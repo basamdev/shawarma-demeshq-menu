@@ -2507,7 +2507,7 @@ a:focus-visible {
     transform: translateY(0);
 }
 
-[dir="rtl"] .lang-dropdown-menu {
+[dir="rtl"] .lang-dropdown-menu:not(.fab-lang-menu) {
     right: auto;
     left: 0;
 }
@@ -3115,6 +3115,32 @@ body.light-mode .menu-card-cart:hover {
     box-shadow: 0 0 0 3px rgba(212,175,55,0.15);
 }
 
+.cart-input.is-invalid {
+    border-color: #D32F2F;
+    box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.15);
+}
+
+.cart-form-warning {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(211, 47, 47, 0.1);
+    border: 1px solid rgba(211, 47, 47, 0.35);
+    color: #B71C1C;
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.45;
+    text-align: right;
+}
+
+.cart-form-warning.hidden {
+    display: none;
+}
+
+[dir="ltr"] .cart-form-warning {
+    text-align: left;
+}
+
 .cart-total {
     display: flex;
     align-items: center;
@@ -3509,9 +3535,16 @@ body.emenu-layout.light-mode .menu-fab .icon-sun { display: inline; }
 .fab-lang-menu {
     bottom: calc(100% + 10px);
     top: auto;
-    right: 50%;
-    transform: translateX(50%);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) translateY(6px);
     min-width: 160px;
+    pointer-events: none;
+}
+
+.lang-dropdown.open .fab-lang-menu {
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
 }
 
 /* Content sheet — cream, no white block */
@@ -3736,13 +3769,13 @@ body.emenu-layout .menu-card-foot-title {
     white-space: nowrap;
 }
 
-body.emenu-layout .menu-card-fav {
+body.emenu-layout .menu-card-foot .menu-card-cart {
     width: 28px;
     height: 28px;
     flex-shrink: 0;
     border: none;
     background: transparent;
-    color: #C5BFB8;
+    color: var(--emenu-fab-text, #5F6368);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -3751,13 +3784,14 @@ body.emenu-layout .menu-card-fav {
     padding: 0;
 }
 
-body.emenu-layout .menu-card-fav:hover,
-body.emenu-layout .menu-card-fav.added {
-    color: #E53935;
-    transform: scale(1.1);
+body.emenu-layout .menu-card-foot .menu-card-cart:hover,
+body.emenu-layout .menu-card-foot .menu-card-cart.added {
+    color: var(--emenu-brown, #6F4E37);
+    transform: scale(1.08);
 }
 
-body.emenu-layout .menu-card-cart {
+body.emenu-layout .menu-card-foot .menu-card-cart::before,
+body.emenu-layout .menu-card-foot .menu-card-cart::after {
     display: none;
 }
 
@@ -4129,18 +4163,6 @@ body.emenu-layout .menu-card-foot-title {
     color: var(--emenu-text, #1A1A1A);
 }
 
-body.emenu-layout .menu-card-fav {
-    width: 26px;
-    height: 26px;
-    color: #BBBBBB;
-    order: -1;
-}
-
-body.emenu-layout .menu-card-fav:hover,
-body.emenu-layout .menu-card-fav.added {
-    transform: none;
-}
-
 body.emenu-layout:not(.light-mode) {
     background: #141414 !important;
 }
@@ -4289,6 +4311,10 @@ body.emenu-layout .detail-category {
     border-color: color-mix(in srgb, var(--emenu-brown, #9B6135) 35%, transparent);
 }
 
+body.emenu-layout .lang-dropdown.open #langDropdownBtn {
+    transform: none;
+}
+
 /* Dropdowns */
 body.emenu-layout .lang-dropdown-menu,
 body.emenu-layout .theme-dropdown-menu {
@@ -4320,8 +4346,9 @@ body.emenu-layout .theme-option.active {
 .theme-dropdown-menu {
     position: absolute;
     bottom: calc(100% + 10px);
-    right: 50%;
-    transform: translateX(50%) translateY(6px);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) translateY(6px);
     min-width: 168px;
     padding: 6px;
     background: #FFFFFF;
@@ -4338,23 +4365,37 @@ body.emenu-layout .theme-option.active {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transform: translateX(50%) translateY(0);
+    transform: translateX(-50%) translateY(0);
 }
 
 @media (max-width: 640px) {
     body.emenu-layout .menu-fab-row,
     body.emenu-layout .fab-wrap,
-    body.emenu-layout .theme-dropdown {
+    body.emenu-layout .theme-dropdown,
+    body.emenu-layout .lang-dropdown {
         overflow: visible;
+    }
+
+    body.emenu-layout .fab-lang-menu,
+    [dir="rtl"] body.emenu-layout .fab-lang-menu {
+        left: 50%;
+        right: auto;
+        bottom: calc(100% + 8px);
+        transform: translateX(-50%) translateY(6px);
+    }
+
+    body.emenu-layout .lang-dropdown.open .fab-lang-menu,
+    [dir="rtl"] body.emenu-layout .lang-dropdown.open .fab-lang-menu {
+        transform: translateX(-50%) translateY(0);
     }
 
     body.emenu-layout .theme-dropdown-menu {
         bottom: calc(100% - 20px);
-        transform: translateX(50%) translateY(26px);
+        transform: translateX(-50%) translateY(26px);
     }
 
     body.emenu-layout .theme-dropdown.open .theme-dropdown-menu {
-        transform: translateX(50%) translateY(20px);
+        transform: translateX(-50%) translateY(20px);
     }
 }
 
@@ -5099,6 +5140,76 @@ body.emenu-layout .menu-hero-brand.hero-theme-pulse .menu-hero-logo-ring {
 .install-steps-list.hidden,
 .install-steps-list[hidden] {
     display: none !important;
+}
+
+.install-images-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 12px 0 14px;
+}
+
+.install-images-list.hidden,
+.install-images-list[hidden] {
+    display: none !important;
+}
+
+.install-image-card {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #0a0a0a;
+    border: 1px solid rgba(212, 175, 55, 0.18);
+}
+
+.install-image-card.is-missing {
+    display: none;
+}
+
+.install-image-num {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 1;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(212, 175, 55, 0.85);
+    color: #1a1408;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+[dir="ltr"] .install-image-num {
+    right: auto;
+    left: 8px;
+}
+
+.install-image-card img {
+    display: block;
+    width: 100%;
+    max-height: 280px;
+    object-fit: contain;
+    background: #111;
+}
+
+.install-images-empty {
+    text-align: center;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.65);
+    margin: 10px 0 14px;
+    line-height: 1.45;
+}
+
+.install-images-empty.hidden {
+    display: none;
+}
+
+.install-tutorial-panel--images .install-tutorial-sub {
+    display: block;
 }
 
 .install-step-card {

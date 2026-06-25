@@ -174,7 +174,6 @@ function loadAdminSection(section) {
         if (section === 'dashboard') { loadDashboard(); }
         else if (section === 'items') { loadManageItems(); }
         else if (section === 'categories') { loadManageCategories(); }
-        else if (section === 'reports') { loadSalesReports(); }
         else if (section === 'cashier') { loadCashier(); }
         else if (section === 'expenses') { loadExpenses(); }
         else if (section === 'settings') { loadSettings(); }
@@ -220,7 +219,7 @@ function loadDashboard() {
             '<div class="stat-card stat-card--income"><h3>' + S.todaySales + '</h3><div class="stat-value" id="todaySales">0 IQD</div></div>' +
             '<div class="stat-card stat-card--expense"><h3>' + S.todayExpenses + '</h3><div class="stat-value" id="todayExpenses">0 IQD</div></div>' +
             '<div class="stat-card stat-card--net"><h3>' + S.netIncome + '</h3><div class="stat-value" id="todayNet">0 IQD</div></div>' +
-            '<div class="stat-card"><h3>' + S.totalOrders + '</h3><div class="stat-value" id="totalOrders">0</div></div>' +
+            '<div class="stat-card"><h3>' + S.todayOrders + '</h3><div class="stat-value" id="todayOrders">0</div></div>' +
         '</div>' +
         '<div class="admin-stats" style="margin-top:16px;">' +
             '<div class="stat-card stat-card--income"><h3>' + S.monthlySales + '</h3><div class="stat-value" id="monthlySales">0 IQD</div></div>' +
@@ -266,6 +265,8 @@ function loadDashboardStats(month) {
         snap.forEach(function (d) { total += (d.data().total || 0); });
         var el = document.getElementById('todaySales');
         if (el) el.textContent = total.toLocaleString() + ' IQD';
+        var elOrders = document.getElementById('todayOrders');
+        if (elOrders) elOrders.textContent = snap.size.toString();
 
         // Today expenses
         db.collection('expenses').where('timestamp', '>=', today).where('timestamp', '<', tomorrow).get().then(function (expSnap) {
@@ -279,16 +280,13 @@ function loadDashboardStats(month) {
     }).catch(function () {});
 
     var monthlyTotal = 0;
-    var orderCount = 0;
     var dayTotals = {};
     var itemCounts = {};
-    var monthlyExpenses = 0;
 
     db.collection('sales').where('timestamp', '>=', mStart).where('timestamp', '<', mEnd).get().then(function (snap) {
         snap.forEach(function (d) {
             var sale = d.data();
             monthlyTotal += (sale.total || 0);
-            orderCount++;
             var ts = sale.timestamp;
             var saleDate;
             if (ts && typeof ts.toDate === 'function') saleDate = ts.toDate();
@@ -307,8 +305,6 @@ function loadDashboardStats(month) {
         });
         var elM = document.getElementById('monthlySales');
         if (elM) elM.textContent = monthlyTotal.toLocaleString() + ' IQD';
-        var elO = document.getElementById('totalOrders');
-        if (elO) elO.textContent = orderCount.toString();
 
         var bestName = '-';
         var bestQty = 0;
@@ -348,8 +344,8 @@ function loadDashboardStats(month) {
     }).catch(function () {
         var elM = document.getElementById('monthlySales');
         if (elM) elM.textContent = '0 IQD';
-        var elO = document.getElementById('totalOrders');
-        if (elO) elO.textContent = '0';
+        var elTodayOrders = document.getElementById('todayOrders');
+        if (elTodayOrders) elTodayOrders.textContent = '0';
         var elB = document.getElementById('bestSelling');
         if (elB) elB.textContent = '-';
         var elExp = document.getElementById('monthlyExpenses');
@@ -1350,151 +1346,6 @@ function deleteCategory(categoryId) {
     }).catch(function (e) { alert(S.errorPrefix + e.message); });
 }
 
-/* ============ REPORTS ============ */
-
-function loadSalesReports() {
-    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-    var adminContent = document.getElementById('adminContent');
-    var now = new Date();
-    var currentMonth = now.getMonth();
-    var monthsHtml = '';
-    var mNames = ['january','february','march','april','may','june','july','august','september','october','november','december'];
-    for (var m = 0; m < 12; m++) {
-        monthsHtml += '<option value="' + m + '"' + (m === currentMonth ? ' selected' : '') + '>' + (m + 1) + ' — ' + S[mNames[m]] + ' ' + now.getFullYear() + '</option>';
-    }
-    adminContent.innerHTML =
-        '<div class="month-selector">' +
-            '<label>' + S.selectMonth + '</label>' +
-            '<select id="reportsMonthSelect">' + monthsHtml + '</select>' +
-        '</div>' +
-        '<div class="admin-stats">' +
-            '<div class="stat-card"><h3>' + S.todaySales + '</h3><div class="stat-value" id="rToday">0 IQD</div></div>' +
-            '<div class="stat-card"><h3>' + S.weeklySales + '</h3><div class="stat-value" id="rWeek">0 IQD</div></div>' +
-            '<div class="stat-card"><h3>' + S.monthlySales + '</h3><div class="stat-value" id="rMonth">0 IQD</div></div>' +
-            '<div class="stat-card"><h3>' + S.totalSales + '</h3><div class="stat-value" id="rTotal">0 IQD</div></div>' +
-        '</div>' +
-        '<div class="admin-stats" style="margin-top:16px;">' +
-            '<div class="stat-card"><h3>' + S.bestSelling + '</h3><div class="stat-value" id="rBest" style="font-size:1.1rem;">-</div></div>' +
-            '<div class="stat-card"><h3>' + S.totalOrders + '</h3><div class="stat-value" id="rOrders">0</div></div>' +
-            '<div class="stat-card"><h3>' + S.dailySales + '</h3><div class="stat-value" id="rAvgDay">0 IQD</div></div>' +
-            '<div class="stat-card"><h3>' + S.totalOrders + '/' + S.week + '</h3><div class="stat-value" id="rWeekOrders">0</div></div>' +
-        '</div>' +
-        '<div class="card" style="margin-top:20px;">' +
-            '<h2>' + S.dailySales + ' — <span id="rDailyLabel"></span></h2>' +
-            '<div id="rDailyContainer"><div class="loading">Loading...</div></div>' +
-        '</div>';
-    var monthSelect = document.getElementById('reportsMonthSelect');
-    if (monthSelect) {
-        monthSelect.addEventListener('change', function () {
-            loadReportsStats(parseInt(this.value, 10));
-        });
-    }
-    loadReportsStats(currentMonth);
-}
-
-function loadReportsStats(month) {
-    if (month === undefined || month === null) month = new Date().getMonth();
-    var year = new Date().getFullYear();
-    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-
-    var today = new Date();
-    today.setHours(0, 0, 0, 0);
-    var tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    var mStart = new Date(year, month, 1);
-    var mEnd = new Date(year, month + 1, 1);
-
-    document.getElementById('rDailyLabel').textContent = getMonthName(month, S);
-
-    db.collection('sales').where('timestamp', '>=', today).where('timestamp', '<', tomorrow).get().then(function (s) {
-        var t = 0; s.forEach(function (d) { t += d.data().total || 0; });
-        var el = document.getElementById('rToday'); if (el) el.textContent = t.toLocaleString() + ' IQD';
-    }).catch(function () {});
-
-    var wStart = new Date(today); wStart.setDate(today.getDate() - 6);
-    var weekOrders = 0;
-    db.collection('sales').where('timestamp', '>=', wStart).where('timestamp', '<', tomorrow).get().then(function (s) {
-        var t = 0; s.forEach(function (d) { t += d.data().total || 0; weekOrders++; });
-        var el = document.getElementById('rWeek'); if (el) el.textContent = t.toLocaleString() + ' IQD';
-        var elWO = document.getElementById('rWeekOrders'); if (elWO) elWO.textContent = weekOrders.toString();
-    }).catch(function () {});
-
-    var monthlyTotal = 0;
-    var monthOrderCount = 0;
-    var allTimeTotal = 0;
-    var dayTotals = {};
-    var itemCounts = {};
-
-    db.collection('sales').where('timestamp', '>=', mStart).where('timestamp', '<', mEnd).get().then(function (snap) {
-        snap.forEach(function (d) {
-            var sale = d.data();
-            monthlyTotal += (sale.total || 0);
-            monthOrderCount++;
-            var ts = sale.timestamp;
-            var saleDate;
-            if (ts && typeof ts.toDate === 'function') saleDate = ts.toDate();
-            else if (ts && ts.seconds) saleDate = new Date(ts.seconds * 1000);
-            else saleDate = new Date(ts);
-            var dayKey = saleDate.getDate();
-            dayTotals[dayKey] = (dayTotals[dayKey] || 0) + (sale.total || 0);
-            if (sale.items) {
-                sale.items.forEach(function (it) {
-                    var itemName = it.name || it['name_' + (localStorage.getItem('selectedLang') || 'ku')] || it.name_en || '—';
-                    var qty = it.quantity || 1;
-                    if (!itemCounts[itemName]) itemCounts[itemName] = 0;
-                    itemCounts[itemName] += qty;
-                });
-            }
-        });
-        var elM = document.getElementById('rMonth');
-        if (elM) elM.textContent = monthlyTotal.toLocaleString() + ' IQD';
-        var elO = document.getElementById('rOrders');
-        if (elO) elO.textContent = monthOrderCount.toString();
-
-        var daysWithSales = Object.keys(dayTotals).length;
-        var avgDay = daysWithSales > 0 ? Math.round(monthlyTotal / daysWithSales) : 0;
-        var elAvg = document.getElementById('rAvgDay');
-        if (elAvg) elAvg.textContent = avgDay.toLocaleString() + ' IQD';
-
-        var bestName = '-';
-        var bestQty = 0;
-        Object.keys(itemCounts).forEach(function (name) {
-            if (itemCounts[name] > bestQty) { bestQty = itemCounts[name]; bestName = name; }
-        });
-        var elB = document.getElementById('rBest');
-        if (elB) {
-            if (bestQty > 0) {
-                elB.innerHTML = '<span class="best-item-name">' + bestName + '</span> <span class="best-item-qty">(' + bestQty + ' ' + S.sold + ')</span>';
-            } else {
-                elB.textContent = '-';
-            }
-        }
-
-        var daysInM = new Date(year, month + 1, 0).getDate();
-        var html = '<table class="daily-sales-table"><thead><tr><th>Day</th><th>' + S.total + ' (IQD)</th></tr></thead><tbody>';
-        for (var d = 1; d <= daysInM; d++) {
-            var dTotal = dayTotals[d] || 0;
-            var cls = dTotal > 0 ? 'day-sales' : 'day-sales zero';
-            var isToday = (d === today.getDate() && month === today.getMonth());
-            html += '<tr' + (isToday ? ' style="background:rgba(212,175,55,0.06);"' : '') + '><td>' + (isToday ? '<strong style="color:var(--gold);">' + d + ' ★</strong>' : d) + '</td><td class="' + cls + '">' + dTotal.toLocaleString() + ' IQD</td></tr>';
-        }
-        html += '</tbody></table>';
-        var container = document.getElementById('rDailyContainer');
-        if (container) container.innerHTML = html;
-    }).catch(function () {
-        var elM = document.getElementById('rMonth'); if (elM) elM.textContent = '0 IQD';
-        var elO = document.getElementById('rOrders'); if (elO) elO.textContent = '0';
-        var elB = document.getElementById('rBest'); if (elB) elB.textContent = '-';
-        var container = document.getElementById('rDailyContainer'); if (container) container.innerHTML = '';
-    });
-
-    db.collection('sales').get().then(function (s) {
-        var t = 0; s.forEach(function (d) { t += d.data().total || 0; });
-        var el = document.getElementById('rTotal'); if (el) el.textContent = t.toLocaleString() + ' IQD';
-    }).catch(function () {});
-}
-
 /* ============ CASHIER ============ */
 
 function stopCashierListener() {
@@ -1757,18 +1608,9 @@ function wireCashierEvents() {
     if (payBtn) {
         payBtn.addEventListener('click', function () {
             if (orderItems.length === 0) { alert(S.addFirst); return; }
-            var total = orderItems.reduce(function (s, i) { return s + i.price * i.quantity; }, 0);
-            var saleWrite = db.collection('sales').add({
-                items: orderItems.map(function (i) { return { name: i.name, price: i.price, quantity: i.quantity }; }),
-                total: total,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                 cashier: (window.auth && auth.currentUser) ? auth.currentUser.email : S.unknown
-            });
-            applyWrite(saleWrite, function () {
-                alert(S.paymentSuccess + total.toLocaleString() + ' IQD');
-                orderItems.length = 0;
-                updateOrderDisplay();
-            });
+            var total = recordCashierSale(orderItems.slice());
+            if (total === null) return;
+            alert(S.paymentSuccess + total.toLocaleString() + ' IQD');
         });
     }
 
@@ -1785,9 +1627,28 @@ function wireCashierEvents() {
     if (printBtn) {
         printBtn.addEventListener('click', function () {
             if (orderItems.length === 0) { alert(S.addFirst); return; }
-            printReceipt();
+            var itemsCopy = orderItems.slice();
+            printReceipt(itemsCopy);
+            recordCashierSale(itemsCopy);
         });
     }
+}
+
+function recordCashierSale(items) {
+    if (!items || items.length === 0) return null;
+    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+    var total = items.reduce(function (s, i) { return s + i.price * i.quantity; }, 0);
+    var saleWrite = db.collection('sales').add({
+        items: items.map(function (i) { return { name: i.name, price: i.price, quantity: i.quantity }; }),
+        total: total,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        cashier: (window.auth && auth.currentUser) ? auth.currentUser.email : S.unknown
+    });
+    applyWrite(saleWrite, function () {
+        orderItems.length = 0;
+        updateOrderDisplay();
+    });
+    return total;
 }
 
 function addToOrder(id, name, price) {
@@ -1797,144 +1658,256 @@ function addToOrder(id, name, price) {
     updateOrderDisplay();
 }
 
-function printReceipt() {
-    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-    var lang = localStorage.getItem('selectedLang') || 'ku';
-    var cafeName = lang === 'ku' ? 'عەلی کافێ' : (lang === 'ar' ? 'علي كافيه' : 'Ali Coffee');
-    var now = new Date();
-    var dateStr = now.toLocaleDateString();
-    var timeStr = now.toLocaleTimeString();
-    var total = orderItems.reduce(function (s, i) { return s + i.price * i.quantity; }, 0);
+function escapeReceiptHtml(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
 
-    var receiptHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Receipt</title>
-    <style>
-        @page {
-            size: 80mm auto;
-            margin: 0;
-        }
-        body {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            margin: 0;
-            padding: 10px;
-            width: 80mm;
-            background: white;
-        }
-        .receipt {
-            text-align: center;
-        }
-        .header {
-            border-bottom: 2px dashed #000;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
-        }
-        .cafe-name {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .date-time {
-            font-size: 11px;
-            margin-bottom: 5px;
-        }
-        .items {
-            margin: 10px 0;
-            text-align: left;
-        }
-        .item-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-            border-bottom: 1px dotted #ccc;
-            padding-bottom: 2px;
-        }
-        .item-name {
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .item-qty {
-            margin-left: 5px;
-            min-width: 30px;
-            text-align: center;
-        }
-        .item-price {
-            min-width: 60px;
-            text-align: right;
-        }
-        .total-section {
-            border-top: 2px dashed #000;
-            border-bottom: 2px dashed #000;
-            padding: 10px 0;
-            margin: 10px 0;
-        }
-        .total-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        .footer {
-            margin-top: 15px;
-            font-size: 10px;
-            text-align: center;
-        }
-        .thank-you {
-            font-size: 12px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-    </style>
-</head>
-<body>
-    <div class="receipt">
-        <div class="header">
-            <div class="cafe-name">${cafeName}</div>
-            <div class="date-time">${dateStr} ${timeStr}</div>
-        </div>
-        <div class="items">
-`;
+function formatReceiptPhone(raw) {
+    var digits = String(raw || '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.indexOf('964') === 0) {
+        return '+964 ' + digits.slice(3, 6) + ' ' + digits.slice(6, 9) + ' ' + digits.slice(9);
+    }
+    return '+' + digits;
+}
 
-    orderItems.forEach(function (item) {
+var RECEIPT_PRINT_WIDTH_PX = 240; /* XP-80 — safe width, left-aligned */
+
+function buildReceiptPrintHtml(options) {
+    var itemsHtml = '';
+    var itemCount = 0;
+    var w = RECEIPT_PRINT_WIDTH_PX;
+    var lang = options.lang || 'ku';
+    var langClass = 'lang-' + (lang === 'ar' || lang === 'en' ? lang : 'ku');
+    var LRM = '\u200E';
+
+    options.items.forEach(function (item, idx) {
+        itemCount += item.quantity;
         var subtotal = item.price * item.quantity;
-        receiptHTML += `
-            <div class="item-row">
-                <div class="item-name">${item.name}</div>
-                <div class="item-qty">x${item.quantity}</div>
-                <div class="item-price">${subtotal.toLocaleString()} IQD</div>
-            </div>
-`;
+        var calcLine = LRM + item.quantity + ' × ' + item.price.toLocaleString() + ' = ' + subtotal.toLocaleString();
+
+        itemsHtml +=
+            '<div class="item">' +
+                '<div class="item-top">' +
+                    '<span class="item-name">' + escapeReceiptHtml(item.name) + '</span>' +
+                    '<span class="item-amt">' + subtotal.toLocaleString() + '</span>' +
+                '</div>' +
+                '<div class="item-calc">' + escapeReceiptHtml(calcLine) + ' IQD</div>' +
+            '</div>';
+        if (idx < options.items.length - 1) {
+            itemsHtml += '<hr class="item-line">';
+        }
     });
 
-    receiptHTML += `
-        </div>
-        <div class="total-section">
-            <div class="total-row">
-                <span>TOTAL:</span>
-                <span>${total.toLocaleString()} IQD</span>
-            </div>
-        </div>
-        <div class="footer">
-            <div class="thank-you">Thank you for your order!</div>
-            <div>${cafeName}</div>
-        </div>
-    </div>
-</body>
-</html>
-`;
+    return '<!DOCTYPE html>' +
+    '<html lang="' + escapeReceiptHtml(options.lang) + '" dir="ltr">' +
+    '<head>' +
+        '<meta charset="UTF-8">' +
+        '<title>Receipt</title>' +
+        '<style>' +
+            '@page { margin: 0; size: auto; }' +
+            '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+            'html { width: ' + w + 'px; max-width: ' + w + 'px; }' +
+            'body {' +
+                'width: ' + w + 'px; max-width: ' + w + 'px;' +
+                'margin: 0; padding: 4px 14px 8px 4px;' +
+                'font-family: Tahoma, Arial, sans-serif;' +
+                'font-size: 10px; line-height: 1.28; color: #000; background: #fff;' +
+                'direction: ltr; text-align: left;' +
+                '-webkit-print-color-adjust: exact; print-color-adjust: exact;' +
+            '}' +
+            '.receipt { width: 100%; max-width: 100%; overflow: hidden; }' +
+            '.brand-logo { display: block; width: 28px; height: 28px; margin: 0 auto 3px; border-radius: 50%; object-fit: cover; }' +
+            '.rule { border: none; border-top: 1px dashed #000; margin: 4px 0; width: 100%; }' +
+            '.rule-solid { border: none; border-top: 1px solid #000; margin: 4px 0; width: 100%; }' +
+            '.brand-title { font-family: Georgia, "Times New Roman", serif; font-size: 11px; font-weight: 700; text-align: center; line-height: 1.2; margin-bottom: 1px; }' +
+            '.brand-title .en { direction: ltr; unicode-bidi: embed; }' +
+            '.brand-title .sep { opacity: 0.4; padding: 0 2px; }' +
+            '.brand-title .ku { font-weight: 700; direction: rtl; unicode-bidi: embed; }' +
+            '.brand-tagline { text-align: center; font-size: 7px; letter-spacing: 0.1em; text-transform: uppercase; color: #444; }' +
+            '.brand-location { text-align: center; font-size: 9px; color: #222; margin-top: 1px; direction: rtl; unicode-bidi: plaintext; }' +
+            '.meta-receipt { text-align: center; font-size: 9px; font-weight: 700; margin-bottom: 3px; }' +
+            '.meta-datetime { width: 100%; margin: 2px 0; }' +
+            '.meta-date, .meta-time { font-size: 9px; font-weight: 600; direction: ltr; unicode-bidi: embed; text-align: center; line-height: 1.35; }' +
+            '.meta-pieces { text-align: center; font-size: 8px; color: #333; margin-top: 2px; }' +
+            'body.lang-ku .meta-receipt, body.lang-ku .meta-pieces, body.lang-ku .thanks-main, body.lang-ku .brand-location { direction: rtl; unicode-bidi: plaintext; }' +
+            'body.lang-ar .meta-receipt, body.lang-ar .meta-pieces, body.lang-ar .thanks-main, body.lang-ar .brand-location { direction: rtl; unicode-bidi: plaintext; }' +
+            '.items-wrap { margin: 2px 0; width: 100%; max-width: 100%; }' +
+            '.item { padding: 3px 0; width: 100%; max-width: 100%; }' +
+            '.item-top { display: flex; flex-direction: row; justify-content: space-between; align-items: flex-start; width: 100%; max-width: 100%; gap: 4px; }' +
+            '.item-name { flex: 1 1 auto; min-width: 0; font-weight: 700; font-size: 10px; word-wrap: break-word; overflow-wrap: break-word; }' +
+            '.item-amt { flex: 0 0 auto; max-width: 42%; font-weight: 700; font-size: 10px; direction: ltr; unicode-bidi: embed; white-space: nowrap; }' +
+            'body.lang-ku .item-top, body.lang-ar .item-top { flex-direction: row-reverse; }' +
+            'body.lang-ku .item-name, body.lang-ar .item-name { text-align: right; direction: rtl; unicode-bidi: plaintext; }' +
+            'body.lang-ku .item-amt, body.lang-ar .item-amt { text-align: left; }' +
+            'body.lang-en .item-name { text-align: left; direction: ltr; }' +
+            'body.lang-en .item-amt { text-align: right; }' +
+            '.item-calc { text-align: center; width: 100%; max-width: 100%; font-size: 8px; color: #333; margin-top: 2px; direction: ltr; unicode-bidi: embed; overflow: hidden; }' +
+            '.item-line { border: none; border-top: 1px dashed #000; margin: 0; height: 0; width: 100%; }' +
+            '.total-box { border: 1.5px solid #000; border-radius: 4px; padding: 4px 5px; margin: 4px 0 3px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 100%; max-width: 100%; gap: 4px; }' +
+            'body.lang-ku .total-box, body.lang-ar .total-box { flex-direction: row-reverse; }' +
+            '.total-label { flex: 1 1 auto; min-width: 0; font-size: 9px; font-weight: 700; text-transform: uppercase; }' +
+            '.total-value { flex: 0 0 auto; font-size: 11px; font-weight: 700; direction: ltr; unicode-bidi: embed; white-space: nowrap; max-width: 55%; }' +
+            'body.lang-ku .total-label, body.lang-ar .total-label { text-align: right; direction: rtl; unicode-bidi: plaintext; }' +
+            'body.lang-en .total-label { text-align: left; direction: ltr; }' +
+            'body.lang-ku .total-value, body.lang-ar .total-value { text-align: left; }' +
+            'body.lang-en .total-value { text-align: right; }' +
+            '.total-currency { font-size: 7px; font-weight: 600; margin-left: 2px; }' +
+            '.footer-thanks { text-align: center; margin-top: 4px; padding-top: 3px; border-top: 1px dashed #000; width: 100%; }' +
+            '.thanks-main { font-size: 10px; font-weight: 700; margin-bottom: 1px; }' +
+            '.thanks-sub { font-size: 7px; color: #444; text-align: center; }' +
+            '.footer-contact { text-align: center; margin-top: 3px; font-size: 9px; width: 100%; }' +
+            '.footer-contact .phone { font-weight: 700; direction: ltr; unicode-bidi: embed; }' +
+            '@media print {' +
+                'html, body { width: ' + w + 'px !important; max-width: ' + w + 'px !important; margin: 0 !important; padding: 2px 14px 6px 4px !important; }' +
+                '@page { margin: 0; size: auto; }' +
+            '}' +
+        '</style>' +
+    '</head>' +
+    '<body class="' + langClass + '">' +
+        '<div class="receipt">' +
+            '<img class="brand-logo" src="' + escapeReceiptHtml(options.logoUrl || 'assets/icon-192.png') + '" alt="" onerror="this.style.display=\'none\'">' +
+            '<div class="brand-title"><span class="en">Ali Coffee</span><span class="sep">|</span><span class="ku">عەلی كافێ</span></div>' +
+            '<div class="brand-tagline">Premium Coffee House</div>' +
+            (options.location ? '<div class="brand-location">' + escapeReceiptHtml(options.location) + '</div>' : '') +
+            '<hr class="rule">' +
+            '<div class="meta-receipt">' + escapeReceiptHtml(options.labels.receipt) + ' #' + escapeReceiptHtml(options.receiptNo) + '</div>' +
+            '<div class="meta-datetime">' +
+                '<div class="meta-date">' + escapeReceiptHtml(options.labels.date) + ': ' + escapeReceiptHtml(options.dateStr) + '</div>' +
+                '<div class="meta-time">' + escapeReceiptHtml(options.labels.time) + ': ' + escapeReceiptHtml(options.timeStr) + '</div>' +
+            '</div>' +
+            '<div class="meta-pieces">' + itemCount + ' ' + escapeReceiptHtml(options.labels.pieces) + '</div>' +
+            '<hr class="rule-solid">' +
+            '<div class="items-wrap">' + itemsHtml + '</div>' +
+            '<hr class="rule">' +
+            '<div class="total-box">' +
+                '<span class="total-label">' + escapeReceiptHtml(options.labels.total) + '</span>' +
+                '<span class="total-value">' + options.total.toLocaleString() + '<span class="total-currency">IQD</span></span>' +
+            '</div>' +
+            '<div class="footer-thanks">' +
+                '<div class="thanks-main">' + escapeReceiptHtml(options.labels.thanksMain) + '</div>' +
+                '<div class="thanks-sub">' + escapeReceiptHtml(options.labels.thanksSub) + '</div>' +
+            '</div>' +
+            (options.phone ? '<div class="footer-contact"><div class="phone">' + escapeReceiptHtml(options.phone) + '</div></div>' : '') +
+        '</div>' +
+    '</body></html>';
+}
 
-    var printWindow = window.open('', '_blank');
-    printWindow.document.write(receiptHTML);
-    printWindow.document.close();
-    printWindow.onload = function () {
-        printWindow.print();
+function printHtmlInFrame(html) {
+    var w = RECEIPT_PRINT_WIDTH_PX + 'px';
+    var frame = document.getElementById('receiptPrintFrame');
+    if (!frame) {
+        frame = document.createElement('iframe');
+        frame.id = 'receiptPrintFrame';
+        frame.title = 'Receipt print';
+        frame.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(frame);
+    }
+
+    frame.style.cssText =
+        'position:fixed;left:-9999px;top:0;width:' + w + ';min-width:' + w + ';max-width:' + w +
+        ';height:800px;border:0;visibility:hidden;overflow:hidden;background:#fff';
+
+    var win = frame.contentWindow;
+    if (!win) {
+        alert('Print failed. Please use Chrome or Edge.');
+        return false;
+    }
+
+    var doc = win.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    function runPrint() {
+        try {
+            win.focus();
+            win.print();
+        } catch (err) {
+            console.error('Print error:', err);
+            alert('Print failed. Please try again.');
+        }
+    }
+
+    if (doc.fonts && doc.fonts.ready) {
+        doc.fonts.ready.then(function () {
+            setTimeout(runPrint, 150);
+        }).catch(function () {
+            setTimeout(runPrint, 200);
+        });
+    } else {
+        setTimeout(runPrint, 250);
+    }
+
+    return true;
+}
+
+function printReceipt(itemsOverride) {
+    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+    var lang = localStorage.getItem('selectedLang') || 'ku';
+    var items = itemsOverride || orderItems;
+    if (items.length === 0) {
+        alert(S.addFirst || 'Add items first');
+        return;
+    }
+
+    var now = new Date();
+    var receiptLabels = {
+        ku: {
+            receipt: 'پسوڵە',
+            date: 'بەروار',
+            time: 'کات',
+            pieces: 'دانە',
+            total: 'کۆی گشتی',
+            thanksMain: 'سوپاس بۆ سەردانتان!',
+            thanksSub: 'Thank you · شكراً لزيارتكم'
+        },
+        ar: {
+            receipt: 'فاتورة',
+            date: 'التاريخ',
+            time: 'الوقت',
+            pieces: 'قطعة',
+            total: 'الإجمالي',
+            thanksMain: 'شكراً لزيارتكم!',
+            thanksSub: 'Thank you · سوپاس بۆ سەردانتان'
+        },
+        en: {
+            receipt: 'Receipt',
+            date: 'Date',
+            time: 'Time',
+            pieces: 'pcs',
+            total: 'Total',
+            thanksMain: 'Thank you for visiting!',
+            thanksSub: 'سوپاس · شكراً لزيارتكم'
+        }
     };
+
+    var labels = receiptLabels[lang] || receiptLabels.ku;
+    var total = items.reduce(function (s, i) { return s + i.price * i.quantity; }, 0);
+    var receiptNo = String(now.getTime()).slice(-6);
+    var phone = formatReceiptPhone(localStorage.getItem('whatsappPhone') || '9647506454656');
+    var location = localStorage.getItem('cafeLocationLabel') || 'بەحرکە-مجەمع';
+
+    var logoUrl = new URL('assets/icon-192.png', window.location.href).href;
+
+    var receiptHTML = buildReceiptPrintHtml({
+        lang: lang,
+        items: items.slice(),
+        total: total,
+        receiptNo: receiptNo,
+        dateStr: now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        timeStr: now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
+        phone: phone,
+        location: location,
+        logoUrl: logoUrl,
+        labels: labels
+    });
+
+    printHtmlInFrame(receiptHTML);
 }
 
 function setupAdminOfflineDetection() {

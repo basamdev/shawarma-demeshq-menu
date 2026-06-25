@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ali Coffee - Admin Panel</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/jpeg" href="assets/ali-new-logo.jpg">
-    <link rel="apple-touch-icon" href="assets/ali-new-logo.jpg">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/ali-new-logo.jpg">
-    <meta name="msapplication-TileImage" content="assets/ali-new-logo.jpg">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+    <meta name="application-name" content="Ali Coffee">
+    <meta name="msapplication-TileColor" content="#5C4033">
+    <meta name="msapplication-TileImage" content="assets/icon-512.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ali Coffee">
@@ -49,9 +51,6 @@
                 <button class="nav-item admin-nav-btn" data-section="categories">
                     <span class="nav-item-icon">📁</span><span data-i18n="manageCategories">Categories</span>
                 </button>
-                <button class="nav-item admin-nav-btn" data-section="reports">
-                    <span class="nav-item-icon">📈</span><span data-i18n="reports">Reports</span>
-                </button>
                 <button class="nav-item admin-nav-btn" data-section="cashier">
                     <span class="nav-item-icon">🛒</span><span data-i18n="cashier">Cashier</span>
                 </button>
@@ -90,8 +89,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="js/firebase.js?v=20"></script>
-    <script src="js/app.js?v=20"></script>
-    <script src="js/admin.js?v=22"></script>
+    <script src="js/app.js?v=64"></script>
+    <script src="js/admin.js?v=33"></script>
     <script>
         function fallbackLogo(img) {
             img.onerror = null;

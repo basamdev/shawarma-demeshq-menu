@@ -8,6 +8,10 @@ window.openMenu = function (lang) {
 
 document.addEventListener('DOMContentLoaded', function () {
     try {
+        var staleInstall = document.getElementById('installTutorialOverlay');
+        if (staleInstall) staleInstall.remove();
+        document.body.classList.remove('install-tutorial-open');
+
         const urlLang = new URLSearchParams(window.location.search).get('lang');
         const savedLang = urlLang || localStorage.getItem('selectedLang') || 'ku';
         if (urlLang) localStorage.setItem('selectedLang', urlLang);
@@ -59,6 +63,7 @@ const i18n = {
         specialDrinks: 'خواردنەوەی تایبەت',
         viewDetails: 'بینینی زیاتر',
         todaySales: 'فرۆشتنی ئەمڕۆ',
+        todayOrders: 'داواکارییەکانی ئەمڕۆ',
         monthlySales: 'فرۆشتنی ئەم مانگە',
         totalOrders: 'کۆی هەموو داواکارییەکان',
         bestSelling: 'باشترین فرۆشراو',
@@ -209,13 +214,14 @@ const i18n = {
         cafeInfoTitle: 'عەلی کافێ',
         linkCopied: 'بەستەر کۆپی کرا!',
         installTitle: 'زیادکردن بۆ سکرینە سەرەکی',
-        installSubtitle: 'مێنووکە وەک ئەپێکی مۆبایل بەکاربهێنە — پێویست بە App Store نییە',
+        installSubtitle: 'زیادکردنی مینیۆ کەمان بوو ناو سکرین وەکو ئەپلیکەیشن',
         installIos: 'iPhone (iOS)',
         installAndroid: 'Android',
         installGotIt: 'تێگەیشتم',
         installDontShow: 'دووبارە پیشان مەدە',
-        installShowHelp: 'زیادکردن بۆ سکرین',
+        installShowHelp: 'زیادکردن بۆ سکرینە سەرەکی',
         installNow: 'ئێستا دابمەزرێنە',
+        installImagesMissing: 'وێنەکانی ڕێنمایی لە images/install/ دابنێ',
         iosStep1: 'دوگمەی Share (↗) لە خوارەوەی Safari دابگرە',
         iosStep2: '«Add to Home Screen» هەڵبژێرە',
         iosStep3: '«Add» دابگرە — ئایکۆنی Ali Coffee لەسەر سکرین دەردەکەوێت',
@@ -250,6 +256,7 @@ const i18n = {
         specialDrinks: 'مشروبات خاصة',
         viewDetails: 'عرض التفاصيل',
         todaySales: 'مبيعات اليوم',
+        todayOrders: 'طلبات اليوم',
         monthlySales: 'مبيعات الشهر',
         totalOrders: 'إجمالي الطلبات',
         bestSelling: 'الأكثر مبيعاً',
@@ -400,13 +407,14 @@ const i18n = {
         cafeInfoTitle: 'علي كافيه',
         linkCopied: 'تم نسخ الرابط!',
         installTitle: 'إضافة إلى الشاشة الرئيسية',
-        installSubtitle: 'استخدم القائمة كتطبيق على الهاتف — بدون App Store',
+        installSubtitle: 'أضف قائمتنا إلى الشاشة الرئيسية كتطبيق',
         installIos: 'iPhone (iOS)',
         installAndroid: 'Android',
         installGotIt: 'فهمت',
         installDontShow: 'لا تظهر مرة أخرى',
         installShowHelp: 'إضافة للشاشة الرئيسية',
         installNow: 'تثبيت الآن',
+        installImagesMissing: 'ضع صور الشرح في images/install/',
         iosStep1: 'اضغط زر Share (↗) أسفل Safari',
         iosStep2: 'اختر «Add to Home Screen»',
         iosStep3: 'اضغط «Add» — يظهر أيقونة Ali Coffee على الشاشة',
@@ -441,6 +449,7 @@ const i18n = {
         specialDrinks: 'Special Drinks',
         viewDetails: 'View',
         todaySales: 'Today Sales',
+        todayOrders: "Today's Orders",
         monthlySales: 'Monthly Sales',
         totalOrders: 'Total Orders',
         bestSelling: 'Best Selling',
@@ -608,13 +617,14 @@ const i18n = {
         cafeInfoTitle: 'Ali Coffee',
         linkCopied: 'Link copied!',
         installTitle: 'Add to Home Screen',
-        installSubtitle: 'Use the menu like a mobile app — no App Store needed',
+        installSubtitle: 'Add our menu to your home screen like an app',
         installIos: 'iPhone (iOS)',
         installAndroid: 'Android',
         installGotIt: 'Got it',
         installDontShow: 'Don\'t show again',
         installShowHelp: 'Add to Home Screen',
         installNow: 'Install now',
+        installImagesMissing: 'Add tutorial images to images/install/',
         iosStep1: 'Tap Share (↗) at the bottom of Safari',
         iosStep2: 'Choose «Add to Home Screen»',
         iosStep3: 'Tap «Add» — Ali Coffee icon appears on your home screen',
@@ -1110,9 +1120,11 @@ function renderMenuItems(items) {
                 </div>
                 <div class="menu-card-foot">
                     <span class="menu-card-foot-title">${name}</span>
-                    <button class="menu-card-fav" data-item-id="${item.id}" aria-label="Add to Cart">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    <button class="menu-card-cart" data-item-id="${item.id}" aria-label="Add to Cart">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                         </svg>
                     </button>
                 </div>
@@ -1150,7 +1162,7 @@ function renderMenuItems(items) {
         card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(); } });
 
         // Cart / fav button
-        const cartBtn = card.querySelector('.menu-card-cart, .menu-card-fav');
+        const cartBtn = card.querySelector('.menu-card-cart');
         if (cartBtn) {
             cartBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -1340,6 +1352,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    setupCartFormValidation();
+
     setupCafeInfoPanel();
 
     // Detail close
@@ -1368,8 +1382,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     });
-
-    registerServiceWorker();
 });
 
 /* ========================================
@@ -1436,7 +1448,7 @@ function applyLanguageUI(lang) {
     }
 
     updateCafeInfoPanel();
-    updateInstallTutorialUI();
+    updateInstallHelpLabel();
 }
 
 function updateAdminPanelText(strings) {
@@ -1444,7 +1456,6 @@ function updateAdminPanelText(strings) {
         dashboard: strings.dashboard,
         items: strings.manageItems,
         categories: strings.manageCategories,
-        reports: strings.reports,
         cashier: strings.cashier,
         expenses: strings.expenses,
         settings: strings.settings,
@@ -1481,7 +1492,8 @@ function setupLanguageButtons() {
         });
 
         langDropdownMenu.querySelectorAll('.lang-option').forEach(function(option) {
-            option.addEventListener('click', function() {
+            option.addEventListener('click', function(e) {
+                e.stopPropagation();
                 var lang = this.getAttribute('data-lang');
                 setActiveLanguage(lang);
                 applyLanguageUI(lang);
@@ -1492,9 +1504,12 @@ function setupLanguageButtons() {
             });
         });
 
-        // Close when clicking outside
-        document.addEventListener('click', function() {
-            if (langDropdown) {
+        langDropdownMenu.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+
+        document.addEventListener('click', function(e) {
+            if (langDropdown && !langDropdown.contains(e.target)) {
                 langDropdown.classList.remove('open');
             }
         });
@@ -1515,6 +1530,8 @@ function setupLanguageButtons() {
    ======================================== */
 
 function setupOfflineDetection() {
+    registerServiceWorker();
+
     window.addEventListener('online', function () {
         isOffline = false;
         updateOfflineIndicator();
@@ -1830,6 +1847,65 @@ function clearCart() {
     updateCartBadge();
 }
 
+function clearCartFormWarning() {
+    var warning = document.getElementById('cartFormWarning');
+    if (warning) {
+        warning.textContent = '';
+        warning.classList.add('hidden');
+    }
+    document.querySelectorAll('.cart-input.is-invalid').forEach(function (el) {
+        el.classList.remove('is-invalid');
+    });
+}
+
+function showCartFormWarning(message, focusEl, invalidEls) {
+    var warning = document.getElementById('cartFormWarning');
+    if (warning) {
+        warning.textContent = message;
+        warning.classList.remove('hidden');
+    }
+    document.querySelectorAll('.cart-input.is-invalid').forEach(function (el) {
+        el.classList.remove('is-invalid');
+    });
+    (invalidEls || []).forEach(function (el) {
+        if (el) el.classList.add('is-invalid');
+    });
+    if (focusEl) {
+        focusEl.focus();
+        focusEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+}
+
+function setupCartFormValidation() {
+    ['customerName', 'customerPlace'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', clearCartFormWarning);
+        }
+    });
+}
+
+function getCartFormLabels(lang) {
+    var labels = {
+        ku: {
+            needName: 'تکایە ناوی خۆت بنووسە پێش ناردن بە واتساپ',
+            needPlace: 'تکایە شوێنەکەت بنووسە پێش ناردن بە واتساپ',
+            needBoth: 'تکایە ناو و شوێن پڕبکەرەوە پێش ناردن بە واتساپ'
+        },
+        ar: {
+            needName: 'الرجاء إدخال اسمك قبل الإرسال عبر واتساب',
+            needPlace: 'الرجاء إدخال موقعك قبل الإرسال عبر واتساب',
+            needBoth: 'الرجاء إدخال الاسم والموقع قبل الإرسال عبر واتساب'
+        },
+        en: {
+            needName: 'Please enter your name before sending via WhatsApp',
+            needPlace: 'Please enter your location before sending via WhatsApp',
+            needBoth: 'Please fill in name and location before sending via WhatsApp'
+        }
+    };
+    return labels[lang] || labels.ku;
+}
+
 function sendWhatsAppOrder() {
     if (cartItems.length === 0) return;
     
@@ -1842,18 +1918,30 @@ function sendWhatsAppOrder() {
     var customerName = nameEl ? nameEl.value.trim() : '';
     var customerPlace = placeEl ? placeEl.value.trim() : '';
 
+    var formT = getCartFormLabels(lang);
     var labels = {
-        ku: { order: 'داواکاری نوێ', name: 'ناو', place: 'شوێن', total: 'کۆی گشتی', time: 'کات', needName: 'تکایە ناوت بنووسە' },
-        ar: { order: 'طلب جديد', name: 'الاسم', place: 'الموقع', total: 'الإجمالي', time: 'الوقت', needName: 'الرجاء إدخال اسمك' },
-        en: { order: 'New Order', name: 'Name', place: 'Location', total: 'Total', time: 'Time', needName: 'Please enter your name' }
+        ku: { order: 'داواکاری نوێ', name: 'ناو', place: 'شوێن', total: 'کۆی گشتی', time: 'کات' },
+        ar: { order: 'طلب جديد', name: 'الاسم', place: 'الموقع', total: 'الإجمالي', time: 'الوقت' },
+        en: { order: 'New Order', name: 'Name', place: 'Location', total: 'Total', time: 'Time' }
     };
     var T = labels[lang] || labels.en;
 
-    if (!customerName) {
-        alert(T.needName);
-        if (nameEl) nameEl.focus();
+    if (!customerName && !customerPlace) {
+        showCartFormWarning(formT.needBoth, nameEl, [nameEl, placeEl]);
         return;
     }
+
+    if (!customerName) {
+        showCartFormWarning(formT.needName, nameEl, [nameEl]);
+        return;
+    }
+
+    if (!customerPlace) {
+        showCartFormWarning(formT.needPlace, placeEl, [placeEl]);
+        return;
+    }
+
+    clearCartFormWarning();
 
     var divider = '------------------------';
     var LRM_TIME = '\u200E';
@@ -1861,7 +1949,7 @@ function sendWhatsAppOrder() {
     lines.push(T.time + ': ' + LRM_TIME + new Date().toLocaleString());
     lines.push(cafeName + ' - ' + T.order);
     lines.push(T.name + ': ' + customerName);
-    if (customerPlace) lines.push(T.place + ': ' + customerPlace);
+    lines.push(T.place + ': ' + customerPlace);
     lines.push(divider);
 
     // \u200E = Left-to-Right Mark. It keeps the numeric "qty x price = total"
@@ -2075,7 +2163,8 @@ function setupCafeInfoPanel() {
     }
 
     var installHelpBtn = document.getElementById('cafeInstallHelpBtn');
-    if (installHelpBtn) {
+    if (installHelpBtn && installHelpBtn.dataset.wired !== '1') {
+        installHelpBtn.dataset.wired = '1';
         installHelpBtn.addEventListener('click', function () {
             closeCafeInfoPanel();
             openInstallTutorial();
@@ -2083,11 +2172,13 @@ function setupCafeInfoPanel() {
     }
 
     updateCafeInfoPanel();
+    updateInstallHelpLabel();
 }
 
 function openCartPanel() {
     renderCartItems();
     updateCustomerFieldPlaceholders();
+    clearCartFormWarning();
     var overlay = document.getElementById('cartOverlay');
     if (overlay) {
         overlay.classList.add('open');
@@ -2227,18 +2318,16 @@ function registerServiceWorker() {
 }
 
 /* ========================================
-   Add to Home Screen tutorial
+   Add to Home Screen — image tutorial (menu only)
+   Put PNG/JPG files in images/install/ (see README there)
    ======================================== */
 
-var _installPromptEvent = null;
-
-var INSTALL_TUTORIAL_CONFIG = {
-    // Set true after adding PNG files to images/install/ (see paths below)
-    useScreenshots: false,
+var INSTALL_TUTORIAL_IMAGES = {
     ios: [
         'images/install/ios-step-1.png',
         'images/install/ios-step-2.png',
-        'images/install/ios-step-3.png'
+        'images/install/ios-step-3.png',
+        'images/install/ios-step-4.png'
     ],
     android: [
         'images/install/android-step-1.png',
@@ -2247,37 +2336,13 @@ var INSTALL_TUTORIAL_CONFIG = {
     ]
 };
 
-function getInstallTutorialImages(platform) {
-    if (!INSTALL_TUTORIAL_CONFIG.useScreenshots) {
-        return ['', '', ''];
-    }
-    return INSTALL_TUTORIAL_CONFIG[platform] || ['', '', ''];
-}
-
-window.addEventListener('beforeinstallprompt', function (e) {
-    e.preventDefault();
-    _installPromptEvent = e;
-    var nativeBtn = document.getElementById('installNativeBtn');
-    if (nativeBtn) nativeBtn.classList.remove('hidden');
-});
-
-function isStandalonePWA() {
-    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-        window.navigator.standalone === true;
-}
-
-function isMobileDevice() {
-    return /Android|webOS|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-        (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
-}
-
-function getMobilePlatform() {
-    var ua = navigator.userAgent || '';
-    if (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
-        return 'ios';
-    }
-    if (/Android/i.test(ua)) return 'android';
-    return 'android';
+function updateInstallHelpLabel() {
+    var helpBtn = document.getElementById('cafeInstallHelpBtn');
+    if (!helpBtn) return;
+    var lang = localStorage.getItem('selectedLang') || 'ku';
+    var S = i18n[lang] || i18n.en;
+    var helpSpan = helpBtn.querySelector('[data-i18n-install]');
+    if (helpSpan) helpSpan.textContent = S.installShowHelp;
 }
 
 function ensureInstallTutorialDOM() {
@@ -2289,7 +2354,7 @@ function ensureInstallTutorialDOM() {
     overlay.setAttribute('aria-hidden', 'true');
     overlay.innerHTML =
         '<div class="install-tutorial-backdrop"></div>' +
-        '<div class="install-tutorial-panel" role="dialog" aria-labelledby="installTutorialTitle">' +
+        '<div class="install-tutorial-panel install-tutorial-panel--images" role="dialog" aria-labelledby="installTutorialTitle">' +
             '<button type="button" class="install-tutorial-close" id="installTutorialClose" aria-label="Close">✕</button>' +
             '<div class="install-tutorial-badge" aria-hidden="true">📲</div>' +
             '<h2 class="install-tutorial-title" id="installTutorialTitle"></h2>' +
@@ -2298,12 +2363,36 @@ function ensureInstallTutorialDOM() {
                 '<button type="button" class="install-platform-tab active" data-platform="ios" id="installTabIos"></button>' +
                 '<button type="button" class="install-platform-tab" data-platform="android" id="installTabAndroid"></button>' +
             '</div>' +
-            '<ol class="install-steps-list" id="installStepsIos"></ol>' +
-            '<ol class="install-steps-list hidden" id="installStepsAndroid"></ol>' +
-            '<button type="button" class="install-native-btn hidden" id="installNativeBtn"></button>' +
+            '<div class="install-images-list" id="installStepsIos"></div>' +
+            '<div class="install-images-list hidden" id="installStepsAndroid" hidden></div>' +
+            '<p class="install-images-empty hidden" id="installImagesEmpty"></p>' +
             '<button type="button" class="install-tutorial-primary" id="installTutorialGotIt"></button>' +
         '</div>';
     document.body.appendChild(overlay);
+    wireInstallTutorialOverlay(overlay);
+}
+
+function wireInstallTutorialOverlay(overlay) {
+    if (!overlay || overlay.dataset.wired === '1') return;
+    overlay.dataset.wired = '1';
+
+    var closeBtn = document.getElementById('installTutorialClose');
+    var gotIt = document.getElementById('installTutorialGotIt');
+    if (closeBtn) closeBtn.addEventListener('click', closeInstallTutorial);
+    if (gotIt) gotIt.addEventListener('click', closeInstallTutorial);
+
+    overlay.addEventListener('click', function (e) {
+        if (e.target === overlay || e.target.classList.contains('install-tutorial-backdrop')) {
+            closeInstallTutorial();
+        }
+    });
+
+    document.querySelectorAll('.install-platform-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            setInstallPlatformTab(tab.getAttribute('data-platform'));
+            updateInstallTutorialUI();
+        });
+    });
 }
 
 function setInstallPlatformTab(platform) {
@@ -2325,86 +2414,73 @@ function setInstallPlatformTab(platform) {
 
 var _installTutorialPlatform = '';
 
-function buildInstallStepHtml(stepNum, caption, imageSrc) {
-    var mediaHtml = '';
-    if (imageSrc) {
-        mediaHtml =
-            '<div class="install-step-media">' +
-                '<img src="' + imageSrc + '" alt="" loading="lazy" ' +
-                'onerror="this.closest(\'.install-step-media\').classList.add(\'is-missing\')">' +
-            '</div>';
+function getMobilePlatform() {
+    var ua = navigator.userAgent || '';
+    if (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+        return 'ios';
     }
+    if (/Android/i.test(ua)) return 'android';
+    return 'ios';
+}
 
+function buildInstallImageHtml(stepNum, imageSrc) {
     return (
-        '<li class="install-step-card">' +
-            '<div class="install-step-head">' +
-                '<span class="install-step-num">' + stepNum + '</span>' +
-                '<p class="install-step-caption">' + caption + '</p>' +
-            '</div>' +
-            mediaHtml +
-        '</li>'
+        '<div class="install-image-card">' +
+            '<span class="install-image-num">' + stepNum + '</span>' +
+            '<img src="' + imageSrc + '" alt="" loading="lazy" ' +
+            'onerror="this.closest(\'.install-image-card\').classList.add(\'is-missing\')">' +
+        '</div>'
     );
 }
 
-function renderInstallStepsList(container, captions, images) {
-    if (!container) return;
+function renderInstallImagesList(container, images) {
+    if (!container) return 0;
     var html = '';
-    for (var i = 0; i < captions.length; i++) {
-        html += buildInstallStepHtml(i + 1, captions[i], images && images[i] ? images[i] : '');
+    var count = 0;
+    for (var i = 0; i < images.length; i++) {
+        if (images[i]) {
+            html += buildInstallImageHtml(i + 1, images[i]);
+            count++;
+        }
     }
     container.innerHTML = html;
+    return count;
 }
 
 function updateInstallTutorialUI() {
-    ensureInstallTutorialDOM();
     var lang = localStorage.getItem('selectedLang') || 'ku';
     var S = i18n[lang] || i18n.en;
 
     var title = document.getElementById('installTutorialTitle');
-    var sub = document.getElementById('installTutorialSub');
+    var subtitle = document.getElementById('installTutorialSub');
     var tabIos = document.getElementById('installTabIos');
     var tabAndroid = document.getElementById('installTabAndroid');
     var gotIt = document.getElementById('installTutorialGotIt');
-    var nativeBtn = document.getElementById('installNativeBtn');
+    var emptyMsg = document.getElementById('installImagesEmpty');
 
     if (title) title.textContent = S.installTitle;
-    if (sub) sub.textContent = S.installSubtitle;
+    if (subtitle) subtitle.textContent = S.installSubtitle || '';
     if (tabIos) tabIos.textContent = S.installIos;
     if (tabAndroid) tabAndroid.textContent = S.installAndroid;
     if (gotIt) gotIt.textContent = S.installGotIt;
-    if (nativeBtn) nativeBtn.textContent = S.installNow;
 
-    renderInstallStepsList(
-        document.getElementById('installStepsIos'),
-        [S.iosStep1, S.iosStep2, S.iosStep3],
-        getInstallTutorialImages('ios')
-    );
-    renderInstallStepsList(
-        document.getElementById('installStepsAndroid'),
-        [S.androidStep1, S.androidStep2, S.androidStep3],
-        getInstallTutorialImages('android')
-    );
+    var iosCount = renderInstallImagesList(document.getElementById('installStepsIos'), INSTALL_TUTORIAL_IMAGES.ios);
+    var androidCount = renderInstallImagesList(document.getElementById('installStepsAndroid'), INSTALL_TUTORIAL_IMAGES.android);
 
-    var helpBtn = document.getElementById('cafeInstallHelpBtn');
-    if (helpBtn) {
-        var helpSpan = helpBtn.querySelector('[data-i18n-install]');
-        if (helpSpan) helpSpan.textContent = S.installShowHelp;
+    if (emptyMsg) {
+        var platform = _installTutorialPlatform || getMobilePlatform();
+        var visible = platform === 'ios' ? iosCount : androidCount;
+        emptyMsg.textContent = S.installImagesMissing || 'Add tutorial images to images/install/';
+        emptyMsg.classList.toggle('hidden', visible > 0);
     }
 
-    if (document.getElementById('installTutorialOverlay')) {
-        setInstallPlatformTab(_installTutorialPlatform || getMobilePlatform());
-    }
+    updateInstallHelpLabel();
 }
 
 function openInstallTutorial() {
     ensureInstallTutorialDOM();
     updateInstallTutorialUI();
     setInstallPlatformTab(getMobilePlatform());
-
-    var nativeBtn = document.getElementById('installNativeBtn');
-    if (nativeBtn) {
-        nativeBtn.classList.toggle('hidden', !_installPromptEvent);
-    }
 
     var overlay = document.getElementById('installTutorialOverlay');
     if (overlay) {
@@ -2424,44 +2500,8 @@ function closeInstallTutorial() {
 }
 
 function setupInstallTutorial() {
-    ensureInstallTutorialDOM();
-    updateInstallTutorialUI();
-    setInstallPlatformTab(getMobilePlatform());
-
-    var overlay = document.getElementById('installTutorialOverlay');
-    if (!overlay || overlay.dataset.wired === '1') return;
-    overlay.dataset.wired = '1';
-
-    var closeBtn = document.getElementById('installTutorialClose');
-    var gotIt = document.getElementById('installTutorialGotIt');
-    var nativeBtn = document.getElementById('installNativeBtn');
-
-    if (closeBtn) closeBtn.addEventListener('click', closeInstallTutorial);
-    if (gotIt) gotIt.addEventListener('click', closeInstallTutorial);
-
-    overlay.addEventListener('click', function (e) {
-        if (e.target === overlay || e.target.classList.contains('install-tutorial-backdrop')) {
-            closeInstallTutorial();
-        }
-    });
-
-    document.querySelectorAll('.install-platform-tab').forEach(function (tab) {
-        tab.addEventListener('click', function () {
-            setInstallPlatformTab(tab.getAttribute('data-platform'));
-        });
-    });
-
-    if (nativeBtn) {
-        nativeBtn.addEventListener('click', function () {
-            if (!_installPromptEvent) return;
-            _installPromptEvent.prompt();
-            _installPromptEvent.userChoice.finally(function () {
-                _installPromptEvent = null;
-                nativeBtn.classList.add('hidden');
-                closeInstallTutorial();
-            });
-        });
-    }
+    if (!document.getElementById('cafeInstallHelpBtn')) return;
+    updateInstallHelpLabel();
 }
 
 window.openInstallTutorial = openInstallTutorial;
