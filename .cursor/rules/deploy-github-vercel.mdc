@@ -1,0 +1,23 @@
+---
+description: After code changes, always commit, push to GitHub, and deploy Vercel production.
+alwaysApply: true
+---
+
+# Deploy workflow (GitHub + Vercel)
+
+After any meaningful code change in this project:
+
+1. **Commit** with a clear message (only when changes exist).
+2. **Push** to GitHub: `git push origin main` (repo: `basamdev/ali-coffee-menu`).
+3. **Deploy Vercel production** from project root:
+   ```bash
+   cd ali-cafe-menu && npx vercel deploy --prod --yes
+   ```
+4. **Bump** `version.txt` when the change is user-facing (menu, admin, offline, etc.).
+5. **Rebuild** `c:\xampp\htdocs\ali-cafe-menu-deploy.zip` for Netlify manual deploys (optional; user may use Netlify separately).
+
+Do not skip push/deploy unless the user explicitly says not to, or Auto-review blocks the action (then retry with user approval).
+
+Verify after deploy: `https://ali-cafe-menu.vercel.app/version.txt`
+
+Netlify is not auto-deployed from this workflow unless the user asks — remind them to drag-drop the zip if they use Netlify.
