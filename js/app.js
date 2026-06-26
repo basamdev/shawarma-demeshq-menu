@@ -116,6 +116,9 @@ const i18n = {
         deleteConfirm: 'دڵنیایت لە سڕینەوەی ئەم ئایتمە؟',
         fillAll: 'تکایە هەموو خانەکان پڕ بکەرەوە',
         itemSaved: 'ئایتم پاشەکەوت کرا!',
+        itemSavedCloud: 'پاشەکەوت کرا — مێنوو بۆ هەموو کڕیارەکان نوێکرایەوە!',
+        itemSavedOffline: 'لە مۆبایل پاشەکەوت کرا — کاتێک ئینتەرنێت هەبوو بۆ مێنوو دەچێت.',
+        itemSyncFailed: 'نەتوانرا بۆ ئینتەرنێت بنێردرێت. ئینتەرنێت بپشکنە و دووبارە هەوڵبدەرەوە.',
         itemError: 'هەڵە: ',
         categoriesList: 'بەشەکانی سیستەم:',
         noItemsFound: 'هیچ ئایتمێک نەدۆزرایەوە',
@@ -155,6 +158,8 @@ const i18n = {
         deleteCategory: 'سڕینەوەی بەش',
         deleteCategoryConfirm: 'دڵنیایت لە سڕینەوەی ئەم بەشە؟ هەموو ئایتمەکانی ئەم بەشە دەسڕێنەوە.',
         categorySaved: 'بەش پاشەکەوت کرا!',
+        categorySavedCloud: 'بەش پاشەکەوت کرا — مێنوو نوێکرایەوە!',
+        categorySavedOffline: 'بەش لە مۆبایل پاشەکەوت کرا — دواتر بۆ مێنوو دەچێت.',
         categoryError: 'هەڵە لە بەش: ',
         createNewCategory: '+ دروستکردنی بەشی نوێ',
         likeItem: 'پەسەندکردن',
@@ -312,6 +317,9 @@ const i18n = {
         deleteConfirm: 'هل أنت متأكد من حذف هذا العنصر؟',
         fillAll: 'يرجى ملء جميع الحقول المطلوبة',
         itemSaved: 'تم حفظ العنصر!',
+        itemSavedCloud: 'تم الحفظ — تم تحديث القائمة لجميع الزبائن!',
+        itemSavedOffline: 'حُفظ على الهاتف — سيظهر في القائمة عند الاتصال بالإنترنت.',
+        itemSyncFailed: 'تعذر المزامنة مع السحابة. تحقق من الإنترنت وحاول مرة أخرى.',
         itemError: 'خطأ: ',
         categoriesList: 'فئات النظام:',
         noItemsFound: 'لم يتم العثور على عناصر',
@@ -351,6 +359,8 @@ const i18n = {
         deleteCategory: 'حذف الفئة',
         deleteCategoryConfirm: 'هل أنت متأكد من حذف هذه الفئة؟ سيتم حذف جميع العناصر في هذه الفئة.',
         categorySaved: 'تم حفظ الفئة!',
+        categorySavedCloud: 'تم حفظ الفئة — تم تحديث القائمة!',
+        categorySavedOffline: 'حُفظت الفئة على الهاتف — ستُزامَن لاحقاً.',
         categoryError: 'خطأ في الفئة: ',
         createNewCategory: '+ إنشاء فئة جديدة',
         likeItem: 'إعجاب',
@@ -508,6 +518,9 @@ const i18n = {
         deleteConfirm: 'Are you sure you want to delete this item?',
         fillAll: 'Please fill in all required fields',
         itemSaved: 'Item saved!',
+        itemSavedCloud: 'Saved — menu updated for all customers!',
+        itemSavedOffline: 'Saved on this phone — will sync to menu when online.',
+        itemSyncFailed: 'Could not sync to cloud. Check internet and try again.',
         itemError: 'Error: ',
         categoriesList: 'System categories:',
         noItemsFound: 'No items found',
@@ -563,6 +576,8 @@ const i18n = {
         deleteCategory: 'Delete Category',
         deleteCategoryConfirm: 'Are you sure you want to delete this category? All items in this category will be deleted.',
         categorySaved: 'Category saved!',
+        categorySavedCloud: 'Category saved — menu updated!',
+        categorySavedOffline: 'Category saved on phone — will sync when online.',
         categoryError: 'Category error: ',
         createNewCategory: '+ Create New Category',
         likeItem: 'Like',
@@ -723,7 +738,7 @@ function firestoreGetWithTimeout(ref, ms) {
     ]);
 }
 
-var APP_VERSION = 'v71';
+var APP_VERSION = 'v87';
 
 function clearMenuLoadingSpinner() {
     var container = document.getElementById('menuGrid');
@@ -1776,6 +1791,7 @@ function isAdminAppUi() {
 
 function setupOfflineDetection() {
     registerServiceWorker();
+    setupMenuAutoRefresh();
 
     window.addEventListener('online', function () {
         isOffline = false;
@@ -1801,6 +1817,38 @@ function setupOfflineDetection() {
 
     isOffline = !navigator.onLine;
     if (isOffline) scheduleMenuConnectionStatus(false);
+}
+
+function setupMenuAutoRefresh() {
+    if (!document.getElementById('menuGrid')) return;
+
+    var lastRefreshMs = 0;
+    var MIN_GAP_MS = 5000;
+
+    function refreshMenuFromCloud() {
+        if (!navigator.onLine) return;
+        var now = Date.now();
+        if (now - lastRefreshMs < MIN_GAP_MS) return;
+        lastRefreshMs = now;
+
+        fetchMenuViaRest(12000).then(function (items) {
+            applyMenuItemsUpdate(items, { force: true });
+        }).catch(function () {});
+
+        loadCategoriesFromFirebase().then(function (categoriesChanged) {
+            if (categoriesChanged && cachedMenuItems.length > 0) {
+                renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
+            }
+        }).catch(function () {});
+    }
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') refreshMenuFromCloud();
+    });
+    window.addEventListener('focus', refreshMenuFromCloud);
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) refreshMenuFromCloud();
+    });
 }
 
 var _menuStatusShowTimer = null;

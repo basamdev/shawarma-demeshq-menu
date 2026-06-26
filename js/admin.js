@@ -256,7 +256,7 @@ function warmAdminOfflineCache(done) {
     });
 }
 
-var ADMIN_VERSION = 'v86';
+var ADMIN_VERSION = 'v87';
 
 function getDashboardMonth() {
     var sel = document.getElementById('dashboardMonthSelect');
@@ -1784,15 +1784,40 @@ function applyItemFilter(searchTerm, cat) {
    offline. So we run the success UI immediately (the data is already saved
    locally) and just log any real sync failure. This keeps the entire dashboard
    usable with no internet. */
-function applyWrite(promise, onDone, onError) {
-    try { if (typeof onDone === 'function') onDone(); }
-    catch (e) { console.error('UI update error after write:', e); }
-    if (promise && typeof promise.catch === 'function') {
-        promise.catch(function (err) {
-            console.error('Firestore sync error (will retry when online):', err);
+var MENU_SYNC_WRITE = { requireSync: true };
+
+function applyWrite(promise, onDone, onError, options) {
+    options = options || {};
+    var waitForCloud = options.requireSync === true && navigator.onLine;
+
+    function callDone(isOfflineSave) {
+        try {
+            if (typeof onDone === 'function') onDone(!!isOfflineSave);
+        } catch (e) {
+            console.error('UI update error after write:', e);
+        }
+    }
+
+    if (!promise || typeof promise.then !== 'function') {
+        callDone(!navigator.onLine);
+        return;
+    }
+
+    if (waitForCloud) {
+        promise.then(function () {
+            callDone(false);
+        }).catch(function (err) {
+            console.error('Firestore sync error:', err);
             if (typeof onError === 'function') onError(err);
         });
+        return;
     }
+
+    callDone(!navigator.onLine);
+    promise.catch(function (err) {
+        console.error('Firestore sync error (will retry when online):', err);
+        if (typeof onError === 'function') onError(err);
+    });
 }
 
 /* Convert a chosen image file into a small base64 data URL so it is stored
@@ -1879,15 +1904,17 @@ function saveQuickCategory() {
 
     // Generate the doc id locally so we can select it immediately, even offline.
     var newCatRef = db.collection('categories').doc();
-    applyWrite(newCatRef.set(categoryData), function () {
+    applyWrite(newCatRef.set(categoryData), function (offline) {
         upsertCachedCategory(newCatRef.id, categoryData);
         document.getElementById('quickCategoryModal').classList.remove('active');
         loadCategoriesDropdown();
         renderCategoriesListNow();
         var select = document.getElementById('itemCategory');
         if (select) { select.value = newCatRef.id; }
-        alert(S.categorySaved);
-    });
+        alert(offline ? S.categorySavedOffline : S.categorySavedCloud);
+    }, function (err) {
+        alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
+    }, MENU_SYNC_WRITE);
 }
 
 function saveItem() {
@@ -1931,13 +1958,15 @@ function saveItem() {
         promise = ref.set(itemData);
     }
 
-    applyWrite(promise, function () {
+    applyWrite(promise, function (offline) {
         upsertCachedMenuItem(ref.id, itemData);
         document.getElementById('itemModal').classList.remove('active');
         activeItemModal = null;
         hydrateItemsUiFromCache();
-        alert(S.itemSaved);
-    });
+        alert(offline ? S.itemSavedOffline : S.itemSavedCloud);
+    }, function (err) {
+        alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
+    }, MENU_SYNC_WRITE);
 }
 
 function editItem(itemId) {
@@ -1992,7 +2021,9 @@ function deleteItem(itemId) {
     applyWrite(db.collection('menuItems').doc(itemId).delete(), function () {
         removeCachedMenuItem(itemId);
         hydrateItemsUiFromCache();
-    });
+    }, function (err) {
+        alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
+    }, MENU_SYNC_WRITE);
 }
 
 /* ============ CATEGORIES ============ */
@@ -2285,10 +2316,12 @@ function syncCategoriesFromItems() {
             });
 
             if (count === 0) { alert(S.noNewCategories || 'All categories are already added.'); return; }
-            applyWrite(batch.commit(), function () {
+            applyWrite(batch.commit(), function (offline) {
                 loadCategoriesList();
-                alert((S.categoriesSynced || 'Categories added:') + ' ' + count);
-            });
+                alert((offline ? S.categorySavedOffline : (S.categoriesSynced || 'Categories added:')) + ' ' + count);
+            }, function (err) {
+                alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
+            }, MENU_SYNC_WRITE);
         });
     }).catch(function (e) { alert(S.errorPrefix + e.message); });
 }
@@ -2328,13 +2361,15 @@ function saveCategory() {
         promise = newRef.set(categoryData);
     }
 
-    applyWrite(promise, function () {
+    applyWrite(promise, function (offline) {
         upsertCachedCategory(savedId, categoryData);
         document.getElementById('categoryModal').classList.remove('active');
         renderCategoriesListNow();
         loadCategoriesDropdown();
-        alert(S.categorySaved);
-    });
+        alert(offline ? S.categorySavedOffline : S.categorySavedCloud);
+    }, function (err) {
+        alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
+    }, MENU_SYNC_WRITE);
 }
 
 function openCategoryModalWith(categoryId, cat, isNew) {
@@ -2385,7 +2420,11 @@ function deleteCategory(categoryId) {
         // Delete the category
         batch.delete(db.collection('categories').doc(categoryId));
 
-        applyWrite(batch.commit(), function () { loadCategoriesList(); });
+        applyWrite(batch.commit(), function () {
+            loadCategoriesList();
+        }, function (err) {
+            alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
+        }, MENU_SYNC_WRITE);
     }).catch(function (e) { alert(S.errorPrefix + e.message); });
 }
 
