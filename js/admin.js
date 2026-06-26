@@ -256,7 +256,7 @@ function warmAdminOfflineCache(done) {
     });
 }
 
-var ADMIN_VERSION = 'v87';
+var ADMIN_VERSION = 'v88';
 
 function getDashboardMonth() {
     var sel = document.getElementById('dashboardMonthSelect');
@@ -395,6 +395,124 @@ function fetchAdminCollectionViaRest(collectionName, timeoutMs) {
             throw e;
         });
     });
+}
+
+function promiseWithTimeout(promise, ms, message) {
+    return Promise.race([
+        promise,
+        new Promise(function (_, reject) {
+            setTimeout(function () { reject(new Error(message || 'timeout')); }, ms);
+        })
+    ]);
+}
+
+function jsToRestFields(obj) {
+    var fields = {};
+    Object.keys(obj || {}).forEach(function (key) {
+        var v = obj[key];
+        if (v === undefined || v === null) return;
+        if (typeof v === 'string') {
+            fields[key] = { stringValue: v };
+        } else if (typeof v === 'boolean') {
+            fields[key] = { booleanValue: v };
+        } else if (typeof v === 'number' && !isNaN(v)) {
+            if (Number.isInteger(v)) fields[key] = { integerValue: String(v) };
+            else fields[key] = { doubleValue: v };
+        }
+    });
+    return fields;
+}
+
+function writeDocumentViaRest(collectionName, docId, plainData, isCreate) {
+    if (!isAdminAuthenticated()) return Promise.reject(new Error('Not signed in'));
+    var cfg = window.firebaseConfig;
+    if (!cfg || !cfg.projectId) return Promise.reject(new Error('No config'));
+    var payload = { fields: jsToRestFields(plainData) };
+    return auth.currentUser.getIdToken().then(function (token) {
+        var base = 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(cfg.projectId) +
+            '/databases/(default)/documents/' + encodeURIComponent(collectionName);
+        var url = isCreate
+            ? base + '?documentId=' + encodeURIComponent(docId)
+            : base + '/' + encodeURIComponent(docId);
+        return fetch(url, {
+            method: isCreate ? 'POST' : 'PATCH',
+            cache: 'no-store',
+            headers: {
+                Authorization: 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        }).then(function (r) {
+            if (!r.ok) {
+                return r.text().then(function (t) {
+                    throw new Error('REST HTTP ' + r.status + (t ? ': ' + t.slice(0, 160) : ''));
+                });
+            }
+            return r.json();
+        });
+    });
+}
+
+function deleteDocumentViaRest(collectionName, docId) {
+    if (!isAdminAuthenticated()) return Promise.reject(new Error('Not signed in'));
+    var cfg = window.firebaseConfig;
+    if (!cfg || !cfg.projectId) return Promise.reject(new Error('No config'));
+    return auth.currentUser.getIdToken().then(function (token) {
+        var url = 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(cfg.projectId) +
+            '/databases/(default)/documents/' + encodeURIComponent(collectionName) + '/' +
+            encodeURIComponent(docId);
+        return fetch(url, {
+            method: 'DELETE',
+            cache: 'no-store',
+            headers: { Authorization: 'Bearer ' + token }
+        }).then(function (r) {
+            if (!r.ok && r.status !== 404) {
+                return r.text().then(function (t) {
+                    throw new Error('REST HTTP ' + r.status + (t ? ': ' + t.slice(0, 160) : ''));
+                });
+            }
+            return true;
+        });
+    });
+}
+
+/** Menu writes: SDK first (8s), then Firestore REST — mobile SDK often hangs. */
+function applyMenuCloudWrite(config) {
+    if (!config || !config.onDone) return;
+
+    if (!navigator.onLine) {
+        applyWrite(config.sdkPromise, config.onDone, config.onError, {});
+        return;
+    }
+
+    function restFallback(err) {
+        console.warn('[menu cloud write] SDK failed, REST fallback:', err && (err.message || err));
+        var restPromise;
+        if (config.isDelete) {
+            restPromise = deleteDocumentViaRest(config.collection, config.docId);
+        } else {
+            restPromise = writeDocumentViaRest(
+                config.collection,
+                config.docId,
+                config.plainData,
+                !!config.isCreate
+            );
+        }
+        restPromise.then(function () {
+            config.onDone(false);
+        }).catch(function (e) {
+            if (typeof config.onError === 'function') config.onError(e);
+        });
+    }
+
+    if (!config.sdkPromise || typeof config.sdkPromise.then !== 'function') {
+        restFallback(new Error('No SDK promise'));
+        return;
+    }
+
+    promiseWithTimeout(config.sdkPromise, 8000, 'SDK write timeout').then(function () {
+        config.onDone(false);
+    }).catch(restFallback);
 }
 
 function restDocsToSales(docs) {
@@ -1893,32 +2011,54 @@ function saveQuickCategory() {
     var placeholderImg = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect fill=%23e0e0e0 width=%27400%27 height=%27300%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 font-size=%2724%27 text-anchor=%27middle%27 dy=%27.3em%27 fill=%23999%27%3ENo+Image%3C/text%3E%3C/svg%3E';
     var finalImg = imgUrl || placeholderImg;
 
-    var categoryData = {
+    var now = new Date().toISOString();
+    var plainData = {
         name_ku: nameKu,
         name_ar: nameAr,
         name_en: nameEn,
         image: finalImg,
-        created_at: firebase.firestore.FieldValue.serverTimestamp(),
-        updated_at: firebase.firestore.FieldValue.serverTimestamp()
+        created_at: now,
+        updated_at: now
     };
 
-    // Generate the doc id locally so we can select it immediately, even offline.
     var newCatRef = db.collection('categories').doc();
-    applyWrite(newCatRef.set(categoryData), function (offline) {
-        upsertCachedCategory(newCatRef.id, categoryData);
-        document.getElementById('quickCategoryModal').classList.remove('active');
-        loadCategoriesDropdown();
-        renderCategoriesListNow();
-        var select = document.getElementById('itemCategory');
-        if (select) { select.value = newCatRef.id; }
-        alert(offline ? S.categorySavedOffline : S.categorySavedCloud);
-    }, function (err) {
-        alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
-    }, MENU_SYNC_WRITE);
+    applyMenuCloudWrite({
+        collection: 'categories',
+        docId: newCatRef.id,
+        isCreate: true,
+        sdkPromise: newCatRef.set(Object.assign({}, plainData, {
+            created_at: firebase.firestore.FieldValue.serverTimestamp(),
+            updated_at: firebase.firestore.FieldValue.serverTimestamp()
+        })),
+        plainData: plainData,
+        onDone: function (offline) {
+            upsertCachedCategory(newCatRef.id, plainData);
+            document.getElementById('quickCategoryModal').classList.remove('active');
+            loadCategoriesDropdown();
+            renderCategoriesListNow();
+            var select = document.getElementById('itemCategory');
+            if (select) { select.value = newCatRef.id; }
+            alert(offline ? S.categorySavedOffline : S.categorySavedCloud);
+        },
+        onError: function (err) {
+            alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
+        }
+    });
 }
 
 function saveItem() {
      var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+
+     if (!window.db) {
+         alert(S.itemSyncFailed + '\nFirebase not ready.');
+         return;
+     }
+     if (!isAdminAuthenticated()) {
+         alert(S.itemSyncFailed + '\nPlease log in again.');
+         window.location.href = 'login.html';
+         return;
+     }
+
      var nameKu = document.getElementById('itemNameKu').value.trim();
     var nameAr = document.getElementById('itemNameAr').value.trim();
     var nameEn = document.getElementById('itemNameEn').value.trim();
@@ -1934,8 +2074,14 @@ function saveItem() {
     var placeholderImg = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect fill=%23e0e0e0 width=%27400%27 height=%27300%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 font-size=%2724%27 text-anchor=%27middle%27 dy=%27.3em%27 fill=%23999%27%3ENo+Image%3C/text%3E%3C/svg%3E';
     var finalImg = imgUrl || placeholderImg;
 
+    if (finalImg.length > 950000) {
+        alert(S.itemSyncFailed + '\nImage too large — paste a URL or use a smaller photo.');
+        return;
+    }
+
     var itemId = document.getElementById('itemId').value;
-    var itemData = {
+    var now = new Date().toISOString();
+    var plainData = {
         name_ku: nameKu, name_ar: nameAr, name_en: nameEn,
         description_ku: document.getElementById('itemDescKu').value.trim(),
         description_ar: document.getElementById('itemDescAr').value.trim(),
@@ -1944,29 +2090,61 @@ function saveItem() {
         category: category,
         image: finalImg,
         available: document.getElementById('itemAvailable').checked,
-        updated_at: firebase.firestore.FieldValue.serverTimestamp()
+        updated_at: now
     };
 
     var ref;
     var promise;
+    var docId;
+    var isCreate = !itemId;
     if (itemId) {
+        docId = itemId;
         ref = db.collection('menuItems').doc(itemId);
-        promise = ref.update(itemData);
+        promise = ref.update(Object.assign({}, plainData, {
+            updated_at: firebase.firestore.FieldValue.serverTimestamp()
+        }));
     } else {
         ref = db.collection('menuItems').doc();
-        itemData.created_at = firebase.firestore.FieldValue.serverTimestamp();
-        promise = ref.set(itemData);
+        docId = ref.id;
+        plainData.created_at = now;
+        promise = ref.set(Object.assign({}, plainData, {
+            created_at: firebase.firestore.FieldValue.serverTimestamp(),
+            updated_at: firebase.firestore.FieldValue.serverTimestamp()
+        }));
     }
 
-    applyWrite(promise, function (offline) {
-        upsertCachedMenuItem(ref.id, itemData);
+    var saveBtn = document.querySelector('#itemForm button[type="submit"]');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.dataset.prevText = saveBtn.textContent; saveBtn.textContent = '…'; }
+
+    function finishSave(offline) {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = saveBtn.dataset.prevText || S.saveItem;
+        }
+        upsertCachedMenuItem(docId, plainData);
         document.getElementById('itemModal').classList.remove('active');
         activeItemModal = null;
         hydrateItemsUiFromCache();
         alert(offline ? S.itemSavedOffline : S.itemSavedCloud);
-    }, function (err) {
+    }
+
+    function failSave(err) {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = saveBtn.dataset.prevText || S.saveItem;
+        }
         alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
-    }, MENU_SYNC_WRITE);
+    }
+
+    applyMenuCloudWrite({
+        collection: 'menuItems',
+        docId: docId,
+        isCreate: isCreate,
+        sdkPromise: promise,
+        plainData: plainData,
+        onDone: finishSave,
+        onError: failSave
+    });
 }
 
 function editItem(itemId) {
@@ -2018,12 +2196,23 @@ function editItem(itemId) {
 function deleteItem(itemId) {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     if (!confirm(S.deleteConfirm)) return;
-    applyWrite(db.collection('menuItems').doc(itemId).delete(), function () {
-        removeCachedMenuItem(itemId);
-        hydrateItemsUiFromCache();
-    }, function (err) {
-        alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
-    }, MENU_SYNC_WRITE);
+    if (!isAdminAuthenticated()) {
+        alert(S.itemSyncFailed + '\nPlease log in again.');
+        return;
+    }
+    applyMenuCloudWrite({
+        collection: 'menuItems',
+        docId: itemId,
+        isDelete: true,
+        sdkPromise: db.collection('menuItems').doc(itemId).delete(),
+        onDone: function () {
+            removeCachedMenuItem(itemId);
+            hydrateItemsUiFromCache();
+        },
+        onError: function (err) {
+            alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
+        }
+    });
 }
 
 /* ============ CATEGORIES ============ */
@@ -2342,34 +2531,49 @@ function saveCategory() {
     var finalImg = imgUrl || placeholderImg;
 
     var categoryId = document.getElementById('categoryId').value;
-    var categoryData = {
+    var now = new Date().toISOString();
+    var plainData = {
         name_ku: nameKu,
         name_ar: nameAr,
         name_en: nameEn,
         image: finalImg,
-        updated_at: firebase.firestore.FieldValue.serverTimestamp()
+        updated_at: now
     };
 
     var promise;
     var savedId = categoryId;
+    var isCreate = !categoryId;
     if (categoryId) {
-        promise = db.collection('categories').doc(categoryId).set(categoryData, { merge: true });
+        promise = db.collection('categories').doc(categoryId).set(Object.assign({}, plainData, {
+            updated_at: firebase.firestore.FieldValue.serverTimestamp()
+        }), { merge: true });
     } else {
-        categoryData.created_at = firebase.firestore.FieldValue.serverTimestamp();
+        plainData.created_at = now;
         var newRef = db.collection('categories').doc();
         savedId = newRef.id;
-        promise = newRef.set(categoryData);
+        promise = newRef.set(Object.assign({}, plainData, {
+            created_at: firebase.firestore.FieldValue.serverTimestamp(),
+            updated_at: firebase.firestore.FieldValue.serverTimestamp()
+        }));
     }
 
-    applyWrite(promise, function (offline) {
-        upsertCachedCategory(savedId, categoryData);
-        document.getElementById('categoryModal').classList.remove('active');
-        renderCategoriesListNow();
-        loadCategoriesDropdown();
-        alert(offline ? S.categorySavedOffline : S.categorySavedCloud);
-    }, function (err) {
-        alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
-    }, MENU_SYNC_WRITE);
+    applyMenuCloudWrite({
+        collection: 'categories',
+        docId: savedId,
+        isCreate: isCreate,
+        sdkPromise: promise,
+        plainData: plainData,
+        onDone: function (offline) {
+            upsertCachedCategory(savedId, plainData);
+            document.getElementById('categoryModal').classList.remove('active');
+            renderCategoriesListNow();
+            loadCategoriesDropdown();
+            alert(offline ? S.categorySavedOffline : S.categorySavedCloud);
+        },
+        onError: function (err) {
+            alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
+        }
+    });
 }
 
 function openCategoryModalWith(categoryId, cat, isNew) {
