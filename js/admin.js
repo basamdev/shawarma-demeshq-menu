@@ -256,7 +256,7 @@ function warmAdminOfflineCache(done) {
     });
 }
 
-var ADMIN_VERSION = 'v78';
+var ADMIN_VERSION = 'v79';
 
 function getDashboardMonth() {
     var sel = document.getElementById('dashboardMonthSelect');
@@ -287,6 +287,53 @@ function hydrateAdminFromLocalCache() {
     var expenses = readCachedExpenses();
     if (sales.length > 0) _adminSalesLive = sales;
     if (expenses.length > 0) _adminExpensesLive = expenses;
+}
+
+function isFirestoreCacheEmptySnap(snap) {
+    return !!(snap && snap.empty && snap.metadata && snap.metadata.fromCache);
+}
+
+function fetchPublicCollectionViaRest(collectionName, timeoutMs) {
+    timeoutMs = timeoutMs || 12000;
+    var cfg = window.firebaseConfig;
+    if (!cfg || !cfg.projectId || !cfg.apiKey) {
+        return Promise.reject(new Error('No config'));
+    }
+    var url = 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(cfg.projectId) +
+        '/databases/(default)/documents/' + encodeURIComponent(collectionName) +
+        '?key=' + encodeURIComponent(cfg.apiKey);
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = null;
+    var opts = { cache: 'no-store' };
+    if (controller) {
+        timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+        opts.signal = controller.signal;
+    }
+    return fetch(url, opts).then(function (r) {
+        if (timer) clearTimeout(timer);
+        if (!r.ok) throw new Error('REST HTTP ' + r.status);
+        return r.json();
+    }).then(parseRestDocuments).catch(function (e) {
+        if (timer) clearTimeout(timer);
+        throw e;
+    });
+}
+
+function fetchMenuItemsForAdmin(timeoutMs) {
+    if (typeof fetchMenuViaRest === 'function') {
+        return fetchMenuViaRest(timeoutMs || 12000);
+    }
+    return fetchPublicCollectionViaRest('menuItems', timeoutMs).then(function (docs) {
+        return docs.map(function (d) {
+            return Object.assign({ id: d.id }, d.data || {});
+        });
+    });
+}
+
+function fetchCategoriesForAdmin(timeoutMs) {
+    return fetchPublicCollectionViaRest('categories', timeoutMs).then(function (docs) {
+        return docs.map(function (d) { return { id: d.id, data: d.data || {} }; });
+    });
 }
 
 function restFieldValue(field) {
@@ -1209,7 +1256,9 @@ function startItemsListener() {
 
     function applyItemsSnap(snap) {
         if (snap.empty) {
-            hydrateItemsUiFromCache();
+            if (hydrateItemsUiFromCache()) return;
+            if (isFirestoreCacheEmptySnap(snap)) return;
+            clearAdminLoadingEl('itemsList', '<p>' + S.noItemsFound + '</p>');
             return;
         }
         _itemsSnapDocs = collectItemDocsFromSnap(snap);
@@ -1245,6 +1294,17 @@ function startItemsListener() {
             clearAdminLoadingEl('itemsList', '<p style="color:#C62828;">' + S.errorPrefix + (S.menuConnectionHint || 'Check connection') + '</p>');
         }
     });
+
+    if (navigator.onLine) {
+        fetchMenuItemsForAdmin(12000).then(function (items) {
+            if (!items || !items.length) return;
+            writeCachedMenuItemsFlat(items);
+            hydrateItemsUiFromCache();
+            loadCategoryFilter();
+        }).catch(function (e) {
+            console.warn('[admin items] REST fallback:', e.message || e);
+        });
+    }
 
     setTimeout(function () {
         if (!adminSectionStillLoading('itemsList')) return;
@@ -2073,6 +2133,17 @@ function loadCategoriesList() {
         renderCategoriesListNow();
     });
 
+    if (navigator.onLine) {
+        fetchCategoriesForAdmin(12000).then(function (cats) {
+            if (!cats || !cats.length) return;
+            var merged = mergeCategoryLists(cats, readCachedCategories());
+            localStorage.setItem('cachedCategories', JSON.stringify(merged));
+            renderCategoriesListNow();
+        }).catch(function (e) {
+            console.warn('[admin categories] REST fallback:', e.message || e);
+        });
+    }
+
     adminGetWithTimeout(db.collection('menuItems'), 8000).then(function (snap) {
         var names = {};
         snap.forEach(function (d) { var c = (d.data() || {}).category; if (c) names[c] = true; });
@@ -2082,6 +2153,16 @@ function loadCategoriesList() {
 
     stopCategoriesListener();
     categoriesUnsubscribe = db.collection('categories').onSnapshot(function (snap) {
+        if (snap.empty) {
+            if (isFirestoreCacheEmptySnap(snap)) {
+                renderCategoriesListNow();
+                return;
+            }
+            var haveEmpty = {};
+            readCachedCategories().forEach(function (c) { haveEmpty[c.id] = true; });
+            renderCategoriesTable(mergeMenuCategories(readCachedCategories(), haveEmpty));
+            return;
+        }
         var fromServer = [];
         snap.forEach(function (doc) {
             fromServer.push({ id: doc.id, data: doc.data() });
@@ -2502,6 +2583,32 @@ function wireCashierOrderToggle() {
     }
 }
 
+function applyCashierItemsSnap(snap) {
+    if (snap.empty) {
+        if (getCashierItemsFromLocalStorage().length > 0) {
+            loadCashierItemsFromCache();
+            return;
+        }
+        if (isFirestoreCacheEmptySnap(snap)) return;
+        showCashierEmptyState();
+        return;
+    }
+    var items = normalizeCashierItems(snap);
+    localStorage.setItem('cachedCashierItems', JSON.stringify(items));
+    var menuCache = [];
+    snap.forEach(function (d) {
+        menuCache.push(Object.assign({ id: d.id }, d.data()));
+    });
+    writeCachedMenuItemsFlat(menuCache);
+    refreshCategoriesCache(function () {
+        if (items.length > 0) {
+            renderCashierProducts(items);
+        } else {
+            showCashierEmptyState();
+        }
+    });
+}
+
 function loadCashierItems() {
     var grid = document.getElementById('cashierGrid');
     var cachedItems = getCashierItemsFromLocalStorage();
@@ -2519,32 +2626,31 @@ function loadCashierItems() {
 
     stopCashierListener();
 
-    adminGetWithTimeout(db.collection('menuItems'), 8000).then(function (snap) {
-        var items = normalizeCashierItems(snap);
-        localStorage.setItem('cachedCashierItems', JSON.stringify(items));
-        refreshCategoriesCache(function () {
-            if (items.length > 0) {
-                renderCashierProducts(items);
-            } else {
-                showCashierEmptyState();
-            }
-        });
-    }).catch(function (e) {
+    adminGetWithTimeout(db.collection('menuItems'), 8000).then(applyCashierItemsSnap).catch(function (e) {
         console.warn('[cashier] get failed:', e.message);
         loadCashierItemsFromCache();
     });
 
-    cashierUnsubscribe = db.collection('menuItems').onSnapshot(function (snap) {
-        var items = normalizeCashierItems(snap);
-        localStorage.setItem('cachedCashierItems', JSON.stringify(items));
-        refreshCategoriesCache(function () {
-            if (items.length > 0) {
-                renderCashierProducts(items);
-            } else {
-                showCashierEmptyState();
-            }
+    if (navigator.onLine) {
+        fetchMenuItemsForAdmin(12000).then(function (flatItems) {
+            if (!flatItems || !flatItems.length) return;
+            writeCachedMenuItemsFlat(flatItems);
+            var items = flatItems.filter(function (it) {
+                return it && it.available !== false && it.category !== 'Water';
+            }).map(function (it) {
+                var v = Object.assign({}, it);
+                var id = v.id;
+                delete v.id;
+                return { id: id, v: v };
+            });
+            localStorage.setItem('cachedCashierItems', JSON.stringify(items));
+            if (items.length > 0) renderCashierProducts(items);
+        }).catch(function (e) {
+            console.warn('[cashier] REST fallback:', e.message || e);
         });
-    }, function (e) {
+    }
+
+    cashierUnsubscribe = db.collection('menuItems').onSnapshot(applyCashierItemsSnap, function (e) {
         console.error('Error loading cashier items:', e);
         loadCashierItemsFromCache();
     });

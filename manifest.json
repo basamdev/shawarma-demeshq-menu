@@ -3,34 +3,22 @@
   "name": "Ali Coffee",
   "short_name": "Ali Coffee",
   "description": "Ali Coffee — Premium Coffee House Menu",
-  "start_url": "./index.html",
+  "start_url": "./admin.html",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "background_color": "#F5EDE3",
-  "theme_color": "#5C4033",
-  "orientation": "portrait-primary",
+  "background_color": "#111111",
+  "theme_color": "#D4AF37",
+  "orientation": "any",
   "icons": [
     {
-      "src": "assets/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "assets/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "assets/icon-512.png",
+      "src": "assets/logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/icon-maskable-512.png",
+      "src": "assets/logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

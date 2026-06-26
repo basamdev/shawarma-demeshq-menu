@@ -353,7 +353,12 @@ body {
     color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
+    padding-top: env(safe-area-inset-top, 0);
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -598,6 +603,10 @@ body {
     padding-bottom: 20px;
     border-bottom: 1px solid var(--border);
     gap: 12px;
+    flex-wrap: nowrap;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .admin-header-left {
@@ -605,6 +614,15 @@ body {
     align-items: center;
     gap: 12px;
     min-width: 0;
+    flex: 1 1 auto;
+}
+
+.admin-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    flex-shrink: 0;
 }
 
 .admin-title {
@@ -617,13 +635,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-.admin-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-shrink: 0;
+    min-width: 0;
 }
 
 .admin-lang-switcher {
@@ -3198,4 +3210,41 @@ body.light-mode[dir="rtl"] .admin-sidebar {
     .form-row {
         grid-template-columns: 1fr;
     }
+}
+
+/* PWA / iPhone standalone + RTL drawer */
+@media (max-width: 1024px) {
+    html[dir="rtl"] .admin-sidebar {
+        left: auto;
+        right: 0;
+        transform: translateX(100%);
+        border-right: none;
+        border-left: 1px solid var(--border);
+    }
+
+    html[dir="rtl"] .admin-sidebar.open {
+        transform: translateX(0);
+    }
+}
+
+@media (display-mode: standalone) {
+    .admin-header {
+        padding-top: max(4px, env(safe-area-inset-top, 0));
+    }
+
+    .admin-main {
+        padding-top: max(12px, env(safe-area-inset-top, 0));
+    }
+}
+
+html[dir="rtl"] .admin-header {
+    direction: rtl;
+}
+
+html[dir="rtl"] .admin-header-left {
+    flex-direction: row;
+}
+
+html[dir="rtl"] .nav-item {
+    text-align: right;
 }
