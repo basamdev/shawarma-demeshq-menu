@@ -633,10 +633,15 @@ function startItemsListener() {
         var cat = catEl ? catEl.value : 'all';
         renderItemsList(filterItemDocs(_itemsSnapDocs, searchTerm, cat));
 
-        var cacheItems = [];
-        snap.forEach(function (d) { cacheItems.push({ id: d.id, v: d.data() }); });
-        localStorage.setItem('cachedCashierItems', JSON.stringify(cacheItems));
-        localStorage.setItem('cachedMenuItems', JSON.stringify(cacheItems));
+        var cashierCache = [];
+        var menuCache = [];
+        snap.forEach(function (d) {
+            var data = d.data();
+            cashierCache.push({ id: d.id, v: data });
+            menuCache.push(Object.assign({ id: d.id }, data));
+        });
+        localStorage.setItem('cachedCashierItems', JSON.stringify(cashierCache));
+        localStorage.setItem('cachedMenuItems', JSON.stringify(menuCache));
     }, function (e) {
         console.error('Items listener error:', e);
         loadItemsList();

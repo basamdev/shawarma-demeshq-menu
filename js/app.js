@@ -667,6 +667,59 @@ function parseMenuItemsFromSnapshot(snapshot) {
     return items;
 }
 
+function normalizeMenuItemEntry(item) {
+    if (!item || !item.id) return null;
+    if (item.v && typeof item.v === 'object') {
+        return Object.assign({ id: item.id }, item.v);
+    }
+    return item;
+}
+
+function normalizeMenuItemsList(items) {
+    if (!Array.isArray(items)) return [];
+    return items.map(normalizeMenuItemEntry).filter(function (item) {
+        return item && item.category && item.category !== 'Water';
+    });
+}
+
+function waitForFirebaseDb(maxMs) {
+    maxMs = maxMs || 8000;
+    if (window.dbReady) {
+        return Promise.race([
+            window.dbReady,
+            new Promise(function (_, reject) {
+                setTimeout(function () { reject(new Error('Firebase timeout')); }, maxMs);
+            })
+        ]);
+    }
+    return new Promise(function (resolve, reject) {
+        if (window.db) {
+            resolve(window.db);
+            return;
+        }
+        var start = Date.now();
+        var timer = setInterval(function () {
+            if (window.db) {
+                clearInterval(timer);
+                resolve(window.db);
+            } else if (Date.now() - start > maxMs) {
+                clearInterval(timer);
+                reject(new Error('Firebase not loaded'));
+            }
+        }, 50);
+    });
+}
+
+function firestoreGetWithTimeout(ref, ms) {
+    ms = ms || 8000;
+    return Promise.race([
+        ref.get(),
+        new Promise(function (_, reject) {
+            setTimeout(function () { reject(new Error('Connection timeout')); }, ms);
+        })
+    ]);
+}
+
 function menuItemsSignature(items) {
     if (!items || !items.length) return '';
     return items.map(function (i) {
@@ -690,7 +743,7 @@ function computeCategoryBarSig(categories, items, lang) {
 async function loadCategoriesFromFirebase() {
     if (!window.db) return false;
     try {
-        const catSnap = await window.db.collection('categories').get();
+        const catSnap = await firestoreGetWithTimeout(window.db.collection('categories'), 8000);
         const categories = [];
         catSnap.forEach(doc => {
             categories.push({ id: doc.id, data: doc.data() });
@@ -748,7 +801,7 @@ function showCachedMenuIfAvailable() {
     if (!cached) return false;
 
     try {
-        const items = JSON.parse(cached);
+        const items = normalizeMenuItemsList(JSON.parse(cached));
         if (!items.length) return false;
 
         cachedMenuItems = items;
@@ -780,7 +833,7 @@ async function loadMenuItems() {
         if (!_menuUiReady && container.querySelector('.loading-menu')) {
             fetchMenuItemsFallback(strings, 'timeout');
         }
-    }, 12000);
+    }, 5000);
 
     const hadCache = showCachedMenuIfAvailable();
     if (!hadCache) {
@@ -788,12 +841,17 @@ async function loadMenuItems() {
     }
 
     try {
-        if (!window.db) throw new Error('Firebase database not initialized');
+        await waitForFirebaseDb(8000);
 
-        const categoriesChanged = await loadCategoriesFromFirebase();
-        if (categoriesChanged && cachedMenuItems.length > 0) {
-            renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
-        }
+        // Do not block menu on categories — load in background.
+        loadCategoriesFromFirebase().then(function (categoriesChanged) {
+            if (categoriesChanged && cachedMenuItems.length > 0) {
+                renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
+            }
+        }).catch(function () {});
+
+        // Primary path: one-shot fetch (works when onSnapshot hangs on mobile hosts).
+        fetchMenuItemsFallback(strings, 'initial-get');
 
         if (loadMenuItems._unsubscribe) loadMenuItems._unsubscribe();
         loadMenuItems._unsubscribe = window.db.collection('menuItems').onSnapshot(
@@ -830,6 +888,11 @@ function showMenuLoadError(strings, error) {
     var msg = (error && error.message) ? error.message : '';
     if (msg.indexOf('permission') !== -1 || msg.indexOf('Missing or insufficient') !== -1) {
         msg = strings.menuConnectionHint;
+    } else if (msg.indexOf('timeout') !== -1 || msg.indexOf('Timeout') !== -1) {
+        msg = strings.menuConnectionHint;
+    }
+    if (!msg && window.location && window.location.hostname) {
+        msg = strings.menuConnectionHint + ' (' + window.location.hostname + ')';
     }
     container.innerHTML =
         '<div class="empty-state">' +
@@ -850,7 +913,7 @@ function showMenuLoadError(strings, error) {
 
 function fetchMenuItemsFallback(strings, reason) {
     if (!window.db || _menuUiReady) return;
-    window.db.collection('menuItems').get().then(function (snap) {
+    firestoreGetWithTimeout(window.db.collection('menuItems'), 8000).then(function (snap) {
         if (loadMenuItems._loadTimer) {
             clearTimeout(loadMenuItems._loadTimer);
             loadMenuItems._loadTimer = null;
@@ -870,7 +933,7 @@ function loadFromCache() {
     var cached = localStorage.getItem('cachedMenuItems');
     if (cached) {
         try {
-            var items = JSON.parse(cached);
+            var items = normalizeMenuItemsList(JSON.parse(cached));
             cachedMenuItems = items;
             _lastMenuItemsSignature = menuItemsSignature(items);
             console.log('Loaded from cache:', items.length);

@@ -38,6 +38,28 @@ try {
     console.warn('Firestore settings:', error);
 }
 
+// Let the app know when Firestore is ready (persistence is optional).
+window.dbReady = Promise.resolve(db);
+try {
+    window.dbReady = db.enablePersistence({ synchronizeTabs: true })
+        .then(function () {
+            console.log('Firestore offline persistence enabled (multi-tab)');
+            return db;
+        })
+        .catch(function (error) {
+            if (error.code === 'failed-precondition') {
+                console.log('Persistence unavailable (another tab owns it) — running online only.');
+            } else if (error.code === 'unimplemented') {
+                console.log('Persistence not supported by browser');
+            } else {
+                console.error('Persistence error:', error);
+            }
+            return db;
+        });
+} catch (error) {
+    console.error('Persistence setup error:', error);
+}
+
 // Firebase Storage is not used in this app; images are stored as public URL strings.
 let storage = null;
 
@@ -70,23 +92,3 @@ auth.onAuthStateChanged((user) => {
         console.log('User is signed out');
     }
 });
-
-// Enable Firestore offline persistence with multi-tab support so having the
-// site open in more than one tab doesn't throw "failed-precondition".
-try {
-    db.enablePersistence({ synchronizeTabs: true })
-        .then(() => {
-            console.log('Firestore offline persistence enabled (multi-tab)');
-        })
-        .catch((error) => {
-            if (error.code === 'failed-precondition') {
-                console.log('Persistence unavailable (another tab owns it) — running online only.');
-            } else if (error.code === 'unimplemented') {
-                console.log('Persistence not supported by browser');
-            } else {
-                console.error('Persistence error:', error);
-            }
-        });
-} catch (error) {
-    console.error('Persistence setup error:', error);
-}
