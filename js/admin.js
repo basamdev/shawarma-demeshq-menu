@@ -252,7 +252,46 @@ function warmAdminOfflineCache(done) {
     });
 }
 
-var ADMIN_VERSION = 'v74';
+var ADMIN_VERSION = 'v75';
+
+function isAdminAuthenticated() {
+    return !!(window.auth && auth.currentUser);
+}
+
+var _adminAuthInitialized = false;
+window.adminAuthReady = new Promise(function (resolve) {
+    if (!window.auth) {
+        resolve(null);
+        return;
+    }
+    auth.onAuthStateChanged(function (user) {
+        if (!_adminAuthInitialized) {
+            _adminAuthInitialized = true;
+            resolve(user);
+        }
+        if (user) {
+            warmAdminOfflineCache();
+            refreshAdminCurrentSection();
+        } else if (navigator.onLine) {
+            window.location.href = 'login.html';
+        }
+    });
+});
+
+function whenAdminReady(fn) {
+    var dbP = window.dbReady || Promise.resolve(window.db);
+    return Promise.all([dbP, window.adminAuthReady]).then(function (results) {
+        if (typeof fn === 'function') fn(results[1]);
+    });
+}
+
+/** Plain Firestore read for sales/expenses — only after login (rules require auth). */
+function adminProtectedGet(queryOrRef) {
+    if (!isAdminAuthenticated()) {
+        return Promise.reject(new Error('Not signed in'));
+    }
+    return queryOrRef.get();
+}
 
 function adminGetWithTimeout(queryOrRef, ms) {
     ms = ms || (navigator.onLine ? 25000 : 10000);
@@ -306,15 +345,7 @@ function refreshAdminCurrentSection() {
 }
 
 function whenAdminDbReady(fn) {
-    var ready = window.dbReady || Promise.resolve(window.db);
-    return Promise.race([
-        ready,
-        new Promise(function (resolve) {
-            setTimeout(function () { resolve(window.db); }, 5000);
-        })
-    ]).then(function () {
-        if (typeof fn === 'function') fn();
-    });
+    return whenAdminReady(fn);
 }
 
 function clearAdminLoadingEl(elementId, html) {
@@ -399,18 +430,6 @@ document.addEventListener('DOMContentLoaded', function () {
             loadExpensesList(expMonth);
         }
     });
-
-    if (window.auth) {
-        auth.onAuthStateChanged(function (user) {
-            if (user) {
-                warmAdminOfflineCache();
-                return;
-            }
-            // Stay on admin when offline — auth session may still exist locally.
-            if (!navigator.onLine) return;
-            window.location.href = 'login.html';
-        });
-    }
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(function () {});
@@ -506,7 +525,7 @@ function initAdminPanel() {
 
     var defaultBtn = document.querySelector('.admin-nav-btn.active');
     if (defaultBtn) {
-        whenAdminDbReady(function () {
+        whenAdminReady(function () {
             loadAdminSection(defaultBtn.getAttribute('data-section'));
         });
     }
@@ -700,6 +719,7 @@ function stopDashboardListeners() {
 function startDashboardListeners(month) {
     stopDashboardListeners();
     if (!window.db || !document.getElementById('dashboardMonthSelect')) return;
+    if (!isAdminAuthenticated()) return;
     if (month === undefined || month === null) {
         var sel = document.getElementById('dashboardMonthSelect');
         month = sel ? parseInt(sel.value, 10) : new Date().getMonth();
@@ -745,50 +765,42 @@ function loadDashboardStats(month) {
     var mEnd = new Date(year, month + 1, 1);
 
     document.getElementById('dailySalesMonthLabel').textContent = getMonthName(month, S);
-    paintDashboardFromCache(month);
 
-    function applyTodayStats(salesTotal, orderCount, expTotal) {
-        var el = document.getElementById('todaySales');
-        if (el) el.textContent = salesTotal.toLocaleString() + ' IQD';
-        var elOrders = document.getElementById('todayOrders');
-        if (elOrders) elOrders.textContent = orderCount.toString();
-        var elExp = document.getElementById('todayExpenses');
-        if (elExp) elExp.textContent = expTotal.toLocaleString() + ' IQD';
-        var elNet = document.getElementById('todayNet');
-        if (elNet) elNet.textContent = (salesTotal - expTotal).toLocaleString() + ' IQD';
+    if (!isAdminAuthenticated()) {
+        paintDashboardFromCache(month);
+        return;
     }
 
-    function applyMonthlyExpenseStats(expTotal, monthlyTotal) {
-        var elExp = document.getElementById('monthlyExpenses');
-        if (elExp) elExp.textContent = expTotal.toLocaleString() + ' IQD';
-        var elNet = document.getElementById('monthlyNet');
-        if (elNet) elNet.textContent = ((monthlyTotal || 0) - expTotal).toLocaleString() + ' IQD';
-    }
-
-    adminGetWithTimeout(db.collection('sales').where('timestamp', '>=', today).where('timestamp', '<', tomorrow)).then(function (snap) {
+    adminProtectedGet(db.collection('sales').where('timestamp', '>=', today).where('timestamp', '<', tomorrow)).then(function (snap) {
         mergeSalesSnapIntoCache(snap);
         var total = 0;
         snap.forEach(function (d) { total += (d.data().total || 0); });
-        var orderCount = snap.size;
+        var el = document.getElementById('todaySales');
+        if (el) el.textContent = total.toLocaleString() + ' IQD';
+        var elOrders = document.getElementById('todayOrders');
+        if (elOrders) elOrders.textContent = snap.size.toString();
 
-        adminGetWithTimeout(db.collection('expenses').where('timestamp', '>=', today).where('timestamp', '<', tomorrow)).then(function (expSnap) {
+        adminProtectedGet(db.collection('expenses').where('timestamp', '>=', today).where('timestamp', '<', tomorrow)).then(function (expSnap) {
             mergeExpensesSnapIntoCache(expSnap);
             var expTotal = 0;
             expSnap.forEach(function (d) { expTotal += (d.data().price || 0); });
-            applyTodayStats(total, orderCount, expTotal);
-        }).catch(function () {
-            applyTodayStats(total, orderCount, sumExpensesInRange(today, tomorrow));
+            var elExp = document.getElementById('todayExpenses');
+            if (elExp) elExp.textContent = expTotal.toLocaleString() + ' IQD';
+            var elNet = document.getElementById('todayNet');
+            if (elNet) elNet.textContent = (total - expTotal).toLocaleString() + ' IQD';
+        }).catch(function (e) {
+            console.error('[dashboard] today expenses:', e.message || e);
         });
-    }).catch(function () {
-        var cached = sumSalesInRange(today, tomorrow);
-        applyTodayStats(cached.total, cached.count, sumExpensesInRange(today, tomorrow));
+    }).catch(function (e) {
+        console.error('[dashboard] today sales:', e.message || e);
+        if (!navigator.onLine) paintDashboardFromCache(month);
     });
 
     var monthlyTotal = 0;
     var dayTotals = {};
     var itemCounts = {};
 
-    adminGetWithTimeout(db.collection('sales').where('timestamp', '>=', mStart).where('timestamp', '<', mEnd)).then(function (snap) {
+    adminProtectedGet(db.collection('sales').where('timestamp', '>=', mStart).where('timestamp', '<', mEnd)).then(function (snap) {
         mergeSalesSnapIntoCache(snap);
         snap.forEach(function (d) {
             var sale = d.data();
@@ -838,18 +850,23 @@ function loadDashboardStats(month) {
         var container = document.getElementById('dailySalesContainer');
         if (container) container.innerHTML = html;
 
-        adminGetWithTimeout(db.collection('expenses').where('timestamp', '>=', mStart).where('timestamp', '<', mEnd)).then(function (expSnap) {
+        adminProtectedGet(db.collection('expenses').where('timestamp', '>=', mStart).where('timestamp', '<', mEnd)).then(function (expSnap) {
             mergeExpensesSnapIntoCache(expSnap);
             var expTotal = 0;
             expSnap.forEach(function (d) { expTotal += (d.data().price || 0); });
-            applyMonthlyExpenseStats(expTotal, monthlyTotal);
-        }).catch(function () {
-            applyMonthlyExpenseStats(sumExpensesInRange(mStart, mEnd), monthlyTotal);
+            var elExp = document.getElementById('monthlyExpenses');
+            if (elExp) elExp.textContent = expTotal.toLocaleString() + ' IQD';
+            var elNet = document.getElementById('monthlyNet');
+            if (elNet) elNet.textContent = (monthlyTotal - expTotal).toLocaleString() + ' IQD';
+        }).catch(function (e) {
+            console.error('[dashboard] monthly expenses:', e.message || e);
         });
-    }).catch(function () {
-        paintDashboardFromCache(month);
-        if (!readCachedSales().length) {
-            clearAdminLoadingEl('dailySalesContainer', '<p style="color:#888;padding:16px;">' + S.noSalesData + '</p>');
+    }).catch(function (e) {
+        console.error('[dashboard] monthly sales:', e.message || e);
+        if (!navigator.onLine) {
+            paintDashboardFromCache(month);
+        } else {
+            clearAdminLoadingEl('dailySalesContainer', '<p style="color:#C62828;padding:16px;">' + S.errorPrefix + (e.message || 'Could not load sales') + '</p>');
         }
     });
 }
@@ -859,28 +876,27 @@ function loadRecentSales() {
     var container = document.getElementById('recentSalesContainer');
     if (!container) return;
 
-    var cached = readCachedSales().slice().sort(function (a, b) {
-        return saleTimestampToMs(b) - saleTimestampToMs(a);
-    }).slice(0, 5);
-    if (cached.length > 0) {
-        renderRecentSalesTable(cached, S, container);
+    if (!isAdminAuthenticated()) {
+        var cached = readCachedSales().slice().sort(function (a, b) {
+            return saleTimestampToMs(b) - saleTimestampToMs(a);
+        }).slice(0, 5);
+        if (cached.length > 0) renderRecentSalesTable(cached, S, container);
+        else container.innerHTML = '<p style="color:#888;padding:16px;">' + S.noSalesData + '</p>';
+        return;
     }
 
-    adminGetWithTimeout(db.collection('sales').orderBy('timestamp', 'desc').limit(5)).then(function (snap) {
+    adminProtectedGet(db.collection('sales').orderBy('timestamp', 'desc').limit(5)).then(function (snap) {
         mergeSalesSnapIntoCache(snap);
         if (snap.empty) {
-            if (cached.length === 0) {
-                container.innerHTML = '<p style="color:#888;padding:16px;">' + S.noSalesYet + '</p>';
-            }
+            container.innerHTML = '<p style="color:#888;padding:16px;">' + S.noSalesYet + '</p>';
             return;
         }
         var rows = [];
         snap.forEach(function (doc) { rows.push(saleEntryFromDoc(doc)); });
         renderRecentSalesTable(rows, S, container);
-    }).catch(function () {
-        if (cached.length === 0) {
-            container.innerHTML = '<p style="color:#888;padding:16px;">' + S.noSalesData + '</p>';
-        }
+    }).catch(function (e) {
+        console.error('[dashboard] recent sales:', e.message || e);
+        container.innerHTML = '<p style="color:#C62828;padding:16px;">' + S.errorPrefix + (e.message || '') + '</p>';
     });
 }
 
@@ -3463,7 +3479,6 @@ function resetAllData() {
  function loadExpensesStats(month) {
      if (month === undefined || month === null) month = new Date().getMonth();
      var year = new Date().getFullYear();
-     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
 
      var today = new Date();
      today.setHours(0, 0, 0, 0);
@@ -3473,19 +3488,23 @@ function resetAllData() {
      var mStart = new Date(year, month, 1);
      var mEnd = new Date(year, month + 1, 1);
 
-     paintExpensesStatsFromCache(month);
+     if (!isAdminAuthenticated()) {
+         paintExpensesStatsFromCache(month);
+         return;
+     }
 
-     adminGetWithTimeout(db.collection('expenses').where('timestamp', '>=', today).where('timestamp', '<', tomorrow)).then(function (snap) {
+     adminProtectedGet(db.collection('expenses').where('timestamp', '>=', today).where('timestamp', '<', tomorrow)).then(function (snap) {
          mergeExpensesSnapIntoCache(snap);
          var total = 0;
          snap.forEach(function (d) { total += (d.data().price || 0); });
          var el = document.getElementById('expTodayTotal');
          if (el) el.textContent = total.toLocaleString() + ' IQD';
-     }).catch(function () {
+     }).catch(function (e) {
+         console.error('[expenses] today stats:', e.message || e);
          paintExpensesStatsFromCache(month);
      });
 
-     adminGetWithTimeout(db.collection('expenses').where('timestamp', '>=', mStart).where('timestamp', '<', mEnd)).then(function (snap) {
+     adminProtectedGet(db.collection('expenses').where('timestamp', '>=', mStart).where('timestamp', '<', mEnd)).then(function (snap) {
          mergeExpensesSnapIntoCache(snap);
          var total = 0;
          var count = 0;
@@ -3497,7 +3516,8 @@ function resetAllData() {
          if (elM) elM.textContent = total.toLocaleString() + ' IQD';
          var elC = document.getElementById('expCount');
          if (elC) elC.textContent = count.toString();
-     }).catch(function () {
+     }).catch(function (e) {
+         console.error('[expenses] month stats:', e.message || e);
          paintExpensesStatsFromCache(month);
      });
  }
@@ -3508,21 +3528,15 @@ function resetAllData() {
      if (!list) return;
      var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
 
-     var cachedMonth = filterExpensesByMonth(readCachedExpenses(), month);
-     paintExpensesStatsFromCache(month);
-     if (cachedMonth.length > 0) {
-         renderExpensesList(month, cachedMonth);
-     } else {
-         list.innerHTML = '<div class="loading">Loading...</div>';
-     }
-
-     if (!window.db) {
-         if (cachedMonth.length === 0) renderExpensesList(month, []);
+     if (!isAdminAuthenticated()) {
+         renderExpensesList(month, filterExpensesByMonth(readCachedExpenses(), month));
          return;
      }
 
+     list.innerHTML = '<div class="loading">' + S.loading + '</div>';
+
      var range = getExpenseMonthRange(month);
-     adminGetWithTimeout(db.collection('expenses')
+     adminProtectedGet(db.collection('expenses')
          .where('timestamp', '>=', range.start)
          .where('timestamp', '<', range.end))
          .then(function (snap) {
@@ -3537,11 +3551,12 @@ function resetAllData() {
              renderExpensesList(month, monthEntries);
          })
          .catch(function (e) {
-             console.error('Error loading expenses:', e);
-             if (cachedMonth.length > 0) {
-                 renderExpensesList(month, cachedMonth);
+             console.error('[expenses] list:', e.message || e);
+             var cached = filterExpensesByMonth(readCachedExpenses(), month);
+             if (cached.length > 0) {
+                 renderExpensesList(month, cached);
              } else {
-                 renderExpensesList(month, filterExpensesByMonth(readCachedExpenses(), month));
+                 list.innerHTML = '<p style="color:#C62828;padding:16px;">' + S.errorPrefix + (e.message || 'Could not load expenses') + '</p>';
              }
          });
  }
