@@ -5,6 +5,9 @@ let activeItemModal = null;
 let cashierUnsubscribe = null;
 let cashierActiveFilter = 'all';
 let categoriesUnsubscribe = null;
+let itemsUnsubscribe = null;
+var dashboardUnsubscribes = [];
+var _itemsSnapDocs = [];
 
 function stopCategoriesListener() {
     if (categoriesUnsubscribe) {
@@ -55,6 +58,26 @@ document.addEventListener('DOMContentLoaded', function () {
     initAdminPanel();
     wireAdminLangButtons();
     initSidebar();
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState !== 'visible') return;
+        var activeBtn = document.querySelector('.admin-nav-btn.active');
+        if (!activeBtn) return;
+        var section = activeBtn.getAttribute('data-section');
+        if (section === 'dashboard' && document.getElementById('todaySales')) {
+            var sel = document.getElementById('dashboardMonthSelect');
+            var month = sel ? parseInt(sel.value, 10) : new Date().getMonth();
+            loadDashboardStats(month);
+            loadRecentSales();
+        } else if (section === 'items' && document.getElementById('itemsList')) {
+            loadItemsList();
+        } else if (section === 'expenses' && document.getElementById('expensesList')) {
+            var expSel = document.getElementById('expensesMonthSelect');
+            var expMonth = expSel ? parseInt(expSel.value, 10) : new Date().getMonth();
+            loadExpensesStats(expMonth);
+            loadExpensesList(expMonth);
+        }
+    });
 
     if (window.auth) {
         auth.onAuthStateChanged(function (user) {
@@ -165,6 +188,12 @@ function loadAdminSection(section) {
     if (section !== 'categories') {
         stopCategoriesListener();
     }
+    if (section !== 'dashboard') {
+        stopDashboardListeners();
+    }
+    if (section !== 'items') {
+        stopItemsListener();
+    }
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     var adminContent = document.getElementById('adminContent');
     if (!adminContent) return;
@@ -238,11 +267,55 @@ function loadDashboard() {
     var monthSelect = document.getElementById('dashboardMonthSelect');
     if (monthSelect) {
         monthSelect.addEventListener('change', function () {
-            loadDashboardStats(parseInt(this.value, 10));
+            var m = parseInt(this.value, 10);
+            loadDashboardStats(m);
+            startDashboardListeners(m);
         });
     }
     loadDashboardStats(currentMonth);
     loadRecentSales();
+    startDashboardListeners(currentMonth);
+}
+
+function stopDashboardListeners() {
+    dashboardUnsubscribes.forEach(function (unsub) {
+        try { unsub(); } catch (e) { /* ignore */ }
+    });
+    dashboardUnsubscribes = [];
+}
+
+function startDashboardListeners(month) {
+    stopDashboardListeners();
+    if (!window.db || !document.getElementById('dashboardMonthSelect')) return;
+    if (month === undefined || month === null) {
+        var sel = document.getElementById('dashboardMonthSelect');
+        month = sel ? parseInt(sel.value, 10) : new Date().getMonth();
+    }
+    var year = new Date().getFullYear();
+    var mStart = new Date(year, month, 1);
+    var mEnd = new Date(year, month + 1, 1);
+
+    function refreshDashboard() {
+        if (!document.getElementById('todaySales')) return;
+        loadDashboardStats(month);
+        loadRecentSales();
+    }
+
+    var salesUnsub = db.collection('sales')
+        .where('timestamp', '>=', mStart)
+        .where('timestamp', '<', mEnd)
+        .onSnapshot(refreshDashboard, function (e) {
+            console.error('Dashboard sales listener error:', e);
+        });
+    dashboardUnsubscribes.push(salesUnsub);
+
+    var expUnsub = db.collection('expenses')
+        .where('timestamp', '>=', mStart)
+        .where('timestamp', '<', mEnd)
+        .onSnapshot(refreshDashboard, function (e) {
+            console.error('Dashboard expenses listener error:', e);
+        });
+    dashboardUnsubscribes.push(expUnsub);
 }
 
 function loadDashboardStats(month) {
@@ -508,10 +581,66 @@ function loadManageItems() {
                 '</div>' +
             '</div>' +
         '</div>';
-    loadItemsList();
     loadCategoriesDropdown();
     refreshCategoriesCache();
     wireItemEvents();
+    startItemsListener();
+}
+
+function stopItemsListener() {
+    if (itemsUnsubscribe) {
+        try { itemsUnsubscribe(); } catch (e) { /* ignore */ }
+        itemsUnsubscribe = null;
+    }
+    _itemsSnapDocs = [];
+}
+
+function collectItemDocsFromSnap(snap) {
+    var docs = [];
+    snap.forEach(function (d) {
+        var data = d.data();
+        if (data.category && data.category !== 'Water') docs.push(d);
+    });
+    return docs;
+}
+
+function filterItemDocs(docs, searchTerm, cat) {
+    var filtered = docs.slice();
+    if (searchTerm) {
+        var lang = localStorage.getItem('selectedLang') || 'ku';
+        var term = searchTerm.toLowerCase();
+        filtered = filtered.filter(function (d) {
+            var item = d.data();
+            var name = (item['name_' + lang] || item.name_en || '').toLowerCase();
+            return name.indexOf(term) !== -1;
+        });
+    }
+    if (cat && cat !== 'all') {
+        filtered = filtered.filter(function (d) { return d.data().category === cat; });
+    }
+    return filtered;
+}
+
+function startItemsListener() {
+    stopItemsListener();
+    if (!window.db || !document.getElementById('itemsList')) return;
+
+    itemsUnsubscribe = db.collection('menuItems').onSnapshot(function (snap) {
+        _itemsSnapDocs = collectItemDocsFromSnap(snap);
+        var searchEl = document.getElementById('itemSearch');
+        var catEl = document.getElementById('categoryFilter');
+        var searchTerm = searchEl ? searchEl.value : '';
+        var cat = catEl ? catEl.value : 'all';
+        renderItemsList(filterItemDocs(_itemsSnapDocs, searchTerm, cat));
+
+        var cacheItems = [];
+        snap.forEach(function (d) { cacheItems.push({ id: d.id, v: d.data() }); });
+        localStorage.setItem('cachedCashierItems', JSON.stringify(cacheItems));
+        localStorage.setItem('cachedMenuItems', JSON.stringify(cacheItems));
+    }, function (e) {
+        console.error('Items listener error:', e);
+        loadItemsList();
+    });
 }
 
 function loadItemsList() {
@@ -776,6 +905,10 @@ function wireItemEvents() {
 }
 
 function applyItemFilter(searchTerm, cat) {
+    if (_itemsSnapDocs.length > 0) {
+        renderItemsList(filterItemDocs(_itemsSnapDocs, searchTerm, cat));
+        return;
+    }
     db.collection('menuItems').get().then(function (snap) {
         var docs = snap.docs;
         if (searchTerm) {
@@ -1641,7 +1774,8 @@ function recordCashierSale(items) {
     var saleWrite = db.collection('sales').add({
         items: items.map(function (i) { return { name: i.name, price: i.price, quantity: i.quantity }; }),
         total: total,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        timestamp: firebase.firestore.Timestamp.fromDate(new Date()),
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
         cashier: (window.auth && auth.currentUser) ? auth.currentUser.email : S.unknown
     });
     applyWrite(saleWrite, function () {

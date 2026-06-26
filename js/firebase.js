@@ -27,6 +27,17 @@ try {
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// Mobile browsers / PWA (iOS Safari, in-app WebViews) often fail with WebChannel;
+// long polling is more reliable on hosted HTTPS sites (Vercel, Netlify).
+try {
+    db.settings({
+        experimentalForceLongPolling: true,
+        merge: true
+    });
+} catch (error) {
+    console.warn('Firestore settings:', error);
+}
+
 // Firebase Storage is not used in this app; images are stored as public URL strings.
 let storage = null;
 

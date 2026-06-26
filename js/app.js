@@ -42,6 +42,8 @@ const i18n = {
         noItems: 'هیچ شتێک نییە لە مێنوودا.',
         noCategoryItems: 'هیچ شتێک نییە لەم بەشەدا.',
         errorLoadingMenu: 'هەڵە لە داگرتنی مێنوودا.',
+        menuLoadRetry: 'دووبارە هەوڵبدەرەوە',
+        menuConnectionHint: 'پەیوەندی ئینتەرنێت یان ڕێکخستنی Firebase بپشکنە.',
         noCategories: 'هیچ بەشێک نییە.',
         pageTitle: 'عەلی کافێ | مێنوو',
         dashboard: 'داشبۆرد',
@@ -235,6 +237,8 @@ const i18n = {
         noItems: 'لا توجد عناصر في القائمة.',
         noCategoryItems: 'لا توجد عناصر في هذا القسم.',
         errorLoadingMenu: 'حدث خطأ أثناء تحميل القائمة.',
+        menuLoadRetry: 'إعادة المحاولة',
+        menuConnectionHint: 'تحقق من الإنترنت أو إعدادات Firebase.',
         noCategories: 'لا توجد أقسام.',
         pageTitle: 'علي كافيه | القائمة',
         dashboard: 'لوحة التحكم',
@@ -428,6 +432,8 @@ const i18n = {
         noItems: 'No menu items found.',
         noCategoryItems: 'No items in this category.',
         errorLoadingMenu: 'Error loading menu.',
+        menuLoadRetry: 'Try again',
+        menuConnectionHint: 'Check internet or Firebase settings for this domain.',
         noCategories: 'No categories.',
         pageTitle: 'Ali Coffee | Menu',
         dashboard: 'Dashboard',
@@ -764,7 +770,17 @@ async function loadMenuItems() {
     const container = document.getElementById('menuGrid');
     const lang = localStorage.getItem('selectedLang') || 'ku';
     const strings = i18n[lang] || i18n.en;
-    if (!container) return;
+    if (!container) {
+        loadMenuItems._inProgress = false;
+        return;
+    }
+
+    if (loadMenuItems._loadTimer) clearTimeout(loadMenuItems._loadTimer);
+    loadMenuItems._loadTimer = setTimeout(function () {
+        if (!_menuUiReady && container.querySelector('.loading-menu')) {
+            fetchMenuItemsFallback(strings, 'timeout');
+        }
+    }, 12000);
 
     const hadCache = showCachedMenuIfAvailable();
     if (!hadCache) {
@@ -782,26 +798,68 @@ async function loadMenuItems() {
         if (loadMenuItems._unsubscribe) loadMenuItems._unsubscribe();
         loadMenuItems._unsubscribe = window.db.collection('menuItems').onSnapshot(
             liveSnap => {
+                if (loadMenuItems._loadTimer) {
+                    clearTimeout(loadMenuItems._loadTimer);
+                    loadMenuItems._loadTimer = null;
+                }
                 applyMenuItemsUpdate(parseMenuItemsFromSnapshot(liveSnap));
             },
             err => {
                 console.warn('[realtime] error:', err.message);
-                if (isOffline) {
-                    loadFromCache();
-                }
+                handleMenuLoadFailure(err, strings);
             }
         );
     } catch (error) {
         console.error('Error loading menu:', error);
-        if (isOffline || error.message.includes('network')) {
-            loadFromCache();
-        } else if (!hadCache) {
-            container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>${strings.errorLoadingMenu}</p><p style="font-size:0.8rem;margin-top:8px">${error.message}</p></div>`;
-            renderCategories([], { forceRebuild: true, autoSelect: false });
-        }
+        handleMenuLoadFailure(error, strings, hadCache);
     } finally {
         loadMenuItems._inProgress = false;
     }
+}
+
+function handleMenuLoadFailure(error, strings, hadCache) {
+    loadFromCache();
+    if (_menuUiReady || hadCache) return;
+    showMenuLoadError(strings, error);
+    fetchMenuItemsFallback(strings, 'snapshot-failed');
+}
+
+function showMenuLoadError(strings, error) {
+    var container = document.getElementById('menuGrid');
+    if (!container || _menuUiReady) return;
+    var msg = (error && error.message) ? error.message : '';
+    if (msg.indexOf('permission') !== -1 || msg.indexOf('Missing or insufficient') !== -1) {
+        msg = strings.menuConnectionHint;
+    }
+    container.innerHTML =
+        '<div class="empty-state">' +
+            '<div class="empty-state-icon">⚠️</div>' +
+            '<p>' + strings.errorLoadingMenu + '</p>' +
+            (msg ? '<p style="font-size:0.8rem;margin-top:8px;opacity:0.85">' + msg + '</p>' : '') +
+            '<button type="button" class="menu-retry-btn" id="menuRetryBtn">' + strings.menuLoadRetry + '</button>' +
+        '</div>';
+    var retry = document.getElementById('menuRetryBtn');
+    if (retry) {
+        retry.addEventListener('click', function () {
+            loadMenuItems._inProgress = false;
+            loadMenuItems();
+        });
+    }
+    renderCategories([], { forceRebuild: true, autoSelect: false });
+}
+
+function fetchMenuItemsFallback(strings, reason) {
+    if (!window.db || _menuUiReady) return;
+    window.db.collection('menuItems').get().then(function (snap) {
+        if (loadMenuItems._loadTimer) {
+            clearTimeout(loadMenuItems._loadTimer);
+            loadMenuItems._loadTimer = null;
+        }
+        applyMenuItemsUpdate(parseMenuItemsFromSnapshot(snap), { force: true });
+    }).catch(function (err) {
+        console.warn('[menu] fallback get failed (' + reason + '):', err.message);
+        if (!_menuUiReady) showMenuLoadError(strings, err);
+    });
 }
 
 function loadFromCache() {
@@ -1536,6 +1594,10 @@ function setupOfflineDetection() {
         isOffline = false;
         updateOfflineIndicator();
         console.log('Back online');
+        if (document.getElementById('menuGrid')) {
+            loadMenuItems._inProgress = false;
+            loadMenuItems();
+        }
     });
 
     window.addEventListener('offline', function () {
@@ -2312,9 +2374,32 @@ function renderMenuCardsWithFeatures() {
     ======================================== */
 
 function registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').catch(function() {});
-    }
+    if (!('serviceWorker' in navigator)) return;
+
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+    });
+
+    navigator.serviceWorker.register('./sw.js').then(function (reg) {
+        function activateWaiting(worker) {
+            if (worker) worker.postMessage({ type: 'SKIP_WAITING' });
+        }
+        if (reg.waiting) activateWaiting(reg.waiting);
+        reg.addEventListener('updatefound', function () {
+            var worker = reg.installing;
+            if (!worker) return;
+            worker.addEventListener('statechange', function () {
+                if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                    activateWaiting(worker);
+                }
+            });
+        });
+    }).catch(function (err) {
+        console.warn('Service worker registration failed:', err);
+    });
 }
 
 /* ========================================

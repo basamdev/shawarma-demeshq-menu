@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ali-cafe-v63';
+const CACHE_NAME = 'ali-cafe-v64';
 // Relative paths — the app is served from a subfolder (e.g. /ali-cafe-menu/),
 // so root-absolute paths like '/index.html' would 404 and break install.
 const STATIC_ASSETS = [
@@ -29,6 +29,12 @@ const STATIC_ASSETS = [
     './images/install/ios-step-3.png',
     './images/install/ios-step-4.png'
 ];
+
+self.addEventListener('message', function (event) {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
 
 self.addEventListener('install', function (event) {
     event.waitUntil(
