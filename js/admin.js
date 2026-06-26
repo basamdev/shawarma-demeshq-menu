@@ -2858,9 +2858,12 @@ function printReceipt(itemsOverride) {
 }
 
 function setupAdminOfflineDetection() {
+    var menuIndicator = document.getElementById('offlineIndicator');
+    if (menuIndicator) menuIndicator.remove();
+
     window.addEventListener('online', function () {
         console.log('Admin: Back online — syncing data');
-        showAdminConnectionStatus(true);
+        scheduleAdminConnectionStatus(true);
         warmAdminOfflineCache(function () {
             refreshAdminCurrentSection();
         });
@@ -2868,49 +2871,72 @@ function setupAdminOfflineDetection() {
 
     window.addEventListener('offline', function () {
         console.log('Admin: Gone offline');
-        showAdminConnectionStatus(false);
+        scheduleAdminConnectionStatus(false);
     });
 
-    // Show the offline badge immediately if we start offline.
-    if (!navigator.onLine) showAdminConnectionStatus(false);
+    if (!navigator.onLine) scheduleAdminConnectionStatus(false);
 }
 
-var _adminOnlineHideTimer = null;
+var _adminStatusShowTimer = null;
+var _adminStatusHideTimer = null;
+var ADMIN_STATUS_DELAY_MS = 2000;
+var ADMIN_STATUS_VISIBLE_MS = 3000;
+
+function clearAdminStatusTimers() {
+    if (_adminStatusShowTimer) { clearTimeout(_adminStatusShowTimer); _adminStatusShowTimer = null; }
+    if (_adminStatusHideTimer) { clearTimeout(_adminStatusHideTimer); _adminStatusHideTimer = null; }
+}
+
+function hideAdminConnectionStatus() {
+    var existing = document.getElementById('adminOfflineIndicator');
+    if (!existing) return;
+    existing.style.opacity = '0';
+    setTimeout(function () { if (existing.parentNode) existing.remove(); }, 400);
+}
+
+function scheduleAdminConnectionStatus(online) {
+    clearAdminStatusTimers();
+    hideAdminConnectionStatus();
+    _adminStatusShowTimer = setTimeout(function () {
+        _adminStatusShowTimer = null;
+        showAdminConnectionStatusNow(online);
+        _adminStatusHideTimer = setTimeout(function () {
+            _adminStatusHideTimer = null;
+            hideAdminConnectionStatus();
+        }, ADMIN_STATUS_VISIBLE_MS);
+    }, ADMIN_STATUS_DELAY_MS);
+}
 
 function showAdminConnectionStatus(online) {
+    scheduleAdminConnectionStatus(online);
+}
+
+function showAdminConnectionStatusNow(online) {
     var existing = document.getElementById('adminOfflineIndicator');
     if (existing) existing.remove();
-    if (_adminOnlineHideTimer) { clearTimeout(_adminOnlineHideTimer); _adminOnlineHideTimer = null; }
 
     var lang = localStorage.getItem('selectedLang') || 'ku';
     var S = i18n[lang] || i18n.en;
 
     var indicator = document.createElement('div');
     indicator.id = 'adminOfflineIndicator';
-    indicator.style.cssText = 'position:fixed;top:70px;right:20px;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:flex;align-items:center;gap:8px;transition:opacity .4s ease;';
+    indicator.style.cssText = 'position:fixed;top:70px;right:20px;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:flex;align-items:center;gap:8px;transition:opacity .4s ease;opacity:0;';
 
     var dot = document.createElement('span');
     dot.style.cssText = 'width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block;';
     indicator.appendChild(dot);
 
     var label = document.createElement('span');
-
     if (online) {
         indicator.style.background = '#2E7D32';
         label.textContent = (S.backOnline || 'Back online — syncing');
-        indicator.appendChild(label);
-        document.body.appendChild(indicator);
-        // Auto-hide the green confirmation after a few seconds.
-        _adminOnlineHideTimer = setTimeout(function () {
-            indicator.style.opacity = '0';
-            setTimeout(function () { if (indicator.parentNode) indicator.remove(); }, 400);
-        }, 3000);
     } else {
         indicator.style.background = '#C62828';
         label.textContent = (S.offlineMode || 'Offline Mode — changes will sync');
-        indicator.appendChild(label);
-        document.body.appendChild(indicator);
     }
+    indicator.appendChild(label);
+    document.body.appendChild(indicator);
+    requestAnimationFrame(function () { indicator.style.opacity = '1'; });
 }
 
 function populateTestData() {

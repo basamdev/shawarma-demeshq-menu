@@ -723,7 +723,7 @@ function firestoreGetWithTimeout(ref, ms) {
     ]);
 }
 
-var APP_VERSION = 'v70';
+var APP_VERSION = 'v71';
 
 function clearMenuLoadingSpinner() {
     var container = document.getElementById('menuGrid');
@@ -1770,12 +1770,20 @@ function setupLanguageButtons() {
    Theme
    ======================================== */
 
+function isAdminAppUi() {
+    return !!(document.getElementById('adminContent') || document.querySelector('.admin-layout'));
+}
+
 function setupOfflineDetection() {
-    registerServiceWorker();
+    if (!isAdminAppUi()) {
+        registerServiceWorker();
+    }
 
     window.addEventListener('online', function () {
         isOffline = false;
-        updateOfflineIndicator();
+        if (!isAdminAppUi()) {
+            scheduleMenuConnectionStatus(true);
+        }
         console.log('Back online');
         if (document.getElementById('menuGrid')) {
             loadMenuItems._inProgress = false;
@@ -1785,28 +1793,63 @@ function setupOfflineDetection() {
 
     window.addEventListener('offline', function () {
         isOffline = true;
-        updateOfflineIndicator();
+        if (!isAdminAppUi()) {
+            scheduleMenuConnectionStatus(false);
+        }
         console.log('Gone offline');
     });
 
-    // Check initial status
+    if (isAdminAppUi()) return;
+
     isOffline = !navigator.onLine;
-    updateOfflineIndicator();
+    if (isOffline) scheduleMenuConnectionStatus(false);
+}
+
+var _menuStatusShowTimer = null;
+var _menuStatusHideTimer = null;
+var MENU_STATUS_DELAY_MS = 2000;
+var MENU_STATUS_VISIBLE_MS = 3000;
+
+function clearMenuStatusTimers() {
+    if (_menuStatusShowTimer) { clearTimeout(_menuStatusShowTimer); _menuStatusShowTimer = null; }
+    if (_menuStatusHideTimer) { clearTimeout(_menuStatusHideTimer); _menuStatusHideTimer = null; }
+}
+
+function hideMenuConnectionStatus() {
+    var existing = document.getElementById('offlineIndicator');
+    if (!existing) return;
+    existing.style.opacity = '0';
+    setTimeout(function () { if (existing.parentNode) existing.remove(); }, 400);
+}
+
+function scheduleMenuConnectionStatus(online) {
+    clearMenuStatusTimers();
+    hideMenuConnectionStatus();
+    _menuStatusShowTimer = setTimeout(function () {
+        _menuStatusShowTimer = null;
+        showMenuConnectionStatusNow(online);
+        _menuStatusHideTimer = setTimeout(function () {
+            _menuStatusHideTimer = null;
+            hideMenuConnectionStatus();
+        }, MENU_STATUS_VISIBLE_MS);
+    }, MENU_STATUS_DELAY_MS);
+}
+
+function showMenuConnectionStatusNow(online) {
+    var existing = document.getElementById('offlineIndicator');
+    if (existing) existing.remove();
+    var lang = localStorage.getItem('selectedLang') || 'ku';
+    var S = i18n[lang] || i18n.en;
+    var indicator = document.createElement('div');
+    indicator.id = 'offlineIndicator';
+    indicator.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);color:white;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:opacity .4s ease;';
+    indicator.textContent = online ? (S.backOnline || 'Back online — syncing') : S.offlineMode;
+    indicator.style.background = online ? '#2E7D32' : '#C62828';
+    document.body.appendChild(indicator);
 }
 
 function updateOfflineIndicator() {
-    var existing = document.getElementById('offlineIndicator');
-    if (existing) existing.remove();
-
-    if (isOffline) {
-        var indicator = document.createElement('div');
-        indicator.id = 'offlineIndicator';
-        indicator.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#C62828;color:white;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;z-index:9999;box-shadow:0 4px12px rgba(0,0,0,0.3);';
-        var lang = localStorage.getItem('selectedLang') || 'ku';
-        var S = i18n[lang] || i18n.en;
-        indicator.textContent = S.offlineMode;
-        document.body.appendChild(indicator);
-    }
+    scheduleMenuConnectionStatus(!isOffline);
 }
 
 function setupThemeToggle() {
