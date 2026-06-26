@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ali-cafe-v81';
+const CACHE_NAME = 'ali-cafe-v82';
 const FIREBASE_SDK_URLS = [
     'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js',
     'https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js',

@@ -256,7 +256,7 @@ function warmAdminOfflineCache(done) {
     });
 }
 
-var ADMIN_VERSION = 'v81';
+var ADMIN_VERSION = 'v82';
 
 function getDashboardMonth() {
     var sel = document.getElementById('dashboardMonthSelect');
@@ -664,10 +664,8 @@ document.addEventListener('DOMContentLoaded', function () {
     hydrateAdminFromLocalCache();
 
     var LOGO_CANDIDATES = [
-        'assets/apple-touch-icon.png',
-        'assets/icon-192.png',
-        'assets/icon-512.png',
-        'images/ali-cafe-logo-circular.png'
+        'images/ali-cafe-logo-circular.png',
+        'assets/logo.svg'
     ];
     window.fallbackLogo = function (img) {
         if (!img || !(img instanceof HTMLImageElement)) return;
@@ -675,7 +673,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var next = parseInt(img.dataset.logoTry || '1', 10);
         if (next < LOGO_CANDIDATES.length) {
             img.dataset.logoTry = String(next + 1);
-            img.src = LOGO_CANDIDATES[next] + '?v=81';
+            img.src = LOGO_CANDIDATES[next] + '?v=82';
             return;
         }
         img.dataset.logoFallbackDone = '1';
