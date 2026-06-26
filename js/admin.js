@@ -10,6 +10,142 @@ var dashboardUnsubscribes = [];
 var _itemsSnapDocs = [];
 let itemsActiveCategory = 'all';
 
+/* ============ OFFLINE CACHE (localStorage backup for admin) ============ */
+
+function readCachedMenuItemsFlat() {
+    try {
+        return JSON.parse(localStorage.getItem('cachedMenuItems') || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+function writeCachedMenuItemsFlat(items) {
+    try {
+        localStorage.setItem('cachedMenuItems', JSON.stringify(items));
+        syncCashierCacheFromMenuFlat(items);
+    } catch (e) {
+        console.warn('Could not write menu cache:', e);
+    }
+}
+
+function syncCashierCacheFromMenuFlat(items) {
+    var cashier = [];
+    (items || []).forEach(function (it) {
+        if (!it || !it.id || it.category === 'Water' || it.available === false) return;
+        var v = Object.assign({}, it);
+        delete v.id;
+        cashier.push({ id: it.id, v: v });
+    });
+    try {
+        localStorage.setItem('cachedCashierItems', JSON.stringify(cashier));
+    } catch (e) {}
+}
+
+function serializableFirestoreData(data) {
+    var o = Object.assign({}, data || {});
+    delete o.updated_at;
+    delete o.created_at;
+    return o;
+}
+
+function fakeFirestoreDoc(id, data) {
+    var payload = Object.assign({}, data);
+    return {
+        id: id,
+        exists: true,
+        data: function () { return payload; }
+    };
+}
+
+function getItemDocsFromLocalCache() {
+    return readCachedMenuItemsFlat()
+        .filter(function (it) { return it && it.id && it.category !== 'Water'; })
+        .map(function (it) {
+            var data = Object.assign({}, it);
+            var id = data.id;
+            delete data.id;
+            return fakeFirestoreDoc(id, data);
+        });
+}
+
+function getMenuItemFromLocalCache(itemId) {
+    var items = readCachedMenuItemsFlat();
+    for (var i = 0; i < items.length; i++) {
+        if (items[i].id === itemId) return items[i];
+    }
+    return null;
+}
+
+function upsertCachedMenuItem(id, data) {
+    if (!id) return;
+    var flat = serializableFirestoreData(data);
+    var items = readCachedMenuItemsFlat();
+    var found = false;
+    items = items.map(function (it) {
+        if (it.id === id) {
+            found = true;
+            return Object.assign({ id: id }, flat);
+        }
+        return it;
+    });
+    if (!found) items.push(Object.assign({ id: id }, flat));
+    writeCachedMenuItemsFlat(items);
+    _itemsSnapDocs = getItemDocsFromLocalCache();
+}
+
+function removeCachedMenuItem(id) {
+    if (!id) return;
+    var items = readCachedMenuItemsFlat().filter(function (it) { return it.id !== id; });
+    writeCachedMenuItemsFlat(items);
+    _itemsSnapDocs = getItemDocsFromLocalCache();
+}
+
+function hydrateItemsUiFromCache() {
+    var docs = getItemDocsFromLocalCache();
+    if (!docs.length) return false;
+    _itemsSnapDocs = docs;
+    refreshCategoryFilterOptions();
+    refreshItemCategoryDropdown();
+    var searchEl = document.getElementById('itemSearch');
+    var searchTerm = searchEl ? searchEl.value : '';
+    renderItemsList(filterItemDocs(_itemsSnapDocs, searchTerm, itemsActiveCategory));
+    return true;
+}
+
+function warmAdminOfflineCache(done) {
+    if (!window.db) {
+        if (typeof done === 'function') done();
+        return;
+    }
+    var tasks = [];
+    tasks.push(db.collection('menuItems').get().then(function (snap) {
+        var menu = [];
+        snap.forEach(function (d) {
+            menu.push(Object.assign({ id: d.id }, d.data()));
+        });
+        writeCachedMenuItemsFlat(menu);
+    }).catch(function () {}));
+    tasks.push(db.collection('categories').get().then(function (snap) {
+        var categories = [];
+        snap.forEach(function (d) {
+            categories.push({ id: d.id, data: d.data() });
+        });
+        localStorage.setItem('cachedCategories', JSON.stringify(categories));
+    }).catch(function () {}));
+    tasks.push(db.collection('expenses').get().then(function (snap) {
+        var expenses = [];
+        snap.forEach(function (d) {
+            expenses.push(Object.assign({ id: d.id }, d.data()));
+        });
+        localStorage.setItem('cachedExpenses', JSON.stringify(expenses));
+    }).catch(function () {}));
+    Promise.all(tasks).then(function () {
+        try { localStorage.setItem('adminCacheWarmedAt', String(Date.now())); } catch (e) {}
+        if (typeof done === 'function') done();
+    });
+}
+
 function stopCategoriesListener() {
     if (categoriesUnsubscribe) {
         try { categoriesUnsubscribe(); } catch (e) {}
@@ -82,10 +218,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (window.auth) {
         auth.onAuthStateChanged(function (user) {
-            if (!user) {
-                window.location.href = 'login.html';
+            if (user) {
+                warmAdminOfflineCache();
+                return;
             }
+            // Stay on admin when offline — auth session may still exist locally.
+            if (!navigator.onLine) return;
+            window.location.href = 'login.html';
         });
+    }
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(function () {});
     }
 });
 
@@ -600,6 +744,7 @@ function loadManageItems() {
     loadCategoryFilter();
     refreshCategoriesCache();
     wireItemEvents();
+    hydrateItemsUiFromCache();
     startItemsListener();
 }
 
@@ -670,18 +815,29 @@ function startItemsListener() {
         localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(catNames)));
     }, function (e) {
         console.error('Items listener error:', e);
-        loadItemsList();
+        if (!hydrateItemsUiFromCache()) loadItemsList();
     });
 }
 
 function loadItemsList() {
      var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+     if (hydrateItemsUiFromCache()) {
+         loadCategoryFilter();
+         return;
+     }
+     if (!window.db) {
+         var el = document.getElementById('itemsList');
+         if (el) el.innerHTML = '<p>' + S.noItemsFound + '</p>';
+         return;
+     }
      db.collection('menuItems').get().then(function (snap) {
          var docs = [];
-         snap.forEach(function (d) { var data = d.data(); if (data.category && data.category !== 'Water') { docs.push(d); } });
+         snap.forEach(function (d) { var data = d.data(); if (data.category !== 'Water') { docs.push(d); } });
+         _itemsSnapDocs = docs;
          renderItemsList(docs);
          loadCategoryFilter();
     }).catch(function (e) {
+        if (hydrateItemsUiFromCache()) return;
         var el = document.getElementById('itemsList');
          if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + e.message + '</p>';
     });
@@ -1240,28 +1396,30 @@ function saveItem() {
         updated_at: firebase.firestore.FieldValue.serverTimestamp()
     };
 
+    var ref;
     var promise;
     if (itemId) {
-        promise = db.collection('menuItems').doc(itemId).update(itemData);
+        ref = db.collection('menuItems').doc(itemId);
+        promise = ref.update(itemData);
     } else {
+        ref = db.collection('menuItems').doc();
         itemData.created_at = firebase.firestore.FieldValue.serverTimestamp();
-        promise = db.collection('menuItems').add(itemData);
+        promise = ref.set(itemData);
     }
 
     applyWrite(promise, function () {
+        upsertCachedMenuItem(ref.id, itemData);
         document.getElementById('itemModal').classList.remove('active');
         activeItemModal = null;
-        invalidateCashierCache();
-        loadItemsList();
+        hydrateItemsUiFromCache();
         alert(S.itemSaved);
     });
 }
 
 function editItem(itemId) {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-    db.collection('menuItems').doc(itemId).get().then(function (doc) {
-        if (!doc.exists) { alert(S.noItemsFound); return; }
-        var item = doc.data();
+
+    function openEditModal(item) {
         document.getElementById('itemId').value = itemId;
         document.getElementById('itemNameKu').value = item.name_ku || '';
         document.getElementById('itemNameAr').value = item.name_ar || '';
@@ -1280,19 +1438,36 @@ function editItem(itemId) {
         var modal = document.getElementById('itemModal');
         modal.classList.add('active');
         activeItemModal = modal;
-        // Reload categories dropdown and set the category value
         loadCategoriesDropdown().then(function () {
             document.getElementById('itemCategory').value = item.category || '';
         });
-    }).catch(function (e) { alert(S.errorPrefix + e.message); });
+    }
+
+    var cached = getMenuItemFromLocalCache(itemId);
+    if (cached) openEditModal(cached);
+
+    if (!window.db) {
+        if (!cached) alert(S.noItemsFound);
+        return;
+    }
+
+    db.collection('menuItems').doc(itemId).get().then(function (doc) {
+        if (!doc.exists) {
+            if (!cached) alert(S.noItemsFound);
+            return;
+        }
+        openEditModal(doc.data());
+    }).catch(function (e) {
+        if (!cached) alert(S.errorPrefix + e.message);
+    });
 }
 
 function deleteItem(itemId) {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     if (!confirm(S.deleteConfirm)) return;
     applyWrite(db.collection('menuItems').doc(itemId).delete(), function () {
-        invalidateCashierCache();
-        loadItemsList();
+        removeCachedMenuItem(itemId);
+        hydrateItemsUiFromCache();
     });
 }
 
@@ -1889,9 +2064,7 @@ function loadCashierItems() {
         });
     }, function (e) {
         console.error('Error loading cashier items:', e);
-        if (getCashierItemsFromLocalStorage().length === 0) {
-            showCashierEmptyState();
-        }
+        loadCashierItemsFromCache();
     });
 }
 
@@ -2218,6 +2391,7 @@ function setupAdminOfflineDetection() {
     window.addEventListener('online', function () {
         console.log('Admin: Back online');
         showAdminConnectionStatus(true);
+        warmAdminOfflineCache();
     });
 
     window.addEventListener('offline', function () {

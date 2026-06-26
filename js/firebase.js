@@ -45,14 +45,20 @@ function isMobileBrowser() {
     return /Android|webOS|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
 }
 
+function isAdminAppPage() {
+    var path = (window.location && window.location.pathname) || '';
+    return /admin\.html/i.test(path) || /login\.html/i.test(path);
+}
+
 // Let the app know when Firestore is ready (persistence is optional).
-// Skip persistence on mobile — it can block reads on iOS Safari / in-app browsers.
+// Admin must work offline on mobile — enable persistence on admin/login pages.
 window.dbReady = Promise.resolve(db);
-if (!isMobileBrowser()) {
+var shouldEnablePersistence = isAdminAppPage() || !isMobileBrowser();
+if (shouldEnablePersistence) {
     try {
         window.dbReady = db.enablePersistence({ synchronizeTabs: true })
             .then(function () {
-                console.log('Firestore offline persistence enabled (multi-tab)');
+                console.log('Firestore offline persistence enabled');
                 return db;
             })
             .catch(function (error) {
@@ -69,7 +75,7 @@ if (!isMobileBrowser()) {
         console.error('Persistence setup error:', error);
     }
 } else {
-    console.log('Mobile browser — Firestore persistence skipped');
+    console.log('Menu page on mobile — Firestore persistence skipped');
 }
 
 // Firebase Storage is not used in this app; images are stored as public URL strings.

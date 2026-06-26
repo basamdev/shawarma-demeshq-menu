@@ -1,4 +1,9 @@
-const CACHE_NAME = 'ali-cafe-v66';
+const CACHE_NAME = 'ali-cafe-v69';
+const FIREBASE_SDK_URLS = [
+    'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js',
+    'https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js',
+    'https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js'
+];
 // Relative paths — the app is served from a subfolder (e.g. /ali-cafe-menu/),
 // so root-absolute paths like '/index.html' would 404 and break install.
 const STATIC_ASSETS = [
@@ -45,7 +50,13 @@ self.addEventListener('install', function (event) {
                 return cache.add(url).catch(function (err) {
                     console.warn('[sw] skip caching', url, err);
                 });
-            }));
+            })).then(function () {
+                return Promise.all(FIREBASE_SDK_URLS.map(function (url) {
+                    return cache.add(url).catch(function (err) {
+                        console.warn('[sw] skip firebase sdk', url, err);
+                    });
+                }));
+            });
         })
     );
     self.skipWaiting();
@@ -111,7 +122,26 @@ self.addEventListener('fetch', function (event) {
         return;
     }
 
-    // Skip caching for external API/font resources (not images).
+    // Firebase SDK — cache-first so admin works offline after one online visit.
+    if (url.hostname === 'www.gstatic.com' && /firebasejs/.test(url.pathname)) {
+        event.respondWith(
+            caches.match(request).then(function (cached) {
+                var networkFetch = fetch(request).then(function (response) {
+                    if (response && response.ok) {
+                        var clone = response.clone();
+                        caches.open(CACHE_NAME).then(function (c) { c.put(request, clone); });
+                    }
+                    return response;
+                });
+                return cached || networkFetch.catch(function () {
+                    return new Response('// offline', { status: 503, statusText: 'Offline' });
+                });
+            })
+        );
+        return;
+    }
+
+    // Skip caching for other external API/font resources (not images).
     if (url.hostname.includes('cdnjs') || url.hostname.includes('firestore.googleapis.com') || url.hostname.includes('firebase') || url.hostname.includes('googleapis') || url.hostname.includes('gstatic')) {
         // Just fetch without caching
         event.respondWith(fetch(request));
