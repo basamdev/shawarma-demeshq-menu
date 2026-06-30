@@ -433,7 +433,7 @@
     margin-bottom: 6px;
 }
 
-.settings-hours-input input[type="time"] {
+.settings-hours-input input {
     width: 100%;
 }
 

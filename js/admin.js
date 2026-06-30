@@ -1240,9 +1240,18 @@ function loadAdminSection(section) {
 
 function toDisplayTime(ts) {
     if (!ts) return '\u2014';
-    if (typeof ts.toDate === 'function') return ts.toDate().toLocaleTimeString();
-    if (ts.seconds != null) return new Date(ts.seconds * 1000).toLocaleTimeString();
-    if (ts._seconds != null) return new Date(ts._seconds * 1000).toLocaleTimeString();
+    var lang = localStorage.getItem('selectedLang') || 'ku';
+    var locale = lang === 'ar' ? 'ar-IQ' : (lang === 'ku' ? 'ku-IQ' : 'en-US');
+
+    function format12(dateObj) {
+        if (!dateObj || isNaN(dateObj.getTime())) return '\u2014';
+        return dateObj.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+    }
+
+    if (ts instanceof Date) return format12(ts);
+    if (typeof ts.toDate === 'function') return format12(ts.toDate());
+    if (ts.seconds != null) return format12(new Date(ts.seconds * 1000));
+    if (ts._seconds != null) return format12(new Date(ts._seconds * 1000));
     return String(ts);
 }
 
@@ -1450,7 +1459,7 @@ function renderRecentSalesTable(sales, S, container) {
     sales.forEach(function (sale) {
         var cnt = sale.items ? sale.items.reduce(function (s, i) { return s + (i.quantity || 1); }, 0) : 0;
         var tsMs = saleTimestampToMs(sale);
-        var timeStr = tsMs ? new Date(tsMs).toLocaleTimeString() : '—';
+        var timeStr = tsMs ? toDisplayTime(new Date(tsMs)) : '—';
         html += '<tr><td>' + timeStr + '</td><td>' + cnt + S.itemsCount + '</td><td>' + (sale.total || 0) + ' IQD</td></tr>';
     });
     html += '</tbody></table></div>';
@@ -3964,11 +3973,11 @@ function loadSettings() {
                   '<div class="settings-social-input-wrap settings-hours-wrap">' +
                       '<div class="settings-hours-input">' +
                           '<label for="cafeOpenTime">' + S.cafeOpenTimeLabel + '</label>' +
-                          '<input type="time" id="cafeOpenTime" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeOpenTime'), '14:00') : (localStorage.getItem('cafeOpenTime') || '14:00')) + '">' +
+                          '<input type="text" id="cafeOpenTime" value="' + (typeof formatCafeTimeForDisplay === 'function' ? formatCafeTimeForDisplay((typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeOpenTime'), '14:00') : (localStorage.getItem('cafeOpenTime') || '14:00')), (localStorage.getItem('selectedLang') || 'ku')) : (localStorage.getItem('cafeOpenTime') || '2:00 PM')) + '" placeholder="2:00 PM">' +
                       '</div>' +
                       '<div class="settings-hours-input">' +
                           '<label for="cafeCloseTime">' + S.cafeCloseTimeLabel + '</label>' +
-                          '<input type="time" id="cafeCloseTime" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeCloseTime'), '02:00') : (localStorage.getItem('cafeCloseTime') || '02:00')) + '">' +
+                          '<input type="text" id="cafeCloseTime" value="' + (typeof formatCafeTimeForDisplay === 'function' ? formatCafeTimeForDisplay((typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeCloseTime'), '02:00') : (localStorage.getItem('cafeCloseTime') || '02:00')), (localStorage.getItem('selectedLang') || 'ku')) : (localStorage.getItem('cafeCloseTime') || '2:00 AM')) + '" placeholder="2:00 AM">' +
                       '</div>' +
                   '</div>' +
               '</div>' +
@@ -4070,8 +4079,13 @@ function loadSettings() {
               document.getElementById('cafeInstagram').value = cafeInstagram;
               document.getElementById('cafeTiktok').value = cafeTiktok;
               document.getElementById('cafeSnapchat').value = cafeSnapchat;
-              document.getElementById('cafeOpenTime').value = cafeOpenTime;
-              document.getElementById('cafeCloseTime').value = cafeCloseTime;
+              var selectedLang = localStorage.getItem('selectedLang') || 'ku';
+              document.getElementById('cafeOpenTime').value = typeof formatCafeTimeForDisplay === 'function'
+                  ? formatCafeTimeForDisplay(cafeOpenTime, selectedLang)
+                  : cafeOpenTime;
+              document.getElementById('cafeCloseTime').value = typeof formatCafeTimeForDisplay === 'function'
+                  ? formatCafeTimeForDisplay(cafeCloseTime, selectedLang)
+                  : cafeCloseTime;
 
               var settingsPayload = {
                   cafeName: cafeName,
@@ -4120,7 +4134,10 @@ function loadSettings() {
                       value = normalizeWhatsAppPhone(value);
                   }
                   if ((storageKey === 'cafeOpenTime' || storageKey === 'cafeCloseTime') && typeof normalizeCafeTimeValue === 'function') {
-                      value = normalizeCafeTimeValue(value, storageKey === 'cafeOpenTime' ? '14:00' : '02:00');
+                      var normalizedTime = normalizeCafeTimeValue(value, storageKey === 'cafeOpenTime' ? '14:00' : '02:00');
+                      value = typeof formatCafeTimeForDisplay === 'function'
+                          ? formatCafeTimeForDisplay(normalizedTime, (localStorage.getItem('selectedLang') || 'ku'))
+                          : normalizedTime;
                   }
                   input.value = value;
               });

@@ -2390,14 +2390,34 @@ function normalizeCafeTimeValue(value, fallback) {
     fallback = fallback || '14:00';
     var raw = (value == null ? '' : String(value)).trim();
     if (!raw) return fallback;
-    var match = raw.match(/^(\d{1,2}):(\d{2})$/);
+    var normalizedRaw = raw
+        .replace(/[٠-٩]/g, function (d) { return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)); })
+        .replace(/[۰-۹]/g, function (d) { return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)); })
+        .replace(/[\u200e\u200f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    var match12 = normalizedRaw.match(/^(\d{1,2})(?::(\d{2}))?\s*([AaPp](?:[Mm])?|[صم])$/);
+    if (match12) {
+        var hour12 = parseInt(match12[1], 10);
+        var minute12 = parseInt(match12[2] || '0', 10);
+        var marker = String(match12[3] || '').toLowerCase();
+        var isPm = marker.indexOf('p') === 0 || marker === 'م';
+        if (!isNaN(hour12) && hour12 >= 1 && hour12 <= 12 && !isNaN(minute12) && minute12 >= 0 && minute12 <= 59) {
+            var hour24 = hour12 % 12;
+            if (isPm) hour24 += 12;
+            return String(hour24).padStart(2, '0') + ':' + String(minute12).padStart(2, '0');
+        }
+    }
+
+    var match = normalizedRaw.match(/^(\d{1,2}):(\d{2})$/);
     if (!match) {
-        var hourOnly = parseInt(raw, 10);
+        var hourOnly = parseInt(normalizedRaw, 10);
         if (!isNaN(hourOnly) && hourOnly >= 0 && hourOnly <= 23) {
             return String(hourOnly).padStart(2, '0') + ':00';
         }
         return fallback;
     }
+
     var hour = parseInt(match[1], 10);
     var minute = parseInt(match[2], 10);
     if (isNaN(hour) || hour < 0 || hour > 23 || isNaN(minute) || minute < 0 || minute > 59) {
@@ -2416,13 +2436,16 @@ function formatCafeTimeForDisplay(timeStr, lang) {
     var normalized = normalizeCafeTimeValue(timeStr, '14:00');
     var parts = normalized.split(':');
     var hour = parseInt(parts[0], 10);
-    var minute = parts[1];
-    if (lang === 'en') {
+    var minute = parseInt(parts[1], 10);
+    var locale = lang === 'ar' ? 'ar-IQ' : (lang === 'ku' ? 'ku-IQ' : 'en-US');
+    var dt = new Date(2000, 0, 1, hour, minute, 0, 0);
+    try {
+        return dt.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true });
+    } catch (e) {
         var ampm = hour >= 12 ? 'PM' : 'AM';
         var hour12 = hour % 12 || 12;
-        return hour12 + ':' + minute + ' ' + ampm;
+        return hour12 + ':' + String(minute).padStart(2, '0') + ' ' + ampm;
     }
-    return normalized;
 }
 
 function formatCafeHoursDisplay(info, lang) {
@@ -2549,6 +2572,7 @@ window.subscribeCafeSettingsUpdates = subscribeCafeSettingsUpdates;
 window.normalizeWhatsAppPhone = normalizeWhatsAppPhone;
 window.normalizeSocialUrl = normalizeSocialUrl;
 window.normalizeCafeTimeValue = normalizeCafeTimeValue;
+window.formatCafeTimeForDisplay = formatCafeTimeForDisplay;
 window.applyCafeSettingsToLocalStorage = applyCafeSettingsToLocalStorage;
 
 function getCafeInfo() {
