@@ -139,6 +139,9 @@ const i18n = {
         cafeName: 'ناوی کافێ',
         locationMapsUrl: 'لینکی نەخشە (Google Maps)',
         locationLabelField: 'ناونیشان (دەردەکەوێت لە مێنوو)',
+        cafeOpenTimeLabel: 'کاتی کردنەوە',
+        cafeCloseTimeLabel: 'کاتی داخراو',
+        cafeHoursDaily: 'ڕۆژانە',
         callWhatsAppNumber: 'ژمارەی پەیوەندی / واتساپ',
         currency: 'دراو',
         saveSettings: 'پاشەکەوتکردن',
@@ -355,6 +358,9 @@ const i18n = {
         cafeName: 'اسم المقهى',
         locationMapsUrl: 'رابط الخريطة (Google Maps)',
         locationLabelField: 'العنوان (يظهر في القائمة)',
+        cafeOpenTimeLabel: 'وقت الفتح',
+        cafeCloseTimeLabel: 'وقت الإغلاق',
+        cafeHoursDaily: 'يومياً',
         callWhatsAppNumber: 'رقم الاتصال / واتساب',
         currency: 'العملة',
         saveSettings: 'حفظ الإعدادات',
@@ -571,6 +577,9 @@ const i18n = {
         cafeName: 'Cafe Name',
         locationMapsUrl: 'Map link (Google Maps)',
         locationLabelField: 'Address label (shown on menu)',
+        cafeOpenTimeLabel: 'Opening time',
+        cafeCloseTimeLabel: 'Closing time',
+        cafeHoursDaily: 'Daily',
         callWhatsAppNumber: 'Call / WhatsApp number',
         currency: 'Currency',
         saveSettings: 'Save Settings',
@@ -2370,10 +2379,58 @@ var CAFE_SETTING_KEYS = [
     'whatsappPhone',
     'cafeLocationUrl',
     'cafeLocationLabel',
+    'cafeOpenTime',
+    'cafeCloseTime',
     'cafeInstagram',
     'cafeTiktok',
     'cafeSnapchat'
 ];
+
+function normalizeCafeTimeValue(value, fallback) {
+    fallback = fallback || '14:00';
+    var raw = (value == null ? '' : String(value)).trim();
+    if (!raw) return fallback;
+    var match = raw.match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) {
+        var hourOnly = parseInt(raw, 10);
+        if (!isNaN(hourOnly) && hourOnly >= 0 && hourOnly <= 23) {
+            return String(hourOnly).padStart(2, '0') + ':00';
+        }
+        return fallback;
+    }
+    var hour = parseInt(match[1], 10);
+    var minute = parseInt(match[2], 10);
+    if (isNaN(hour) || hour < 0 || hour > 23 || isNaN(minute) || minute < 0 || minute > 59) {
+        return fallback;
+    }
+    return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+}
+
+function parseCafeTimeToMinutes(timeStr, fallbackHour) {
+    var normalized = normalizeCafeTimeValue(timeStr, String(fallbackHour).padStart(2, '0') + ':00');
+    var parts = normalized.split(':');
+    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+}
+
+function formatCafeTimeForDisplay(timeStr, lang) {
+    var normalized = normalizeCafeTimeValue(timeStr, '14:00');
+    var parts = normalized.split(':');
+    var hour = parseInt(parts[0], 10);
+    var minute = parts[1];
+    if (lang === 'en') {
+        var ampm = hour >= 12 ? 'PM' : 'AM';
+        var hour12 = hour % 12 || 12;
+        return hour12 + ':' + minute + ' ' + ampm;
+    }
+    return normalized;
+}
+
+function formatCafeHoursDisplay(info, lang) {
+    var strings = i18n[lang] || i18n.en;
+    var open = formatCafeTimeForDisplay(info.openTime || '14:00', lang);
+    var close = formatCafeTimeForDisplay(info.closeTime || '02:00', lang);
+    return (strings.cafeHoursDaily || 'Daily') + ': ' + open + ' — ' + close;
+}
 
 function normalizeWhatsAppPhone(phone) {
     var digits = (phone || '').replace(/\D/g, '');
@@ -2491,6 +2548,7 @@ window.saveCafeSettingsToFirestore = saveCafeSettingsToFirestore;
 window.subscribeCafeSettingsUpdates = subscribeCafeSettingsUpdates;
 window.normalizeWhatsAppPhone = normalizeWhatsAppPhone;
 window.normalizeSocialUrl = normalizeSocialUrl;
+window.normalizeCafeTimeValue = normalizeCafeTimeValue;
 window.applyCafeSettingsToLocalStorage = applyCafeSettingsToLocalStorage;
 
 function getCafeInfo() {
@@ -2508,6 +2566,11 @@ function getCafeInfo() {
         storedLabel = defaultLabel;
     }
 
+    var openTime = normalizeCafeTimeValue(localStorage.getItem('cafeOpenTime'), '14:00');
+    var closeTime = normalizeCafeTimeValue(localStorage.getItem('cafeCloseTime'), '02:00');
+    var openMinutes = parseCafeTimeToMinutes(openTime, 14);
+    var closeMinutes = parseCafeTimeToMinutes(closeTime, 2);
+
     return {
         name: localStorage.getItem('cafeName') || 'Ali Coffee',
         phone: normalizeWhatsAppPhone(localStorage.getItem('whatsappPhone') || '9647506454656'),
@@ -2516,8 +2579,12 @@ function getCafeInfo() {
         instagram: localStorage.getItem('cafeInstagram') || '',
         tiktok: localStorage.getItem('cafeTiktok') || '',
         snapchat: localStorage.getItem('cafeSnapchat') || '',
-        openHour: 14,
-        closeHour: 2
+        openTime: openTime,
+        closeTime: closeTime,
+        openHour: Math.floor(openMinutes / 60),
+        closeHour: Math.floor(closeMinutes / 60),
+        openMinutes: openMinutes,
+        closeMinutes: closeMinutes
     };
 }
 
@@ -2525,8 +2592,10 @@ function isCafeOpen(info) {
     info = info || getCafeInfo();
     var now = new Date();
     var mins = now.getHours() * 60 + now.getMinutes();
-    var start = info.openHour * 60;
-    var end = info.closeHour * 60;
+    var start = info.openMinutes != null ? info.openMinutes : info.openHour * 60;
+    var end = info.closeMinutes != null ? info.closeMinutes : info.closeHour * 60;
+    if (start === end) return false;
+    if (start < end) return mins >= start && mins < end;
     return mins >= start || mins < end;
 }
 
@@ -2570,7 +2639,7 @@ function updateCafeInfoPanel() {
     if (titleEl) titleEl.textContent = info.name || strings.cafeInfoTitle;
 
     var hoursEl = document.getElementById('cafeHoursText');
-    if (hoursEl) hoursEl.textContent = strings.cafeHoursValue;
+    if (hoursEl) hoursEl.textContent = formatCafeHoursDisplay(info, lang);
 
     var addressEl = document.getElementById('cafeAddressLink');
     var addressText = document.getElementById('cafeAddressText');

@@ -744,7 +744,7 @@ function warmSalesCacheFromServer() {
     }
     if (isAdminAuthenticated() && navigator.onLine) {
         return fetchAllAdminCollectionViaRest('sales').then(function (docs) {
-            writeCachedSales(restDocsToSales(docs || []));
+            mergeRestSalesDocs(docs || []);
         }).catch(function () {
             return salesCacheFromSdkServer();
         });
@@ -773,7 +773,7 @@ function warmExpensesCacheFromServer() {
     }
     if (isAdminAuthenticated() && navigator.onLine) {
         return fetchAllAdminCollectionViaRest('expenses').then(function (docs) {
-            writeCachedExpenses(restDocsToExpenses(docs || []));
+            mergeRestExpensesDocs(docs || []);
         }).catch(function () {
             return expensesCacheFromSdkServer();
         });
@@ -792,6 +792,34 @@ function expensesCacheFromSdkServer() {
             snap.forEach(function (d) { expenses.push(expenseEntryFromDoc(d)); });
             writeCachedExpenses(expenses);
         });
+    });
+}
+
+function shouldIgnoreCachedFirestoreSnap(snap) {
+    return !!(navigator.onLine &&
+        isAdminAuthenticated() &&
+        snap &&
+        snap.metadata &&
+        snap.metadata.fromCache &&
+        !snap.metadata.hasPendingWrites);
+}
+
+function syncAdminFinancialsFromServer(callback) {
+    if (!isAdminAuthenticated() || !navigator.onLine) {
+        if (typeof callback === 'function') callback();
+        return Promise.resolve();
+    }
+    return Promise.all([
+        warmSalesCacheFromServer(),
+        warmExpensesCacheFromServer()
+    ]).then(function () {
+        syncSalesLiveFromCache();
+        syncExpensesLiveFromCache();
+        refreshAdminCurrentSection();
+        if (typeof callback === 'function') callback();
+    }).catch(function (err) {
+        console.warn('[sync] financials:', err && err.message ? err.message : err);
+        if (typeof callback === 'function') callback();
     });
 }
 
@@ -834,22 +862,19 @@ function startAdminLiveListeners() {
 
     if (navigator.onLine) {
         fetchAdminCollectionViaRest('sales').then(function (docs) {
-            if (!docs.length) return;
-            mergeRestSalesDocs(docs);
-            if (document.getElementById('todaySales')) renderDashboardUI(getDashboardMonth());
-            if (document.getElementById('recentSalesContainer')) renderRecentSalesUI();
+            mergeRestSalesDocs(docs || []);
+            refreshAdminCurrentSection();
         }).catch(function (e) { console.warn('[REST] sales:', e.message || e); });
 
         fetchAdminCollectionViaRest('expenses').then(function (docs) {
-            if (!docs.length) return;
-            mergeRestExpensesDocs(docs);
-            if (document.getElementById('expensesList')) renderExpensesUI(getExpensesMonth());
-            if (document.getElementById('todaySales')) renderDashboardUI(getDashboardMonth());
+            mergeRestExpensesDocs(docs || []);
+            refreshAdminCurrentSection();
         }).catch(function (e) { console.warn('[REST] expenses:', e.message || e); });
     }
 
     function applySalesSnap(snap) {
         if (_adminResetInProgress) return;
+        if (shouldIgnoreCachedFirestoreSnap(snap)) return;
         if (snap.empty) {
             if (isFirestoreCacheEmptySnap(snap)) {
                 hydrateAdminFromLocalCache();
@@ -874,6 +899,7 @@ function startAdminLiveListeners() {
 
     function applyExpensesSnap(snap) {
         if (_adminResetInProgress) return;
+        if (shouldIgnoreCachedFirestoreSnap(snap)) return;
         if (snap.empty) {
             if (isFirestoreCacheEmptySnap(snap)) {
                 hydrateAdminFromLocalCache();
@@ -929,6 +955,7 @@ window.adminAuthReady = new Promise(function (resolve) {
             resolve(user);
         }
         if (user) {
+            syncAdminFinancialsFromServer();
             warmAdminOfflineCache();
             startAdminLiveListeners();
             refreshAdminCurrentSection();
@@ -1078,19 +1105,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState !== 'visible') return;
-        var activeBtn = document.querySelector('.admin-nav-btn.active');
-        if (!activeBtn) return;
-        var section = activeBtn.getAttribute('data-section');
-        if (section === 'dashboard' && document.getElementById('todaySales')) {
-            var sel = document.getElementById('dashboardMonthSelect');
-            var month = sel ? parseInt(sel.value, 10) : new Date().getMonth();
-            loadDashboardStats(month);
-            loadRecentSales();
-        } else if (section === 'items' && document.getElementById('itemsList')) {
-            loadItemsList();
-        } else if (section === 'expenses' && document.getElementById('expensesList')) {
-            renderExpensesUI(getExpensesMonth());
-        }
+        if (!isAdminAuthenticated() || !navigator.onLine) return;
+        syncAdminFinancialsFromServer();
     });
 
 });
@@ -1281,6 +1297,10 @@ function loadDashboard() {
     renderDashboardUI(currentMonth);
     renderRecentSalesUI();
     startAdminLiveListeners();
+    syncAdminFinancialsFromServer(function () {
+        renderDashboardUI(currentMonth);
+        renderRecentSalesUI();
+    });
 }
 
 function renderDashboardUI(month) {
@@ -3939,6 +3959,19 @@ function loadSettings() {
                       '<input type="text" id="cafeCurrency" value="IQD" readonly>' +
                   '</div>' +
               '</div>' +
+              '<div class="settings-social-field settings-hours-field">' +
+                  '<span class="settings-social-icon settings-social-icon--hours" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>' +
+                  '<div class="settings-social-input-wrap settings-hours-wrap">' +
+                      '<div class="settings-hours-input">' +
+                          '<label for="cafeOpenTime">' + S.cafeOpenTimeLabel + '</label>' +
+                          '<input type="time" id="cafeOpenTime" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeOpenTime'), '14:00') : (localStorage.getItem('cafeOpenTime') || '14:00')) + '">' +
+                      '</div>' +
+                      '<div class="settings-hours-input">' +
+                          '<label for="cafeCloseTime">' + S.cafeCloseTimeLabel + '</label>' +
+                          '<input type="time" id="cafeCloseTime" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeCloseTime'), '02:00') : (localStorage.getItem('cafeCloseTime') || '02:00')) + '">' +
+                      '</div>' +
+                  '</div>' +
+              '</div>' +
           '</div>' +
           '<div class="card settings-social-card" style="margin-top:20px;">' +
               '<div class="settings-section-label"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> ' + S.socialLinks + '</div>' +
@@ -4008,6 +4041,12 @@ function loadSettings() {
               var cafeSnapchat = typeof normalizeSocialUrl === 'function'
                   ? normalizeSocialUrl(document.getElementById('cafeSnapchat').value.trim(), 'snapchat')
                   : document.getElementById('cafeSnapchat').value.trim();
+              var cafeOpenTime = typeof normalizeCafeTimeValue === 'function'
+                  ? normalizeCafeTimeValue(document.getElementById('cafeOpenTime').value.trim(), '14:00')
+                  : document.getElementById('cafeOpenTime').value.trim();
+              var cafeCloseTime = typeof normalizeCafeTimeValue === 'function'
+                  ? normalizeCafeTimeValue(document.getElementById('cafeCloseTime').value.trim(), '02:00')
+                  : document.getElementById('cafeCloseTime').value.trim();
 
               function storeSetting(key, value) {
                   if (value == null || String(value).trim() === '') {
@@ -4024,11 +4063,15 @@ function loadSettings() {
               storeSetting('cafeInstagram', cafeInstagram);
               storeSetting('cafeTiktok', cafeTiktok);
               storeSetting('cafeSnapchat', cafeSnapchat);
+              storeSetting('cafeOpenTime', cafeOpenTime);
+              storeSetting('cafeCloseTime', cafeCloseTime);
 
               document.getElementById('whatsappPhone').value = whatsappPhone;
               document.getElementById('cafeInstagram').value = cafeInstagram;
               document.getElementById('cafeTiktok').value = cafeTiktok;
               document.getElementById('cafeSnapchat').value = cafeSnapchat;
+              document.getElementById('cafeOpenTime').value = cafeOpenTime;
+              document.getElementById('cafeCloseTime').value = cafeCloseTime;
 
               var settingsPayload = {
                   cafeName: cafeName,
@@ -4037,7 +4080,9 @@ function loadSettings() {
                   cafeLocationLabel: cafeLocationLabel,
                   cafeInstagram: cafeInstagram,
                   cafeTiktok: cafeTiktok,
-                  cafeSnapchat: cafeSnapchat
+                  cafeSnapchat: cafeSnapchat,
+                  cafeOpenTime: cafeOpenTime,
+                  cafeCloseTime: cafeCloseTime
               };
 
               if (typeof saveCafeSettingsToFirestore === 'function') {
@@ -4063,7 +4108,9 @@ function loadSettings() {
                   cafeLocationLabel: 'cafeLocationLabel',
                   cafeInstagram: 'cafeInstagram',
                   cafeTiktok: 'cafeTiktok',
-                  cafeSnapchat: 'cafeSnapchat'
+                  cafeSnapchat: 'cafeSnapchat',
+                  cafeOpenTime: 'cafeOpenTime',
+                  cafeCloseTime: 'cafeCloseTime'
               };
               Object.keys(fields).forEach(function (storageKey) {
                   var input = document.getElementById(fields[storageKey]);
@@ -4071,6 +4118,9 @@ function loadSettings() {
                   var value = localStorage.getItem(storageKey) || input.value || '';
                   if (storageKey === 'whatsappPhone' && typeof normalizeWhatsAppPhone === 'function') {
                       value = normalizeWhatsAppPhone(value);
+                  }
+                  if ((storageKey === 'cafeOpenTime' || storageKey === 'cafeCloseTime') && typeof normalizeCafeTimeValue === 'function') {
+                      value = normalizeCafeTimeValue(value, storageKey === 'cafeOpenTime' ? '14:00' : '02:00');
                   }
                   input.value = value;
               });

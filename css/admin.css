@@ -418,6 +418,31 @@
     display: block;
 }
 
+.settings-social-icon--hours {
+    background: linear-gradient(135deg, #5c6bc0, #3949ab);
+}
+
+.settings-hours-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.settings-hours-input label {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.settings-hours-input input[type="time"] {
+    width: 100%;
+}
+
+@media (max-width: 520px) {
+    .settings-hours-wrap {
+        grid-template-columns: 1fr;
+    }
+}
+
 .settings-contact-card .settings-social-field:last-of-type {
     margin-bottom: 0;
 }
