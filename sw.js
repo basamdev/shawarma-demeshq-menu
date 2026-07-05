@@ -9,14 +9,9 @@ const FIREBASE_SDK_URLS = [
 // so root-absolute paths like '/index.html' would 404 and break install.
 const STATIC_ASSETS = [
     './manifest.json',
-    './assets/ali-logo-page.jpg',
-    './assets/ali-new-logo.jpg',
-    './images/flag-kurdistan.svg',
-    './assets/apple-touch-icon.png',
-    './assets/icon-192.png',
-    './assets/icon-512.png',
-    './assets/icon-maskable-512.png',
+    './assets/shawarma demeshq-logo.jpg',
     './assets/logo.svg',
+    './images/flag-kurdistan.svg',
     './assets/currency-icon.png',
     './images/install/ios-step-1.png',
     './images/install/ios-step-2.png',

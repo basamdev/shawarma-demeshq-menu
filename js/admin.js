@@ -1,4 +1,4 @@
-// Admin.js — Ali Coffee Admin Panel
+// Admin.js — Shawarma DeMeshq Admin Panel
 
 const orderItems = [];
 let activeItemModal = null;
@@ -1073,7 +1073,7 @@ document.addEventListener('DOMContentLoaded', function () {
     hydrateAdminFromLocalCache();
 
     var LOGO_CANDIDATES = [
-        'assets/ali-logo-page.jpg',
+        'assets/shawarma demeshq-logo.jpg',
         'assets/logo.svg'
     ];
     window.fallbackLogo = function (img) {
@@ -2907,7 +2907,11 @@ function saveCategory() {
     var placeholderImg = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect fill=%23e0e0e0 width=%27400%27 height=%27300%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 font-size=%2724%27 text-anchor=%27middle%27 dy=%27.3em%27 fill=%23999%27%3ENo+Image%3C/text%3E%3C/svg%3E';
     var finalImg = imgUrl || placeholderImg;
 
-    var categoryId = document.getElementById('categoryId').value;
+    var categoryId = document.getElementById('categoryId').value.trim();
+    var isCreate = !categoryId;
+    if (isCreate) {
+        categoryId = nameEn || nameKu || nameAr;
+    }
     var now = new Date().toISOString();
     var plainData = {
         name_ku: nameKu,
@@ -2919,15 +2923,19 @@ function saveCategory() {
 
     var promise;
     var savedId = categoryId;
-    var isCreate = !categoryId;
     if (categoryId) {
-        promise = db.collection('categories').doc(categoryId).set(Object.assign({}, plainData, {
+        var catRef = db.collection('categories').doc(categoryId);
+        if (isCreate) {
+            plainData.created_at = now;
+        }
+        promise = catRef.set(Object.assign({}, plainData, {
+            created_at: firebase.firestore.FieldValue.serverTimestamp(),
             updated_at: firebase.firestore.FieldValue.serverTimestamp()
         }), { merge: true });
     } else {
-        plainData.created_at = now;
         var newRef = db.collection('categories').doc();
         savedId = newRef.id;
+        plainData.created_at = now;
         promise = newRef.set(Object.assign({}, plainData, {
             created_at: firebase.firestore.FieldValue.serverTimestamp(),
             updated_at: firebase.firestore.FieldValue.serverTimestamp()
@@ -3493,8 +3501,8 @@ function buildReceiptPrintHtml(options) {
     '</head>' +
     '<body class="' + langClass + '">' +
         '<div class="receipt">' +
-            '<img class="brand-logo" src="' + escapeReceiptHtml(options.logoUrl || 'assets/icon-192.png') + '" alt="" onerror="this.style.display=\'none\'">' +
-            '<div class="brand-title"><span class="en">Ali Coffee</span><span class="sep">|</span><span class="ku">عەلی كافێ</span></div>' +
+            '<img class="brand-logo" src="' + escapeReceiptHtml(options.logoUrl || 'assets/shawarma demeshq-logo.jpg') + '" alt="" onerror="this.style.display=\'none\'">' +
+            '<div class="brand-title"><span class="en">Shawarma DeMeshq</span><span class="sep">|</span><span class="ku">شاورما الدمشقي</span></div>' +
             '<div class="brand-tagline">Premium Coffee House</div>' +
             (options.location ? '<div class="brand-location">' + escapeReceiptHtml(options.location) + '</div>' : '') +
             '<hr class="rule">' +
@@ -3615,7 +3623,7 @@ function printReceipt(itemsOverride) {
     var phone = formatReceiptPhone(localStorage.getItem('whatsappPhone') || '9647506454656');
     var location = localStorage.getItem('cafeLocationLabel') || 'بەحرکە-مجەمع';
 
-    var logoUrl = new URL('assets/icon-192.png', window.location.href).href;
+    var logoUrl = new URL('assets/shawarma demeshq-logo.jpg', window.location.href).href;
 
     var receiptHTML = buildReceiptPrintHtml({
         lang: lang,

@@ -1,4 +1,4 @@
-// App.js — Ali Coffee Premium Menu
+// App.js — Shawarma DeMeshq Premium Menu
 // Handles: i18n, theme, category filtering, product detail modal, video player
 
 window.openMenu = function (lang) {
@@ -29,6 +29,8 @@ document.addEventListener('DOMContentLoaded', function () {
             setupLanguageButtons();
             initHeroTitleSequence();
             setupInstallTutorial();
+        } else if (document.getElementById('heroTypewriter')) {
+            initHeroTitleSequence();
         }
     } catch (e) {
         console.error('Init error:', e);
@@ -260,7 +262,7 @@ const i18n = {
         installImagesMissing: 'وێنەکانی ڕێنمایی لە images/install/ دابنێ',
         iosStep1: 'دوگمەی Share (↗) لە خوارەوەی Safari دابگرە',
         iosStep2: '«Add to Home Screen» هەڵبژێرە',
-        iosStep3: '«Add» دابگرە — ئایکۆنی Ali Coffee لەسەر سکرین دەردەکەوێت',
+        iosStep3: '«Add» دابگرە — ئایکۆنی Shawarma DeMeshq لەسەر سکرین دەردەکەوێت',
         androidStep1: 'Menu (⋮) لە گۆشەی سەرەوەی Chrome دابگرە',
         androidStep2: '«Add to Home screen» هەڵبژێرە',
         androidStep3: '«Install» هەڵبژێرە',
@@ -486,11 +488,11 @@ const i18n = {
         installImagesMissing: 'ضع صور الشرح في images/install/',
         iosStep1: 'اضغط زر Share (↗) أسفل Safari',
         iosStep2: 'اختر «Add to Home Screen»',
-        iosStep3: 'اضغط «Add» — يظهر أيقونة Ali Coffee على الشاشة',
+        iosStep3: 'اضغط «Add» — يظهر أيقونة Shawarma DeMeshq على الشاشة',
         androidStep1: 'اضغط القائمة (⋮) أعلى Chrome',
         androidStep2: 'اختر «Add to Home screen»',
         androidStep3: 'اختر «Install»',
-        androidStep4: 'اضغط «Install» — يُثبت تطبيق Ali Coffee',
+        androidStep4: 'اضغط «Install» — يُثبت تطبيق Shawarma DeMeshq',
     },
     en: {
         menuTitle: 'Our Menu',
@@ -501,7 +503,7 @@ const i18n = {
         menuLoadRetry: 'Try again',
         menuConnectionHint: 'Check internet or Firebase settings for this domain.',
         noCategories: 'No categories.',
-        pageTitle: 'Ali Coffee | Menu',
+        pageTitle: 'Shawarma DeMeshq | Menu',
         dashboard: 'Dashboard',
         manageItems: 'Manage Items',
         manageCategories: 'Manage Categories',
@@ -635,7 +637,7 @@ const i18n = {
         sold: 'sold',
         itemsCount: ' items',
         unknown: 'unknown',
-        siteName: 'Ali Coffee',
+        siteName: 'Shawarma DeMeshq',
         addCategory: '+ Add New Category',
         categoryNameKu: 'Category Name (Kurdish)',
         categoryNameAr: 'Category Name (Arabic)',
@@ -716,7 +718,7 @@ const i18n = {
         instagramUrl: 'Instagram',
         tiktokUrl: 'TikTok',
         snapchatUrl: 'Snapchat',
-        cafeInfoTitle: 'Ali Coffee',
+        cafeInfoTitle: 'شاورما الدمشقي',
         linkCopied: 'Link copied!',
         installTitle: 'Add to Home Screen',
         installSubtitle: 'Add our menu to your home screen like an app',
@@ -729,11 +731,11 @@ const i18n = {
         installImagesMissing: 'Add tutorial images to images/install/',
         iosStep1: 'Tap Share (↗) at the bottom of Safari',
         iosStep2: 'Choose «Add to Home Screen»',
-        iosStep3: 'Tap «Add» — Ali Coffee icon appears on your home screen',
+        iosStep3: 'Tap «Add» — Shawarma DeMeshq icon appears on your home screen',
         androidStep1: 'Tap Menu (⋮) at the top of Chrome',
         androidStep2: 'Choose «Add to Home screen»',
         androidStep3: 'Choose «Install»',
-        androidStep4: 'Tap «Install» — Ali Coffee is added to your phone',
+        androidStep4: 'Tap «Install» — Shawarma DeMeshq is added to your phone',
     }
 };
 
@@ -944,6 +946,9 @@ async function loadCategoriesFromFirebase() {
         const prev = localStorage.getItem('cachedCategoriesSig') || '';
         localStorage.setItem('cachedCategories', JSON.stringify(categories));
         localStorage.setItem('cachedCategoriesSig', sig);
+        if (cachedMenuItems.length > 0) {
+            renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
+        }
         return prev !== sig;
     } catch (e) {
         console.error('Error loading categories:', e);
@@ -1219,6 +1224,19 @@ function renderCategories(items, options) {
              console.error('Error parsing cached categories:', e);
          }
      }
+
+     // Merge item categories into the menu category list so any category used by items
+     // is shown even if there is no matching categories document or the IDs differ.
+     const existingIds = new Set(categories.map(c => c.id));
+     items.forEach(item => {
+         const cat = item.category;
+         if (!cat || cat === 'Water' || existingIds.has(cat)) return;
+         existingIds.add(cat);
+         categories.push({
+             id: cat,
+             data: { name_ku: cat, name_ar: cat, name_en: cat, image: '' }
+         });
+     });
 
      const barSig = computeCategoryBarSig(categories, items, lang);
      if (!options.forceRebuild && scroll.dataset.categorySig === barSig) {
@@ -2109,8 +2127,8 @@ function setupMenuThemePicker() {
 }
 
 var HERO_TYPE_PHRASES = [
-    { text: 'Ali Coffee', dir: 'ltr' },
-    { text: 'عەلی کافێ', dir: 'rtl' }
+    { text: 'شاورمة الدمشقیة', dir: 'rtl' },
+    { text: 'Shawarma DeMeshq', dir: 'ltr' }
 ];
 
 function heroTypeChars(str) {
@@ -2127,15 +2145,20 @@ function initHeroTitleSequence() {
     var phraseIndex = 0;
     var charIndex = 0;
     var isDeleting = false;
+    var isIndexPage = document.body.classList.contains('index-page');
     var chars = heroTypeChars(HERO_TYPE_PHRASES[0].text);
 
     function typeDelay() {
-        if (isDeleting) return 38 + Math.random() * 28;
-        return 68 + Math.random() * 45;
+        if (isDeleting) {
+            return (isIndexPage ? 75 : 38) + Math.random() * (isIndexPage ? 45 : 28);
+        }
+        return (isIndexPage ? 120 : 68) + Math.random() * (isIndexPage ? 90 : 45);
     }
 
     function pauseDelay() {
-        return isDeleting ? 320 : 2000;
+        return isDeleting
+            ? (isIndexPage ? 450 : 320)
+            : (isIndexPage ? 2600 : 2000);
     }
 
     function applyPhraseMeta() {
@@ -2676,7 +2699,7 @@ function getCafeInfo() {
     var closeMinutes = parseCafeTimeToMinutes(closeTime, 2);
 
     return {
-        name: localStorage.getItem('cafeName') || 'Ali Coffee',
+        name: localStorage.getItem('cafeName') || 'Shawarma DeMeshq',
         phone: normalizeWhatsAppPhone(localStorage.getItem('whatsappPhone') || '9647506454656'),
         locationUrl: storedUrl || defaultUrl,
         locationLabel: storedLabel || defaultLabel,

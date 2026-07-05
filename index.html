@@ -3,28 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>عەلی کافێ | Ali Coffee</title>
+    <title>شاورمة الدمشقیة</title>
     <link rel="manifest" href="manifest.json?v=83">
-    <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/ali-new-logo.jpg">
-    <meta name="application-name" content="Ali Coffee">
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/shawarma demeshq-logo.jpg?v=1">
+    <meta name="application-name" content="Shawarma DeMeshq">
     <meta name="msapplication-TileColor" content="#5C4033">
-    <meta name="msapplication-TileImage" content="assets/icon-512.png">
+    <meta name="msapplication-TileImage" content="assets/shawarma demeshq-logo.jpg?v=1">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Ali Coffee">
+    <meta name="apple-mobile-web-app-title" content="شاورما الدمشقي">
     <meta name="theme-color" content="#8B6914">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@400;600;700&family=Montserrat:wght@500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css?v=61">
+    <style>
+        .cafe-name {
+            font-family: 'Montserrat', sans-serif;
+            letter-spacing: 0.05em;
+            font-size: clamp(2.2rem, 8vw, 4.2rem);
+            font-weight: 700;
+            line-height: 1.05;
+            text-transform: none;
+            color: #F7D87D;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.24);
+        }
+        .logo-splash-text {
+            font-family: 'Amiri', serif;
+            letter-spacing: 0.02em;
+            font-size: 1.1rem;
+        }
+    </style>
 </head>
 <body class="index-page has-video-bg">
 
     <div class="logo-splash" id="logoSplash">
-        <img src="assets/ali-logo-page.jpg?v=83" alt="Ali Coffee" onerror="this.onerror=null; this.src='assets/logo.svg';">
-        <span class="logo-splash-text">Ali Coffee</span>
+        <img src="assets/shawarma demeshq-logo.jpg?v=1" alt="Shawarma DeMeshq" onerror="this.onerror=null; this.src='assets/logo.svg';">
+        <span class="logo-splash-text">شاورمة الدمشقیة</span>
         <div class="logo-splash-dots"><span></span><span></span><span></span></div>
     </div>
 
@@ -36,24 +52,14 @@
     <section class="hero">
         <div class="hero-center">
             <div class="logo-float-wrap">
-                <img src="assets/ali-logo-page.jpg?v=83" alt="Ali Coffee" class="logo" id="indexLogo"
+                 <img src="assets/shawarma demeshq-logo.jpg?v=1" alt="Shawarma DeMeshq" class="logo" id="indexLogo"
                      onerror="this.onerror=null; this.src='assets/logo.svg';">
-            </div>
-            <h1 class="cafe-name">Ali <span class="gold">Coffee</span></h1>
-
-            <div class="coffee-wrap">
-                <svg class="coffee-cup" viewBox="0 0 64 68" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M10 18 h44 v34 c0 8-5.4 14-16 14 s-16-6-16-14 z" fill="#6b3a1a"/>
-                    <ellipse cx="32" cy="18" rx="22" ry="6" fill="#4a2a12"/>
-                    <ellipse cx="32" cy="18" rx="15" ry="4" fill="#8b5e3c"/>
-                    <path d="M54 26 q8 0 8 10 q0 10-8 10" fill="none" stroke="#6b3a1a" stroke-width="4" stroke-linecap="round"/>
-                    <path class="steam steam1" d="M22 10 q2-4 0-8" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"/>
-                    <path class="steam steam2" d="M32 8 q2-5 0-10" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"/>
-                    <path class="steam steam3" d="M42 10 q2-4 0-8" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-            </div>
-
-            <p class="cafe-tagline">Premium Coffee House in Baherka</p>
+              </div>
+              <h1 class="cafe-name">
+                <span class="menu-hero-typewriter" id="heroTypewriter" aria-live="polite">
+                    <span class="menu-hero-typed" id="heroTitleTyped" dir="rtl"></span><span class="menu-hero-cursor" id="heroTitleCursor" aria-hidden="true"></span>
+                </span>
+              </h1>
 
             <div class="lang-group">
                 <button class="lang-btn" data-lang="ku" onclick="openMenu('ku')">

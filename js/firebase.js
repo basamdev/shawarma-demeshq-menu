@@ -2,13 +2,13 @@
 
 // Firebase config - using CDN versions loaded in HTML
 const firebaseConfig = {
-    apiKey: "AIzaSyAO2FU5CDt5o5EEMI-Hd2d04g4HSX62C8M",
-    authDomain: "ali-cafe-menu.firebaseapp.com",
-    projectId: "ali-cafe-menu",
-    storageBucket: "ali-cafe-menu.appspot.com",
-    messagingSenderId: "50748629603",
-    appId: "1:50748629603:web:74a14f151d617c51b50e56",
-    measurementId: "G-J8W87J7KLW"
+    apiKey: "AIzaSyCPJ5fx88XnG_8xo_hb7y_DnHE3h_QntP0",
+    authDomain: "shawarma-demashq-menu.firebaseapp.com",
+    projectId: "shawarma-demashq-menu",
+    storageBucket: "shawarma-demashq-menu.firebasestorage.app",
+    messagingSenderId: "954186813753",
+    appId: "1:954186813753:web:ef0b07813a9fdeccb118e8",
+    measurementId: "G-HWB8F12K7K"
 };
 
 // Initialize Firebase (only if not already initialized)
