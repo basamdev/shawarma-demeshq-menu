@@ -16,11 +16,17 @@
     <meta name="theme-color" content="#8B6914">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@400;600;700&family=Montserrat:wght@500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=61">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=62">
     <style>
+        :lang(en) {
+            font-family: var(--font-body);
+        }
+        :lang(ar), :lang(ku) {
+            font-family: var(--font-arabic);
+        }
         .cafe-name {
-            font-family: 'Montserrat', sans-serif;
+            font-family: inherit;
             letter-spacing: 0.05em;
             font-size: clamp(2.2rem, 8vw, 4.2rem);
             font-weight: 700;
@@ -30,9 +36,13 @@
             text-shadow: 0 2px 20px rgba(0,0,0,0.24);
         }
         .logo-splash-text {
-            font-family: 'Amiri', serif;
+            font-family: inherit;
             letter-spacing: 0.02em;
             font-size: 1.1rem;
+        }
+        .lang-btn,
+        .lang-sep {
+            font-family: inherit;
         }
     </style>
 </head>

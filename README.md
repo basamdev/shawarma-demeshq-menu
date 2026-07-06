@@ -63,7 +63,7 @@
 ## 📂 FILE STRUCTURE
 
 ```
-ali-cafe-menu/
+shawarma-demeshq-menu/
 ├── index.html          (Landing page - Ludon Cafe style)
 ├── menu.html           (Customer QR menu)
 ├── login.html          (Admin login)
@@ -85,7 +85,7 @@ ali-cafe-menu/
 
 ### 1. Firebase Setup
 1. Go to Firebase Console: https://console.firebase.google.com
-2. Select project: `ali-cafe-menu`
+2. Select project: `shawarma-demeshq-menu`
 3. Go to **Authentication** → Enable **Email/Password**
 4. Go to **Firestore Database** → Create database → Start in **test mode** (for development)
 
@@ -108,9 +108,9 @@ ali-cafe-menu/
 3. Use Firebase Console Firestore to add items manually
 
 ### 4. Deploy Locally (XAMPP)
-1. Place folder in `C:\xampp\htdocs\ali-cafe-menu`
+1. Place folder in `C:\xampp\htdocs\shawarma-demeshq-menu`
 2. Start XAMPP Apache
-3. Open: `http://localhost/ali-cafe-menu/`
+3. Open: `http://localhost/shawarma-demeshq-menu/`
 
 ### 5. Deploy to Netlify/Vercel
 1. Push to GitHub repository
@@ -181,4 +181,4 @@ Add options in `admin.html` within the item modal form.
 ## 📞 SUPPORT
 
 Firebase Console: https://console.firebase.google.com
-Project ID: `ali-cafe-menu`
+Project ID: `shawarma-demeshq-menu`

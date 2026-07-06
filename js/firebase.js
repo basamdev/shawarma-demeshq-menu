@@ -1,21 +1,72 @@
 // Firebase Configuration and Initialization
 
+function getHostName() {
+    return (window.location && window.location.hostname) || '';
+}
+
+function getFirebaseEnvironment() {
+    var host = getHostName();
+    var params = new URLSearchParams(window.location.search || '');
+    var forcedEnv = (params.get('firebaseEnv') || '').toLowerCase();
+
+    if (forcedEnv === 'development') {
+        return 'development';
+    }
+
+    if (forcedEnv === 'production') {
+        return 'production';
+    }
+
+    if (!host || host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || /\.local$/i.test(host) || /\.test$/i.test(host)) {
+        return 'development';
+    }
+
+    return 'production';
+}
+
+function getFirebaseAuthDomain(config) {
+    var host = getHostName();
+    if (!host || host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || /\.local$/i.test(host) || /\.test$/i.test(host)) {
+        return host || 'localhost';
+    }
+    return config && config.authDomain ? config.authDomain : '';
+}
+
+function getDefaultFirebaseConfig() {
+    return {
+        apiKey: "AIzaSyCPJ5fx88XnG_8xo_hb7y_DnHE3h_QntP0",
+        authDomain: "shawarma-demeshq-menu.firebaseapp.com",
+        projectId: "shawarma-demeshq-menu",
+        storageBucket: "shawarma-demeshq-menu.firebasestorage.app",
+        messagingSenderId: "954186813753",
+        appId: "1:954186813753:web:ef0b07813a9fdeccb118e8",
+        measurementId: "G-HWB8F12K7K"
+    };
+}
+
+function getFirebaseConfig() {
+    if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId) {
+        return window.FIREBASE_CONFIG;
+    }
+
+    return getDefaultFirebaseConfig();
+}
+
+function buildFirebaseConfig(baseConfig) {
+    var config = Object.assign({}, baseConfig);
+    config.authDomain = getFirebaseAuthDomain(config);
+    return config;
+}
+
 // Firebase config - using CDN versions loaded in HTML
-const firebaseConfig = {
-    apiKey: "AIzaSyCPJ5fx88XnG_8xo_hb7y_DnHE3h_QntP0",
-    authDomain: "shawarma-demashq-menu.firebaseapp.com",
-    projectId: "shawarma-demashq-menu",
-    storageBucket: "shawarma-demashq-menu.firebasestorage.app",
-    messagingSenderId: "954186813753",
-    appId: "1:954186813753:web:ef0b07813a9fdeccb118e8",
-    measurementId: "G-HWB8F12K7K"
-};
+const firebaseConfig = buildFirebaseConfig(getFirebaseConfig());
+window.firebaseEnvironment = getFirebaseEnvironment();
 
 // Initialize Firebase (only if not already initialized)
 try {
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
-        console.log('Firebase initialized successfully');
+        console.log('Firebase initialized successfully for', firebaseConfig.projectId);
     } else {
         console.log('Firebase already initialized');
     }
@@ -119,6 +170,7 @@ window.db = db;
 window.storage = storage;
 
 console.log('Firebase Storage disabled; using direct image URLs only');
+console.log('Using Firebase environment:', window.firebaseEnvironment, 'project:', firebaseConfig.projectId);
 
 // Auth state observer (for debugging)
 auth.onAuthStateChanged((user) => {

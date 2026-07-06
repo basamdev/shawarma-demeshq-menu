@@ -4225,7 +4225,7 @@ function loadSettings() {
               '</div>' +
               '<div class="settings-social-field">' +
                   '<span class="settings-social-icon settings-social-icon--currency" aria-hidden="true">' +
-                      '<img src="assets/currency-icon.png" alt="" width="28" height="28">' +
+                      '<i class="fa-solid fa-coins"></i>' +
                   '</span>' +
                   '<div class="settings-social-input-wrap">' +
                       '<label for="cafeCurrency">' + S.currency + '</label>' +
@@ -4280,11 +4280,6 @@ function loadSettings() {
               '<div class="settings-section-hint">' + TL.hint + '</div>' +
               '<div class="theme-picker" id="themePicker">' + swatchesHtml + '</div>' +
           '</div>' +
-          '<div class="card" style="margin-top:20px;border:1px solid #C62828;">' +
-              '<h2 style="color:#C62828;">⚠️ ' + S.resetAllData + '</h2>' +
-              '<p style="margin-bottom:12px;color:#666;">' + S.resetConfirm + '</p>' +
-              '<button class="btn-danger" id="resetAllDataBtn">' + S.resetAllData + '</button>' +
-          '</div>';
 
       setupCafeTimePickers(settingsLang);
 
@@ -4351,6 +4346,9 @@ function loadSettings() {
               storeSetting('cafeSnapchat', cafeSnapchat);
               storeSetting('cafeOpenTime', cafeOpenTime);
               storeSetting('cafeCloseTime', cafeCloseTime);
+              try {
+                  localStorage.setItem('cafeSettingsUpdatedAt', String(Date.now()));
+              } catch (e) {}
 
               document.getElementById('whatsappPhone').value = whatsappPhone;
               document.getElementById('cafeInstagram').value = cafeInstagram;
@@ -4416,76 +4414,8 @@ function loadSettings() {
           });
       }
 
-     var resetBtn = document.getElementById('resetAllDataBtn');
-     if (resetBtn) {
-         resetBtn.addEventListener('click', function () { resetAllData(); });
-     }
  }
 
-function resetAllData() {
-     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-     if (!confirm(S.resetConfirm)) return;
-
-     if (!window.db) {
-         alert(S.resetError + 'Firestore not ready.');
-         return;
-     }
-
-     if (!isAdminAuthenticated()) {
-         alert(S.resetError + (S.loginRequired || 'Please log in again.'));
-         return;
-     }
-
-     if (_adminResetInProgress) return;
-
-     var resetBtn = document.getElementById('resetAllDataBtn');
-     var resetBtnLabel = resetBtn ? resetBtn.textContent : '';
-     if (resetBtn) {
-         resetBtn.disabled = true;
-         resetBtn.textContent = S.loading || '...';
-     }
-
-     _adminResetInProgress = true;
-     stopDashboardListeners();
-
-     // Reset sales + expenses only — keep menu items and categories.
-     clearAdminSalesExpensesCache();
-     refreshAdminCurrentSection();
-
-     var collections = ['sales', 'expenses'];
-     var deleteTasks = collections.map(function (col) {
-         return deleteAdminCollectionFromServer(col).then(function (result) {
-             if (result.remaining > 0) {
-                 throw new Error(col + ': ' + result.remaining + ' documents still on server');
-             }
-             return result;
-         });
-     });
-
-     Promise.all(deleteTasks).then(function () {
-         clearAdminSalesExpensesCache();
-         try { localStorage.setItem('adminCacheWarmedAt', String(Date.now())); } catch (e) {}
-         _adminResetInProgress = false;
-         if (resetBtn) {
-             resetBtn.disabled = false;
-             resetBtn.textContent = resetBtnLabel;
-         }
-         alert(S.resetSuccess);
-         loadAdminSection('dashboard');
-     }).catch(function (e) {
-         console.error('Reset failed:', e);
-         _adminResetInProgress = false;
-         if (resetBtn) {
-             resetBtn.disabled = false;
-             resetBtn.textContent = resetBtnLabel;
-         }
-         warmAdminOfflineCache(function () {
-             startAdminLiveListeners();
-             refreshAdminCurrentSection();
-             alert(S.resetError + (e && e.message ? e.message : ''));
-         });
-     });
- }
 
  /* ============ EXPENSES ============ */
 

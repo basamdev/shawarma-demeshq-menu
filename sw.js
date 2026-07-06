@@ -1,18 +1,17 @@
-const CACHE_NAME = 'ali-cafe-v102';
+const CACHE_NAME = 'ali-cafe-v103';
 const APP_SHELL_PATHS = /\.(html|css|js)$/i;
 const FIREBASE_SDK_URLS = [
     'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js',
     'https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js',
     'https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js'
 ];
-// Relative paths — the app is served from a subfolder (e.g. /ali-cafe-menu/),
+// Relative paths — the app is served from a subfolder (e.g. /shawarma-demeshq-menu/),
 // so root-absolute paths like '/index.html' would 404 and break install.
 const STATIC_ASSETS = [
     './manifest.json',
     './assets/shawarma demeshq-logo.jpg',
     './assets/logo.svg',
     './images/flag-kurdistan.svg',
-    './assets/currency-icon.png',
     './images/install/ios-step-1.png',
     './images/install/ios-step-2.png',
     './images/install/ios-step-3.png',

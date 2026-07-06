@@ -35,10 +35,10 @@
 }
 
 .logo-splash-text {
-    font-family: var(--font-display, 'Playfair Display', serif);
+    font-family: var(--font-body);
     font-size: 1.4rem;
     font-weight: 700;
-    color: var(--color-gold, #D4AF37);
+    color: var(--color-gold);
     letter-spacing: 0.04em;
 }
 
@@ -110,9 +110,9 @@ body.light-mode .logo-splash {
     --shadow-gold: 0 0 40px rgba(212,175,55,0.12);
     --shadow-gold-hover: 0 8px 40px rgba(212,175,55,0.25);
 
-    --font-display: "Playfair Display", "Amiri", Georgia, serif;
-    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-arabic: "Inter", "Amiri", "Traditional Arabic", sans-serif;
+    --font-display: "Manrope", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-body: "Manrope", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-arabic: "IBM Plex Sans Arabic", "Cairo", sans-serif;
 
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
@@ -683,7 +683,7 @@ body.light-mode .hero .logo {
 }
 
 .cafe-name {
-    font-family: 'Montserrat', 'Inter', sans-serif;
+    font-family: inherit;
     font-size: clamp(2.4rem, 8vw, 4rem);
     font-weight: 700;
     line-height: 1.02;
@@ -2627,7 +2627,7 @@ body.light-mode .lang-option.active {
     display: inline-block;
     flex-shrink: 1;
     min-width: 0;
-    font-family: 'Amiri', 'Traditional Arabic', 'Playfair Display', serif;
+    font-family: var(--font-display);
     font-size: 1.15rem;
     font-weight: 700;
     letter-spacing: 0;
@@ -4638,7 +4638,7 @@ body.emenu-layout .menu-hero-typewriter {
     display: inline-block;
     min-width: 6.8rem;
     text-align: right;
-    font-family: var(--font-display, 'Playfair Display', serif);
+    font-family: var(--font-display);
     font-size: clamp(0.9rem, 3.6vw, 1.1rem);
     font-weight: 600;
     letter-spacing: 0.03em;

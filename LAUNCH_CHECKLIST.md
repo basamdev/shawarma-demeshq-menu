@@ -2,9 +2,9 @@
 
 Use this before printing QR codes and selling to customers.
 
-**Live site:** https://ali-cafe-menu.vercel.app  
-**Customer menu:** https://ali-cafe-menu.vercel.app/menu.html  
-**Admin:** https://ali-cafe-menu.vercel.app/admin.html  
+**Live site:** https://shawarma-demeshq-menu.vercel.app  
+**Customer menu:** https://shawarma-demeshq-menu.vercel.app/menu.html  
+**Admin:** https://shawarma-demeshq-menu.vercel.app/admin.html  
 
 ---
 
@@ -32,7 +32,7 @@ The QR is only a link. Customers always get the **latest menu from the cloud** w
 - [ ] Test QR opens menu on your phone (Safari scan)
 
 **Print QR pointing to:**  
-`https://ali-cafe-menu.vercel.app/menu.html`  
+`https://shawarma-demeshq-menu.vercel.app/menu.html`  
 (or `index.html` if you want language selection first)
 
 ---

@@ -1170,7 +1170,7 @@ function loadFromCache() {
     }
 }
 
-window.addEventListener('unload', function () {
+window.addEventListener('pagehide', function () {
     if (loadMenuItems._unsubscribe) loadMenuItems._unsubscribe();
 });
 
@@ -2614,6 +2614,15 @@ function getCafeSettingsFromLocalStorage() {
 }
 
 var cafeSettingsUnsubscribe = null;
+
+function handleCafeSettingsStorageChange(event) {
+    if (!event || !event.key) return;
+    if (event.key === 'cafeSettingsUpdatedAt' || CAFE_SETTING_KEYS.indexOf(event.key) !== -1) {
+        updateCafeInfoPanel();
+    }
+}
+
+window.addEventListener('storage', handleCafeSettingsStorageChange);
 
 function loadCafeSettingsFromFirestore(callback) {
     if (!window.db) {

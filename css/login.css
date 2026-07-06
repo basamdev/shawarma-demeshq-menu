@@ -20,7 +20,7 @@
 }
 
 .login-box h2 {
-    font-family: var(--font-display, "Playfair Display", Georgia, serif);
+    font-family: var(--font-display);
     font-size: 1.75rem;
     font-weight: 600;
     color: var(--color-gold, #D4AF37);
@@ -48,7 +48,7 @@
     border-radius: 8px;
     color: var(--color-cream, #FAF8F5);
     font-size: 1rem;
-    font-family: var(--font-body, "Inter", sans-serif);
+    font-family: var(--font-body);
     transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
@@ -83,8 +83,20 @@
     box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
 }
 
+.login-btn.secondary {
+    margin-top: 10px;
+    background: #1f1f1f;
+    color: #ffffff;
+    border: 1px solid var(--color-gold, #D4AF37);
+}
+
 .login-btn:active {
     transform: translateY(0);
+}
+
+.create-account-box {
+    display: none;
+    margin-top: 16px;
 }
 
 .error-message {
