@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Shawarma DeMeshq",
-  "short_name": "Shawarma DeMeshq",
-  "description": "Shawarma DeMeshq — Premium Shawarma Menu",
+  "name": "Shawarma",
+  "short_name": "Shawarma",
+  "description": "Shawarma — Premium Shawarma Menu",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

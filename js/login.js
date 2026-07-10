@@ -29,6 +29,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            if (typeof USE_LOCAL_API !== 'undefined' && USE_LOCAL_API) {
+                // Use authApi.login() which resolves the API URL absolutely
+                // (via getApiUrl) and sends credentials. Building the URL
+                // relatively with localApiRequest('auth.php') only works when
+                // login.html shares the exact origin/path as the PHP backend;
+                // otherwise the POST never reaches api/auth.php and login fails.
+                authApi.login(email, password).then(function(response) {
+                    if (response.token) {
+                        window.currentAuthToken = response.token;
+                        window.currentUser = response.user;
+                        localStorage.setItem('adminAuthToken', response.token);
+                        localStorage.setItem('adminUser', JSON.stringify(response.user));
+                    }
+                    showMessage(loginError, '', false);
+                    window.location.href = 'admin.html';
+                }).catch(function(error) {
+                    showMessage(loginError, error.message || 'Authentication failed', true);
+                });
+                return;
+            }
+
             auth.signInWithEmailAndPassword(email, password)
                 .then(function() {
                     showMessage(loginError, '', false);
@@ -84,6 +105,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            if (typeof USE_LOCAL_API !== 'undefined' && USE_LOCAL_API) {
+                showMessage(createAccountError, 'Account creation is disabled in local mode. Use default credentials: admin@shawarma.com / admin123', true);
+                return;
+            }
+
             auth.createUserWithEmailAndPassword(email, password)
                 .then(function() {
                     showMessage(createAccountError, 'Admin account created. Redirecting...', false);
@@ -105,9 +131,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    auth.onAuthStateChanged(function(user) {
-        if (user) {
-            window.location.href = 'admin.html';
-        }
-    });
+    if (typeof USE_LOCAL_API === 'undefined' || !USE_LOCAL_API) {
+        auth.onAuthStateChanged(function(user) {
+            if (user) {
+                window.location.href = 'admin.html';
+            }
+        });
+    }
 });

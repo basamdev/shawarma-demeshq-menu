@@ -498,6 +498,19 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
+.cafe-time-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    color-scheme: light;
+}
+
 .cafe-time-picker-btn i.fa-clock {
     color: var(--accent);
     flex-shrink: 0;

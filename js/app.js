@@ -1,10 +1,50 @@
-// App.js — Shawarma DeMeshq Premium Menu
+// App.js — Shawarma Premium Menu
 // Handles: i18n, theme, category filtering, product detail modal, video player
 
 window.openMenu = function (lang) {
     localStorage.setItem('selectedLang', lang);
     window.location.href = 'menu.html?lang=' + lang;
 };
+
+// Use local API instead of Firebase
+var USE_LOCAL_API = false;
+var API_BASE = 'api';
+
+function localApiRequest(endpoint, options) {
+    options = options || {};
+    // Resolve the API URL absolutely (same logic as getApiUrl in local-api.js)
+    // so requests work regardless of how the page is served. Falling back to a
+    // relative URL only works when the document and the API share an origin.
+    var url = (typeof getApiUrl === 'function') ? getApiUrl(endpoint) : (API_BASE + '/' + endpoint);
+    var method = options.method || 'GET';
+    var body = options.body || null;
+    var headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    };
+    
+    var config = {
+        method: method,
+        headers: headers,
+        mode: 'cors',
+        credentials: 'include'
+    };
+    
+    if (body) {
+        config.body = JSON.stringify(body);
+    }
+    
+    return fetch(url, config).then(function(response) {
+        if (!response.ok) {
+            return response.json().then(function(err) {
+                throw new Error(err.error || 'HTTP ' + response.status);
+            }).catch(function() {
+                throw new Error('HTTP ' + response.status);
+            });
+        }
+        return response.json();
+    });
+}
 
 document.addEventListener('DOMContentLoaded', function () {
     try {
@@ -29,6 +69,7 @@ document.addEventListener('DOMContentLoaded', function () {
             setupLanguageButtons();
             initHeroTitleSequence();
             setupInstallTutorial();
+            setupFlutterwaveCartButton();
         } else if (document.getElementById('heroTypewriter')) {
             initHeroTitleSequence();
         }
@@ -51,7 +92,7 @@ const i18n = {
         menuLoadRetry: 'دووبارە هەوڵبدەرەوە',
         menuConnectionHint: 'پەیوەندی ئینتەرنێت یان ڕێکخستنی Firebase بپشکنە.',
         noCategories: 'هیچ بەشێک نییە.',
-        pageTitle: 'عەلی کافێ | مێنوو',
+        pageTitle: 'Shawarma | مێنوو',
         dashboard: 'داشبۆرد',
         manageItems: 'بەڕێوەبردنی ئایتمەکان',
         manageCategories: 'بەڕێوەبردنی بەشەکان',
@@ -146,7 +187,7 @@ const i18n = {
         cafeOpenTimePlaceholder: '٢:٠٠ دوای نیوەڕۆ',
         cafeCloseTimePlaceholder: '٢:٠٠ بەیانی',
         timeAm: 'بەیانی',
-        timePm: 'دوای نیوەڕۆ',
+        timePm: 'ئێوارە',
         applyTime: 'جێبەجێکردن',
         saveHours: 'پاشەکەوتکردنی کاتەکان',
         hoursSaved: 'کاتەکان پاشەکەوت کران!',
@@ -169,7 +210,7 @@ const i18n = {
         sold: 'دانە',
         itemsCount: ' ئایتم',
         unknown: 'نەناسراو',
-        siteName: 'عەلی کافێ',
+        siteName: 'Shawarma',
         addCategory: '+ زیادکردنی بەشی نوێ',
         categoryNameKu: 'ناوی بەش بە کوردی',
         categoryNameAr: 'ناوی بەش بە عەرەبی',
@@ -249,7 +290,7 @@ const i18n = {
         instagramUrl: 'ئینستاگرام',
         tiktokUrl: 'تیکتۆک',
         snapchatUrl: 'سنەپچات',
-        cafeInfoTitle: 'عەلی کافێ',
+        cafeInfoTitle: 'Shawarma',
         linkCopied: 'بەستەر کۆپی کرا!',
         installTitle: 'زیادکردن بۆ سکرینی سەرەکی',
         installSubtitle: 'زیادکردنی مینیۆ کەمان بوو ناو سکرین وەکو ئەپلیکەیشن',
@@ -259,14 +300,8 @@ const i18n = {
         installDontShow: 'دووبارە پیشان مەدە',
         installShowHelp: 'زیادکردن بۆ سکرینی سەرەکی',
         installNow: 'ئێستا دابمەزرێنە',
-        installImagesMissing: 'وێنەکانی ڕێنمایی لە images/install/ دابنێ',
-        iosStep1: 'دوگمەی Share (↗) لە خوارەوەی Safari دابگرە',
-        iosStep2: '«Add to Home Screen» هەڵبژێرە',
-        iosStep3: '«Add» دابگرە — ئایکۆنی Shawarma DeMeshq لەسەر سکرین دەردەکەوێت',
-        androidStep1: 'Menu (⋮) لە گۆشەی سەرەوەی Chrome دابگرە',
-        androidStep2: '«Add to Home screen» هەڵبژێرە',
-        androidStep3: '«Install» هەڵبژێرە',
-        androidStep4: '«Install» دابگرە — ئەپەکە لەسەر مۆبایلەکەت دادەمەزرێت',
+        flutterwaveSettings: 'پارەدانی کارتی بانق',
+        flutterwavePublicKey: 'کلیلی publiki Flutterwave'
     },
     ar: {
         menuTitle: 'قائمتنا',
@@ -277,7 +312,7 @@ const i18n = {
         menuLoadRetry: 'إعادة المحاولة',
         menuConnectionHint: 'تحقق من الإنترنت أو إعدادات Firebase.',
         noCategories: 'لا توجد أقسام.',
-        pageTitle: 'علي كافيه | القائمة',
+        pageTitle: 'Shawarma | القائمة',
         dashboard: 'لوحة التحكم',
         manageItems: 'إدارة العناصر',
         manageCategories: 'إدارة الفئات',
@@ -395,7 +430,7 @@ const i18n = {
         sold: 'قطعة',
         itemsCount: ' عناصر',
         unknown: 'غير معروف',
-        siteName: 'علي كافيه',
+        siteName: 'Shawarma',
         addCategory: '+ إضافة فئة جديدة',
         categoryNameKu: 'اسم الفئة بالكردية',
         categoryNameAr: 'اسم الفئة بالعربية',
@@ -475,7 +510,7 @@ const i18n = {
         instagramUrl: 'إنستغرام',
         tiktokUrl: 'تيك توك',
         snapchatUrl: 'سناب شات',
-        cafeInfoTitle: 'علي كافيه',
+        cafeInfoTitle: 'Shawarma',
         linkCopied: 'تم نسخ الرابط!',
         installTitle: 'إضافة إلى الشاشة الرئيسية',
         installSubtitle: 'أضف قائمتنا إلى الشاشة الرئيسية كتطبيق',
@@ -488,11 +523,13 @@ const i18n = {
         installImagesMissing: 'ضع صور الشرح في images/install/',
         iosStep1: 'اضغط زر Share (↗) أسفل Safari',
         iosStep2: 'اختر «Add to Home Screen»',
-        iosStep3: 'اضغط «Add» — يظهر أيقونة Shawarma DeMeshq على الشاشة',
+        iosStep3: 'اضغط «Add» — يظهر أيقونة Shawarma على الشاشة',
         androidStep1: 'اضغط القائمة (⋮) أعلى Chrome',
         androidStep2: 'اختر «Add to Home screen»',
         androidStep3: 'اختر «Install»',
-        androidStep4: 'اضغط «Install» — يُثبت تطبيق Shawarma DeMeshq',
+        androidStep4: 'اضغط «Install» — يُثبت تطبيق Shawarma',
+        flutterwaveSettings: 'بوابة الدفع',
+        flutterwavePublicKey: 'مفتاح Flutterwave العام'
     },
     en: {
         menuTitle: 'Our Menu',
@@ -503,7 +540,7 @@ const i18n = {
         menuLoadRetry: 'Try again',
         menuConnectionHint: 'Check internet or Firebase settings for this domain.',
         noCategories: 'No categories.',
-        pageTitle: 'Shawarma DeMeshq | Menu',
+        pageTitle: 'Shawarma | Menu',
         dashboard: 'Dashboard',
         manageItems: 'Manage Items',
         manageCategories: 'Manage Categories',
@@ -597,8 +634,8 @@ const i18n = {
         cafeCloseTimeLabel: 'Closing time',
         cafeOpenTimePlaceholder: '2:00 PM',
         cafeCloseTimePlaceholder: '2:00 AM',
-        timeAm: 'AM',
-        timePm: 'PM',
+        timeAm: 'Morning',
+        timePm: 'Evening',
         applyTime: 'Apply',
         saveHours: 'Save hours',
         hoursSaved: 'Hours saved!',
@@ -637,7 +674,7 @@ const i18n = {
         sold: 'sold',
         itemsCount: ' items',
         unknown: 'unknown',
-        siteName: 'Shawarma DeMeshq',
+        siteName: 'Shawarma',
         addCategory: '+ Add New Category',
         categoryNameKu: 'Category Name (Kurdish)',
         categoryNameAr: 'Category Name (Arabic)',
@@ -718,7 +755,7 @@ const i18n = {
         instagramUrl: 'Instagram',
         tiktokUrl: 'TikTok',
         snapchatUrl: 'Snapchat',
-        cafeInfoTitle: 'شاورما الدمشقي',
+        cafeInfoTitle: 'Shawarma',
         linkCopied: 'Link copied!',
         installTitle: 'Add to Home Screen',
         installSubtitle: 'Add our menu to your home screen like an app',
@@ -731,11 +768,13 @@ const i18n = {
         installImagesMissing: 'Add tutorial images to images/install/',
         iosStep1: 'Tap Share (↗) at the bottom of Safari',
         iosStep2: 'Choose «Add to Home Screen»',
-        iosStep3: 'Tap «Add» — Shawarma DeMeshq icon appears on your home screen',
+        iosStep3: 'Tap «Add» — Shawarma icon appears on your home screen',
         androidStep1: 'Tap Menu (⋮) at the top of Chrome',
         androidStep2: 'Choose «Add to Home screen»',
         androidStep3: 'Choose «Install»',
-        androidStep4: 'Tap «Install» — Shawarma DeMeshq is added to your phone',
+        androidStep4: 'Tap «Install» — Shawarma is added to your phone',
+        flutterwaveSettings: 'Payment Gateway',
+        flutterwavePublicKey: 'Flutterwave Public Key'
     }
 };
 
@@ -819,7 +858,29 @@ function firestoreGetWithTimeout(ref, ms) {
     ]);
 }
 
-var APP_VERSION = 'v87';
+var APP_VERSION = 'v88';
+
+function isFirestoreApiDisabledError(err) {
+    if (!err || !err.message) return false;
+    var m = err.message;
+    var disabled = m.indexOf('Cloud Firestore API has not been used in project') !== -1 ||
+        m.indexOf('SERVICE_DISABLED') !== -1 ||
+        m.indexOf('firestore.googleapis.com/overview') !== -1;
+    if (disabled) {
+        window._firestoreApiDisabled = true;
+    }
+    return disabled;
+}
+
+function showFirestoreApiDisabledAlert() {
+    if (window._firestoreApiDisabledAlerted) return;
+    window._firestoreApiDisabledAlerted = true;
+    var lang = localStorage.getItem('selectedLang') || 'ku';
+    var strings = i18n[lang] || i18n.en;
+    var projectId = (window.firebaseConfig && window.firebaseConfig.projectId) || 'shawarma-demashq-menu';
+    var url = 'https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=' + encodeURIComponent(projectId);
+    alert('⚠️ ' + (strings.errorPrefix || 'Error:') + '\n\nCloud Firestore API is disabled for this project.\n\nPlease enable it here:\n' + url + '\n\nAfter enabling, wait a few minutes and refresh this page.');
+}
 
 function clearMenuLoadingSpinner() {
     var container = document.getElementById('menuGrid');
@@ -889,13 +950,23 @@ function parseMenuItemsFromRest(json) {
     return items;
 }
 
+function getFirestoreRestBaseUrl() {
+    var emulatorInfo = window._firestoreEmulatorInfo;
+    if (emulatorInfo) {
+        return 'http://' + emulatorInfo.host + ':' + emulatorInfo.port + '/v1/projects/';
+    }
+    return 'https://firestore.googleapis.com/v1/projects/';
+}
+
 function fetchMenuViaRest(timeoutMs) {
+    if (window._firestoreApiDisabled) return Promise.reject(new Error('Firestore API disabled'));
     timeoutMs = timeoutMs || 10000;
     var cfg = window.firebaseConfig;
     if (!cfg || !cfg.projectId || !cfg.apiKey) {
         return Promise.reject(new Error('Firebase config missing'));
     }
-    var url = 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(cfg.projectId) +
+    var baseUrl = getFirestoreRestBaseUrl();
+    var url = baseUrl + encodeURIComponent(cfg.projectId) +
         '/databases/(default)/documents/menuItems?key=' + encodeURIComponent(cfg.apiKey);
     var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
     var timer = null;
@@ -906,10 +977,20 @@ function fetchMenuViaRest(timeoutMs) {
     }
     return fetch(url, opts).then(function (r) {
         if (timer) clearTimeout(timer);
-        if (!r.ok) throw new Error('REST HTTP ' + r.status);
+        if (!r.ok) {
+            return r.text().then(function (body) {
+                var msg = 'REST HTTP ' + r.status;
+                if (body && body.indexOf('Cloud Firestore API has not been used') !== -1) {
+                    window._firestoreApiDisabled = true;
+                    msg = body;
+                }
+                throw new Error(msg);
+            });
+        }
         return r.json();
     }).then(parseMenuItemsFromRest).catch(function (err) {
         if (timer) clearTimeout(timer);
+        if (isFirestoreApiDisabledError(err)) showFirestoreApiDisabledAlert();
         throw err;
     });
 }
@@ -936,6 +1017,7 @@ function computeCategoryBarSig(categories, items, lang) {
 
 async function loadCategoriesFromFirebase() {
     if (!window.db) return false;
+    if (window._firestoreApiDisabled) return false;
     try {
         const catSnap = await firestoreGetWithTimeout(window.db.collection('categories'), 8000);
         const categories = [];
@@ -952,6 +1034,9 @@ async function loadCategoriesFromFirebase() {
         return prev !== sig;
     } catch (e) {
         console.error('Error loading categories:', e);
+        if (isFirestoreApiDisabledError(e)) {
+            showFirestoreApiDisabledAlert();
+        }
         return false;
     }
 }
@@ -1018,6 +1103,44 @@ async function loadMenuItems() {
         return;
     }
 
+    const hadCache = showCachedMenuIfAvailable();
+    if (!hadCache) {
+        container.innerHTML = '<div class="loading-menu">' + strings.loadingMenu +
+            '<br><small style="opacity:0.45;font-size:0.75rem;margin-top:6px;display:block">' + APP_VERSION + '</small></div>';
+    }
+
+    if (USE_LOCAL_API) {
+        localApiRequest('menu_items.php').then(function(items) {
+            if (loadMenuItems._loadTimer) {
+                clearTimeout(loadMenuItems._loadTimer);
+                loadMenuItems._loadTimer = null;
+            }
+            applyMenuItemsUpdate(items, { force: true });
+        }).catch(function(err) {
+            console.warn('[menu] Local API load failed:', err.message);
+            if (!hadCache && !_menuUiReady) {
+                var container = document.getElementById('menuGrid');
+                if (container) {
+                    container.innerHTML = '<div class="empty-state">' +
+                        '<div class="empty-state-icon">⚠️</div>' +
+                        '<p>' + (strings.errorLoadingMenu || 'Error loading menu') + '</p>' +
+                        '<p style="font-size:0.8rem;opacity:0.7;margin-top:8px;">' + (err.message || 'Check connection') + '</p>' +
+                        '<button type="button" class="menu-retry-btn" id="menuRetryBtn">' + (strings.menuLoadRetry || 'Retry') + '</button>' +
+                    '</div>';
+                    var retry = document.getElementById('menuRetryBtn');
+                    if (retry) {
+                        retry.addEventListener('click', function () {
+                            loadMenuItems._inProgress = false;
+                            loadMenuItems();
+                        });
+                    }
+                }
+            }
+        });
+        loadMenuItems._inProgress = false;
+        return;
+    }
+
     if (loadMenuItems._loadTimer) clearTimeout(loadMenuItems._loadTimer);
     loadMenuItems._loadTimer = setTimeout(function () {
         if (menuStillLoading()) {
@@ -1029,12 +1152,6 @@ async function loadMenuItems() {
         }
     }, 4000);
 
-    const hadCache = showCachedMenuIfAvailable();
-    if (!hadCache) {
-        container.innerHTML = '<div class="loading-menu">' + strings.loadingMenu +
-            '<br><small style="opacity:0.45;font-size:0.75rem;margin-top:6px;display:block">' + APP_VERSION + '</small></div>';
-    }
-
     // REST fetch runs immediately — bypasses Firestore SDK when it hangs on mobile hosts.
     fetchMenuViaRest(10000).then(function (items) {
         if (loadMenuItems._loadTimer) {
@@ -1044,6 +1161,27 @@ async function loadMenuItems() {
         applyMenuItemsUpdate(items, { force: true });
     }).catch(function (err) {
         console.warn('[menu] REST load failed:', err.message);
+        if (isFirestoreApiDisabledError(err)) {
+            showFirestoreApiDisabledAlert();
+        }
+        if (!hadCache && !_menuUiReady) {
+            var container = document.getElementById('menuGrid');
+            if (container) {
+                container.innerHTML = '<div class="empty-state">' +
+                    '<div class="empty-state-icon">⏳</div>' +
+                    '<p>' + (strings.loadingMenu || 'Loading menu...') + '</p>' +
+                    '<p style="font-size:0.8rem;opacity:0.7;margin-top:8px;">' + (strings.menuConnectionHint || 'Check connection') + '</p>' +
+                    '<button type="button" class="menu-retry-btn" id="menuRetryBtn">' + (strings.menuLoadRetry || 'Retry') + '</button>' +
+                '</div>';
+                var retry = document.getElementById('menuRetryBtn');
+                if (retry) {
+                    retry.addEventListener('click', function () {
+                        loadMenuItems._inProgress = false;
+                        loadMenuItems();
+                    });
+                }
+            }
+        }
     });
 
     try {
@@ -1073,6 +1211,22 @@ async function loadMenuItems() {
                 handleMenuLoadFailure(err, strings);
             }
         );
+
+        if (window._categoriesUnsubscribe) window._categoriesUnsubscribe();
+        window._categoriesUnsubscribe = window.db.collection('categories').onSnapshot(
+            snap => {
+                const cats = [];
+                snap.forEach(doc => cats.push({ id: doc.id, data: doc.data() }));
+                localStorage.setItem('cachedCategories', JSON.stringify(cats));
+                const sig = cats.map(c => c.id).join('|');
+                const prev = localStorage.getItem('cachedCategoriesSig') || '';
+                localStorage.setItem('cachedCategoriesSig', sig);
+                if (cachedMenuItems && cachedMenuItems.length > 0) {
+                    renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
+                }
+            },
+            err => console.warn('[realtime categories] error:', err.message)
+        );
     } catch (error) {
         console.error('Error loading menu:', error);
         handleMenuLoadFailure(error, strings, hadCache);
@@ -1084,6 +1238,9 @@ async function loadMenuItems() {
 function handleMenuLoadFailure(error, strings, hadCache) {
     loadFromCache();
     if (_menuUiReady && !menuStillLoading()) return;
+    if (isFirestoreApiDisabledError(error)) {
+        showFirestoreApiDisabledAlert();
+    }
     showMenuLoadError(strings, error);
     fetchMenuItemsFallback(strings, 'snapshot-failed');
 }
@@ -1118,6 +1275,7 @@ function showMenuLoadError(strings, error) {
 }
 
 function fetchMenuItemsFallback(strings, reason) {
+    if (window._firestoreApiDisabled) return;
     if (_menuUiReady && !menuStillLoading()) return;
     fetchMenuViaRest(10000).then(function (items) {
         if (loadMenuItems._loadTimer) {
@@ -2128,7 +2286,7 @@ function setupMenuThemePicker() {
 
 var HERO_TYPE_PHRASES = [
     { text: 'شاورمة الدمشقیة', dir: 'rtl' },
-    { text: 'Shawarma DeMeshq', dir: 'ltr' }
+    { text: 'Shawarma', dir: 'ltr' }
 ];
 
 function heroTypeChars(str) {
@@ -2625,6 +2783,20 @@ function handleCafeSettingsStorageChange(event) {
 window.addEventListener('storage', handleCafeSettingsStorageChange);
 
 function loadCafeSettingsFromFirestore(callback) {
+    if (USE_LOCAL_API) {
+        localApiRequest('settings.php?id=cafe').then(function(doc) {
+            if (doc && doc.data) {
+                var data = typeof doc.data === 'string' ? JSON.parse(doc.data) : doc.data;
+                applyCafeSettingsToLocalStorage(data);
+            }
+            if (callback) callback();
+        }).catch(function(err) {
+            console.warn('Could not load cafe settings:', err.message);
+            if (callback) callback();
+        });
+        return;
+    }
+    
     if (!window.db) {
         if (callback) callback();
         return;
@@ -2642,6 +2814,27 @@ function loadCafeSettingsFromFirestore(callback) {
 }
 
 function subscribeCafeSettingsUpdates() {
+    if (USE_LOCAL_API) {
+        // For local API, we'll poll for changes every 5 seconds
+        if (window._settingsPollInterval) {
+            clearInterval(window._settingsPollInterval);
+        }
+        window._settingsPollInterval = setInterval(function() {
+            if (!document.getElementById('menuGrid')) {
+                clearInterval(window._settingsPollInterval);
+                return;
+            }
+            localApiRequest('settings.php?id=cafe').then(function(doc) {
+                if (doc && doc.data) {
+                    var data = typeof doc.data === 'string' ? JSON.parse(doc.data) : doc.data;
+                    applyCafeSettingsToLocalStorage(data);
+                    updateCafeInfoPanel();
+                }
+            }).catch(function() {});
+        }, 5000);
+        return;
+    }
+    
     if (!window.db || !document.getElementById('menuGrid')) return;
     if (cafeSettingsUnsubscribe) {
         cafeSettingsUnsubscribe();
@@ -2659,6 +2852,18 @@ function subscribeCafeSettingsUpdates() {
 }
 
 function saveCafeSettingsToFirestore(data, callback) {
+    if (USE_LOCAL_API) {
+        localApiRequest('settings.php', {
+            method: 'POST',
+            body: { id: 'cafe', data: data }
+        }).then(function() {
+            if (callback) callback(null);
+        }).catch(function(err) {
+            if (callback) callback(err);
+        });
+        return;
+    }
+    
     if (!window.db) {
         if (callback) callback(new Error('Firestore not ready'));
         return;
@@ -2668,10 +2873,18 @@ function saveCafeSettingsToFirestore(data, callback) {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
+    var timedOut = false;
+    var timer = setTimeout(function () {
+        timedOut = true;
+        if (callback) callback(new Error('Connection timeout'));
+    }, 12000);
+
     window.db.collection('settings').doc('cafe').set(payload, { merge: true }).then(function () {
-        if (callback) callback(null);
+        clearTimeout(timer);
+        if (!timedOut && callback) callback(null);
     }).catch(function (err) {
-        if (callback) callback(err);
+        clearTimeout(timer);
+        if (!timedOut && callback) callback(err);
     });
 }
 
@@ -2708,7 +2921,7 @@ function getCafeInfo() {
     var closeMinutes = parseCafeTimeToMinutes(closeTime, 2);
 
     return {
-        name: localStorage.getItem('cafeName') || 'Shawarma DeMeshq',
+        name: localStorage.getItem('cafeName') || 'Shawarma',
         phone: normalizeWhatsAppPhone(localStorage.getItem('whatsappPhone') || '9647506454656'),
         locationUrl: storedUrl || defaultUrl,
         locationLabel: storedLabel || defaultLabel,
@@ -3369,3 +3582,138 @@ window.setupLogoClickActions = function (logoEl, onSingleClick, doubleClickHref)
         }
     });
 };
+
+/* ========================================
+   Flutterwave Payment Integration
+   ======================================== */
+
+function getFlutterwavePublicKey() {
+    return localStorage.getItem('flutterwave_public_key') || 'FLWPUBK_TEST-xxxxxxxxxx';
+}
+
+function loadFlutterwaveScript() {
+    return new Promise(function(resolve, reject) {
+        if (window.FlutterwaveCheckout) {
+            resolve();
+            return;
+        }
+        if (document.getElementById('flutterwave-script')) {
+            if (!window._flutterwaveLoadPromise) {
+                window._flutterwaveLoadPromise = new Promise(function(res, rej) {
+                    window._flutterwaveResolve = res;
+                    window._flutterwaveReject = rej;
+                });
+            }
+            window._flutterwaveLoadPromise.then(resolve).catch(reject);
+            return;
+        }
+        window._flutterwaveLoadPromise = new Promise(function(res, rej) {
+            window._flutterwaveResolve = res;
+            window._flutterwaveReject = rej;
+        });
+        var script = document.createElement('script');
+        script.id = 'flutterwave-script';
+        script.src = 'https://checkout.flutterwave.com/v3.js';
+        script.async = true;
+        script.onload = function() {
+            if (window._flutterwaveResolve) window._flutterwaveResolve();
+        };
+        script.onerror = function() {
+            if (window._flutterwaveReject) window._flutterwaveReject(new Error('Failed to load Flutterwave'));
+        };
+        document.head.appendChild(script);
+        window._flutterwaveLoadPromise.then(resolve).catch(reject);
+    });
+}
+
+function recordMenuSale(items, total, paymentData) {
+    if (!window.db) return;
+    var saleData = {
+        items: (items || []).map(function(i) { return { name: i.name || i.name_en || '', price: i.price || 0, quantity: i.quantity || 1 }; }),
+        total: total,
+        timestamp: firebase.firestore.Timestamp.fromDate(new Date()),
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        cashier: 'Customer',
+        payment_method: 'flutterwave',
+        payment_ref: (paymentData && paymentData.transaction_id) ? paymentData.transaction_id : ''
+    };
+    db.collection('sales').add(saleData).catch(function(err) {
+        console.error('Failed to record sale:', err);
+    });
+}
+
+function handleCartFlutterwavePayment() {
+    if (!cartItems.length) return;
+    var lang = localStorage.getItem('selectedLang') || 'ku';
+    var S = i18n[lang] || i18n.en;
+    var total = getCartTotal();
+    var publicKey = getFlutterwavePublicKey();
+
+    if (publicKey.indexOf('FLWPUBK_TEST') !== -1 || publicKey.indexOf('xxxxxxxxxx') !== -1) {
+        alert('⚠️ Payment is not configured.\n\nPlease add your Flutterwave public key in Admin Settings → Payment Gateway.');
+        return;
+    }
+
+    var customerNameEl = document.getElementById('customerName');
+    var customerPlaceEl = document.getElementById('customerPlace');
+    var customerName = customerNameEl ? customerNameEl.value.trim() : '';
+    var customerPhone = customerPlaceEl ? customerPlaceEl.value.trim() : '';
+
+    if (!customerName || !customerPhone) {
+        alert((S.needBoth || 'Please fill in name and location before payment.'));
+        if (!customerName && customerNameEl) customerNameEl.focus();
+        else if (customerPlaceEl) customerPlaceEl.focus();
+        return;
+    }
+
+    var txRef = 'Shawarma-' + Date.now();
+
+    loadFlutterwaveScript().then(function() {
+        FlutterwaveCheckout({
+            public_key: publicKey,
+            tx_ref: txRef,
+            amount: total,
+            currency: 'IQD',
+            country: 'IQ',
+            payment_options: 'card, mobilemoney, ussd',
+            redirect_url: window.location.href,
+            customer: {
+                email: 'customer@shawarma.com',
+                phone_number: customerPhone.replace(/\D/g, ''),
+                name: customerName
+            },
+            customizations: {
+                title: 'Shawarma',
+                description: 'Order #' + txRef.split('-')[1],
+                logo: new URL('assets/shawarma demeshq-logo.jpg', window.location.href).href
+            },
+            callback: function(data) {
+                recordMenuSale(cartItems.slice(), total, data);
+                clearCart();
+                updateCartBadge();
+                alert('✅ Payment successful!\nTransaction: ' + data.transaction_id + '\n\nThank you, ' + customerName + '!');
+                closeCartPanel();
+            },
+            onclose: function() {
+                console.log('Flutterwave payment closed');
+            }
+        });
+    }).catch(function(err) {
+        console.error('Flutterwave error:', err);
+        alert('Payment service temporarily unavailable.\n\nPlease try WhatsApp order instead or contact us directly.');
+    });
+}
+
+function setupFlutterwaveCartButton() {
+    var actions = document.querySelector('.cart-actions');
+    if (!actions) return;
+    if (actions.querySelector('.cart-flutterwave')) return;
+
+    var btn = document.createElement('button');
+    btn.className = 'cart-flutterwave';
+    btn.type = 'button';
+    btn.textContent = '💳 Pay with Card';
+    btn.style.cssText = 'flex:1;padding:12px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;';
+    btn.addEventListener('click', handleCartFlutterwavePayment);
+    actions.appendChild(btn);
+}

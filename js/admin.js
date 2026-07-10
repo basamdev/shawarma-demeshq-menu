@@ -1,4 +1,57 @@
-// Admin.js — Shawarma DeMeshq Admin Panel
+// Admin.js — Shawarma Admin Panel
+
+var USE_LOCAL_API = false;
+var API_BASE = 'api';
+
+if (USE_LOCAL_API && typeof console !== 'undefined' && console.error) {
+    var originalConsoleError = console.error;
+    console.error = function() {
+        var args = Array.prototype.slice.call(arguments);
+        var msg = args.join(' ');
+        if (msg.indexOf('Cloud Firestore API') !== -1 || 
+            msg.indexOf('Could not reach Cloud Firestore backend') !== -1 ||
+            msg.indexOf('firestore.googleapis.com') !== -1) {
+            return;
+        }
+        originalConsoleError.apply(console, args);
+    };
+}
+
+function localApiRequest(endpoint, options) {
+    options = options || {};
+    // Resolve the API URL absolutely so requests work regardless of how the
+    // page is served (relative URLs break when the document and API differ
+    // in origin/path).
+    var url = (typeof getApiUrl === 'function') ? getApiUrl(endpoint) : (API_BASE + '/' + endpoint);
+    var method = options.method || 'GET';
+    var body = options.body || null;
+    var headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    };
+    
+    var config = {
+        method: method,
+        headers: headers,
+        mode: 'cors',
+        credentials: 'include'
+    };
+    
+    if (body) {
+        config.body = JSON.stringify(body);
+    }
+    
+    return fetch(url, config).then(function(response) {
+        if (!response.ok) {
+            return response.json().then(function(err) {
+                throw new Error(err.error || 'HTTP ' + response.status);
+            }).catch(function() {
+                throw new Error('HTTP ' + response.status);
+            });
+        }
+        return response.json();
+    });
+}
 
 const orderItems = [];
 let activeItemModal = null;
@@ -12,6 +65,7 @@ var _adminSalesLive = null;
 var _adminExpensesLive = null;
 var _adminLiveListenersStarted = false;
 var _adminResetInProgress = false;
+window._firestoreApiDisabled = false;
 let itemsActiveCategory = 'all';
 
 /* ============ OFFLINE CACHE (localStorage backup for admin) ============ */
@@ -252,10 +306,13 @@ function warmAdminOfflineCache(done) {
         try { localStorage.setItem('adminCacheWarmedAt', String(Date.now())); } catch (e) {}
         hydrateAdminFromLocalCache();
         if (typeof done === 'function') done();
+    }).catch(function () {
+        hydrateAdminFromLocalCache();
+        if (typeof done === 'function') done();
     });
 }
 
-var ADMIN_VERSION = 'v101';
+var ADMIN_VERSION = 'v102';
 
 function getDashboardMonth() {
     var sel = document.getElementById('dashboardMonthSelect');
@@ -440,7 +497,8 @@ function fetchPublicCollectionViaRest(collectionName, timeoutMs) {
     if (!cfg || !cfg.projectId || !cfg.apiKey) {
         return Promise.reject(new Error('No config'));
     }
-    var url = 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(cfg.projectId) +
+    var baseUrl = getFirestoreRestBaseUrl();
+    var url = baseUrl + encodeURIComponent(cfg.projectId) +
         '/databases/(default)/documents/' + encodeURIComponent(collectionName) +
         '?key=' + encodeURIComponent(cfg.apiKey);
     var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -452,10 +510,20 @@ function fetchPublicCollectionViaRest(collectionName, timeoutMs) {
     }
     return fetch(url, opts).then(function (r) {
         if (timer) clearTimeout(timer);
-        if (!r.ok) throw new Error('REST HTTP ' + r.status);
+        if (!r.ok) {
+            return r.text().then(function (body) {
+                var msg = 'REST HTTP ' + r.status;
+                if (body && body.indexOf('Cloud Firestore API has not been used') !== -1) {
+                    window._firestoreApiDisabled = true;
+                    msg = body;
+                }
+                throw new Error(msg);
+            });
+        }
         return r.json();
     }).then(parseRestDocuments).catch(function (e) {
         if (timer) clearTimeout(timer);
+        if (isFirestoreApiDisabledError(e)) showFirestoreApiDisabledAlert();
         throw e;
     });
 }
@@ -464,6 +532,7 @@ function fetchMenuItemsForAdmin(timeoutMs) {
     if (typeof fetchMenuViaRest === 'function') {
         return fetchMenuViaRest(timeoutMs || 12000);
     }
+    if (window._firestoreApiDisabled) return Promise.resolve([]);
     return fetchPublicCollectionViaRest('menuItems', timeoutMs).then(function (docs) {
         return docs.map(function (d) {
             return Object.assign({ id: d.id }, d.data || {});
@@ -472,6 +541,7 @@ function fetchMenuItemsForAdmin(timeoutMs) {
 }
 
 function fetchCategoriesForAdmin(timeoutMs) {
+    if (window._firestoreApiDisabled) return Promise.resolve([]);
     return fetchPublicCollectionViaRest('categories', timeoutMs).then(function (docs) {
         return docs.map(function (d) { return { id: d.id, data: d.data || {} }; });
     });
@@ -510,7 +580,16 @@ function parseRestDocuments(json) {
 }
 
 function fetchAdminCollectionViaRest(collectionName, timeoutMs) {
+    if (window._firestoreApiDisabled) return Promise.resolve([]);
     return fetchAllAdminCollectionViaRest(collectionName, timeoutMs);
+}
+
+function getFirestoreRestBaseUrl() {
+    var emulatorInfo = window._firestoreEmulatorInfo;
+    if (emulatorInfo) {
+        return 'http://' + emulatorInfo.host + ':' + emulatorInfo.port + '/v1/projects/';
+    }
+    return 'https://firestore.googleapis.com/v1/projects/';
 }
 
 function fetchAllAdminCollectionViaRest(collectionName, timeoutMs) {
@@ -521,7 +600,8 @@ function fetchAllAdminCollectionViaRest(collectionName, timeoutMs) {
 
     function fetchPage(pageToken) {
         return auth.currentUser.getIdToken().then(function (token) {
-            var url = 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(cfg.projectId) +
+            var baseUrl = getFirestoreRestBaseUrl();
+            var url = baseUrl + encodeURIComponent(cfg.projectId) +
                 '/databases/(default)/documents/' + encodeURIComponent(collectionName);
             if (pageToken) url += '?pageToken=' + encodeURIComponent(pageToken);
             var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -533,7 +613,18 @@ function fetchAllAdminCollectionViaRest(collectionName, timeoutMs) {
             }
             return fetch(url, opts).then(function (r) {
                 if (timer) clearTimeout(timer);
-                if (!r.ok) throw new Error('REST HTTP ' + r.status);
+                if (!r.ok) {
+                    return r.text().then(function (body) {
+                        var msg = 'REST HTTP ' + r.status;
+                        if (body && body.indexOf('Cloud Firestore API has not been used') !== -1) {
+                            window._firestoreApiDisabled = true;
+                            msg = body;
+                        } else if (body) {
+                            msg += ': ' + body.slice(0, 160);
+                        }
+                        throw new Error(msg);
+                    });
+                }
                 return r.json();
             }).then(function (json) {
                 var docs = parseRestDocuments(json);
@@ -550,7 +641,12 @@ function fetchAllAdminCollectionViaRest(collectionName, timeoutMs) {
         });
     }
 
-    return fetchPage(null);
+    return fetchPage(null).catch(function (err) {
+        if (isFirestoreApiDisabledError(err)) {
+            showFirestoreApiDisabledAlert();
+        }
+        throw err;
+    });
 }
 
 function deleteCollectionDocumentsByIds(collectionName, docIds) {
@@ -613,7 +709,7 @@ function writeDocumentViaRest(collectionName, docId, plainData, isCreate) {
     if (!cfg || !cfg.projectId) return Promise.reject(new Error('No config'));
     var payload = { fields: jsToRestFields(plainData) };
     return auth.currentUser.getIdToken().then(function (token) {
-        var base = 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(cfg.projectId) +
+        var base = getFirestoreRestBaseUrl() + encodeURIComponent(cfg.projectId) +
             '/databases/(default)/documents/' + encodeURIComponent(collectionName);
         var url = isCreate
             ? base + '?documentId=' + encodeURIComponent(docId)
@@ -642,7 +738,7 @@ function deleteDocumentViaRest(collectionName, docId) {
     var cfg = window.firebaseConfig;
     if (!cfg || !cfg.projectId) return Promise.reject(new Error('No config'));
     return auth.currentUser.getIdToken().then(function (token) {
-        var url = 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(cfg.projectId) +
+        var url = getFirestoreRestBaseUrl() + encodeURIComponent(cfg.projectId) +
             '/databases/(default)/documents/' + encodeURIComponent(collectionName) + '/' +
             encodeURIComponent(docId);
         return fetch(url, {
@@ -742,10 +838,21 @@ function warmSalesCacheFromServer() {
         writeCachedSales([]);
         return Promise.resolve();
     }
+    if (window._firestoreApiDisabled) return Promise.resolve();
+    if (USE_LOCAL_API) {
+        return localApiRequest('sales.php').then(function(docs) {
+            mergeRestSalesDocs(docs || []);
+        }).catch(function(err) {
+            console.warn('[sales] Local API failed:', err.message);
+        });
+    }
     if (isAdminAuthenticated() && navigator.onLine) {
         return fetchAllAdminCollectionViaRest('sales').then(function (docs) {
             mergeRestSalesDocs(docs || []);
-        }).catch(function () {
+        }).catch(function (err) {
+            if (isFirestoreApiDisabledError(err)) {
+                showFirestoreApiDisabledAlert();
+            }
             return salesCacheFromSdkServer();
         });
     }
@@ -757,11 +864,16 @@ function salesCacheFromSdkServer() {
         var sales = [];
         snap.forEach(function (d) { sales.push(saleEntryFromDoc(d)); });
         writeCachedSales(sales);
-    }).catch(function () {
+    }).catch(function (err) {
+        if (isFirestoreApiDisabledError(err)) {
+            showFirestoreApiDisabledAlert();
+        }
         return db.collection('sales').get().then(function (snap) {
             var sales = [];
             snap.forEach(function (d) { sales.push(saleEntryFromDoc(d)); });
             writeCachedSales(sales);
+        }).catch(function () {
+            writeCachedSales([]);
         });
     });
 }
@@ -771,10 +883,21 @@ function warmExpensesCacheFromServer() {
         writeCachedExpenses([]);
         return Promise.resolve();
     }
+    if (window._firestoreApiDisabled) return Promise.resolve();
+    if (USE_LOCAL_API) {
+        return localApiRequest('expenses.php').then(function(docs) {
+            mergeRestExpensesDocs(docs || []);
+        }).catch(function(err) {
+            console.warn('[expenses] Local API failed:', err.message);
+        });
+    }
     if (isAdminAuthenticated() && navigator.onLine) {
         return fetchAllAdminCollectionViaRest('expenses').then(function (docs) {
             mergeRestExpensesDocs(docs || []);
-        }).catch(function () {
+        }).catch(function (err) {
+            if (isFirestoreApiDisabledError(err)) {
+                showFirestoreApiDisabledAlert();
+            }
             return expensesCacheFromSdkServer();
         });
     }
@@ -786,11 +909,16 @@ function expensesCacheFromSdkServer() {
         var expenses = [];
         snap.forEach(function (d) { expenses.push(expenseEntryFromDoc(d)); });
         writeCachedExpenses(expenses);
-    }).catch(function () {
+    }).catch(function (err) {
+        if (isFirestoreApiDisabledError(err)) {
+            showFirestoreApiDisabledAlert();
+        }
         return db.collection('expenses').get().then(function (snap) {
             var expenses = [];
             snap.forEach(function (d) { expenses.push(expenseEntryFromDoc(d)); });
             writeCachedExpenses(expenses);
+        }).catch(function () {
+            writeCachedExpenses([]);
         });
     });
 }
@@ -824,6 +952,7 @@ function syncAdminFinancialsFromServer(callback) {
 }
 
 function scheduleAdminRestFallback() {
+    if (window._firestoreApiDisabled) return;
     setTimeout(function () {
         if (!isAdminAuthenticated()) return;
         if (_adminSalesLive === null) {
@@ -940,11 +1069,85 @@ function startAdminLiveListeners() {
 }
 
 function isAdminAuthenticated() {
+    if (USE_LOCAL_API) {
+        var token = window.currentAuthToken || localStorage.getItem('adminAuthToken');
+        var user = window.currentUser || localStorage.getItem('adminUser');
+        return !!(token && user);
+    }
     return !!(window.auth && auth.currentUser);
+}
+
+function isFirestoreApiDisabledError(err) {
+    if (!err || !err.message) return false;
+    var m = err.message;
+    var disabled = m.indexOf('Cloud Firestore API has not been used in project') !== -1 ||
+        m.indexOf('SERVICE_DISABLED') !== -1 ||
+        m.indexOf('firestore.googleapis.com/overview') !== -1 ||
+        (m.indexOf('firestore.googleapis.com') !== -1 && m.indexOf('disabled') !== -1);
+    if (disabled) {
+        window._firestoreApiDisabled = true;
+    }
+    return disabled;
+}
+
+function isFirestorePermissionError(err) {
+    if (!err || !err.message) return false;
+    var msg = err.message.toLowerCase();
+    return msg.indexOf('permission') !== -1 ||
+        msg.indexOf('insufficient') !== -1 ||
+        err.code === 'permission-denied' ||
+        err.code === 'PERMISSION_DENIED' ||
+        msg.indexOf('app check') !== -1 ||
+        msg.indexOf('appcheck') !== -1;
+}
+
+function showFirestoreApiDisabledAlert() {
+    if (window._firestoreApiDisabledAlerted) return;
+    window._firestoreApiDisabledAlerted = true;
+    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+    var projectId = (window.firebaseConfig && window.firebaseConfig.projectId) || 'shawarma-demashq-menu';
+    var url = 'https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=' + encodeURIComponent(projectId);
+    alert('⚠️ ' + (S.errorPrefix || 'Error:') + '\n\nCloud Firestore API is disabled for this project.\n\nPlease enable it here:\n' + url + '\n\nAfter enabling, wait a few minutes and refresh this page.');
 }
 
 var _adminAuthInitialized = false;
 window.adminAuthReady = new Promise(function (resolve) {
+    if (USE_LOCAL_API) {
+        _adminAuthInitialized = true;
+        var storedToken = localStorage.getItem('adminAuthToken');
+        var storedUser = localStorage.getItem('adminUser');
+        if (storedToken && storedUser) {
+            try {
+                window.currentAuthToken = storedToken;
+                window.currentUser = JSON.parse(storedUser);
+                resolve(window.currentUser);
+                syncAdminFinancialsFromServer();
+                warmAdminOfflineCache();
+                startAdminLiveListeners();
+                refreshAdminCurrentSection();
+            } catch (e) {
+                localStorage.removeItem('adminAuthToken');
+                localStorage.removeItem('adminUser');
+                resolve(null);
+                if (navigator.onLine) {
+                    window.location.href = 'login.html';
+                } else {
+                    hydrateAdminFromLocalCache();
+                    refreshAdminCurrentSection();
+                }
+            }
+        } else {
+            resolve(null);
+            if (navigator.onLine) {
+                window.location.href = 'login.html';
+            } else {
+                hydrateAdminFromLocalCache();
+                refreshAdminCurrentSection();
+            }
+        }
+        return;
+    }
+    
     if (!window.auth) {
         resolve(null);
         return;
@@ -984,12 +1187,12 @@ function adminProtectedGet(queryOrRef) {
 }
 
 function adminGetWithTimeout(queryOrRef, ms) {
-    ms = ms || (navigator.onLine ? 25000 : 10000);
+    ms = ms || (navigator.onLine ? 10000 : 8000);
     var cacheSnap = null;
 
     function raceServer() {
         return Promise.race([
-            queryOrRef.get(),
+            queryOrRef.get({ source: 'server' }),
             new Promise(function (_, reject) {
                 setTimeout(function () { reject(new Error('Connection timeout')); }, ms);
             })
@@ -1004,11 +1207,11 @@ function adminGetWithTimeout(queryOrRef, ms) {
         }
         return raceServer();
     }).catch(function (err) {
-        if (cacheSnap) return cacheSnap;
-        return queryOrRef.get({ source: 'cache' }).then(function (snap) {
-            if (snap) return snap;
-            throw err;
-        });
+        if (isFirestoreApiDisabledError(err)) {
+            showFirestoreApiDisabledAlert();
+        }
+        if (cacheSnap && !cacheSnap.empty) return cacheSnap;
+        throw err;
     });
 }
 
@@ -1661,6 +1864,48 @@ function startItemsListener() {
 
     hydrateItemsUiFromCache();
 
+    if (USE_LOCAL_API) {
+        localApiRequest('menu_items.php').then(function(items) {
+            var docs = items.map(function(item) {
+                return {
+                    id: item.id,
+                    data: function() { return item; }
+                };
+            });
+            _itemsSnapDocs = docs.filter(function(d) { return d.data().category !== 'Water'; });
+            refreshCategoryFilterOptions();
+            refreshItemCategoryDropdown();
+            var searchEl = document.getElementById('itemSearch');
+            var catEl = document.getElementById('categoryFilter');
+            var searchTerm = searchEl ? searchEl.value : '';
+            var cat = catEl ? catEl.value : itemsActiveCategory;
+            renderItemsList(filterLocalItemDocs(_itemsSnapDocs, searchTerm, cat));
+
+            var cashierCache = [];
+            var menuCache = [];
+            _itemsSnapDocs.forEach(function(d) {
+                var data = d.data();
+                cashierCache.push({ id: d.id, v: data });
+                menuCache.push(Object.assign({ id: d.id }, data));
+            });
+            localStorage.setItem('cachedCashierItems', JSON.stringify(cashierCache));
+            writeCachedMenuItemsFlat(menuCache);
+
+            var catNames = {};
+            _itemsSnapDocs.forEach(function(d) {
+                var c = d.data().category;
+                if (c && c !== 'Water') catNames[c] = true;
+            });
+            localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(catNames)));
+        }).catch(function(err) {
+            console.warn('[admin items] Local API failed:', err.message);
+            if (!hydrateItemsUiFromCache()) {
+                clearAdminLoadingEl('itemsList', '<p style="color:#C62828;">' + S.errorPrefix + (S.menuConnectionHint || 'Check connection') + '</p>');
+            }
+        });
+        return;
+    }
+
     if (!window.db) {
         if (!_itemsSnapDocs.length) {
             clearAdminLoadingEl('itemsList', '<p>' + S.noItemsFound + '</p>');
@@ -1704,6 +1949,9 @@ function startItemsListener() {
 
     adminGetWithTimeout(db.collection('menuItems'), 8000).then(applyItemsSnap).catch(function (e) {
         console.warn('[admin items] get failed:', e.message);
+        if (isFirestoreApiDisabledError(e)) {
+            showFirestoreApiDisabledAlert();
+        }
         if (!hydrateItemsUiFromCache()) {
             clearAdminLoadingEl('itemsList', '<p style="color:#C62828;">' + S.errorPrefix + (S.menuConnectionHint || 'Check connection') + '</p>');
         }
@@ -2727,6 +2975,28 @@ function loadCategoriesList() {
     renderCategoriesListNow();
     clearAdminLoadingEl('categoriesList', '');
 
+    if (USE_LOCAL_API) {
+        localApiRequest('categories.php').then(function(cats) {
+            var merged = mergeCategoryLists(cats.map(function(c) { return { id: c.id, data: c }; }), readCachedCategories());
+            localStorage.setItem('cachedCategories', JSON.stringify(merged));
+            var have = {};
+            merged.forEach(function(c) { have[c.id] = true; });
+            renderCategoriesTable(mergeMenuCategories(merged, have));
+
+            // Also update menu category names from items
+            localApiRequest('menu_items.php').then(function(items) {
+                var names = {};
+                items.forEach(function(it) { if (it.category) names[it.category] = true; });
+                localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(names)));
+                renderCategoriesListNow();
+            }).catch(function() {});
+        }).catch(function(err) {
+            console.warn('[admin categories] Local API failed:', err.message);
+            renderCategoriesListNow();
+        });
+        return;
+    }
+
     if (!window.db) {
         if (!readCachedCategories().length) {
             clearAdminLoadingEl('categoriesList', '<p style="color:var(--text-muted);padding:8px 2px;">' + (i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en).noCategories + '</p>');
@@ -2744,7 +3014,10 @@ function loadCategoriesList() {
         var have = {};
         merged.forEach(function (c) { have[c.id] = true; });
         renderCategoriesTable(mergeMenuCategories(merged, have));
-    }).catch(function () {
+    }).catch(function (err) {
+        if (isFirestoreApiDisabledError(err)) {
+            showFirestoreApiDisabledAlert();
+        }
         renderCategoriesListNow();
     });
 
@@ -2928,10 +3201,11 @@ function saveCategory() {
         if (isCreate) {
             plainData.created_at = now;
         }
-        promise = catRef.set(Object.assign({}, plainData, {
+        var writeData = Object.assign({}, plainData, {
             created_at: firebase.firestore.FieldValue.serverTimestamp(),
             updated_at: firebase.firestore.FieldValue.serverTimestamp()
-        }), { merge: true });
+        });
+        promise = catRef.set(writeData, { merge: true });
     } else {
         var newRef = db.collection('categories').doc();
         savedId = newRef.id;
@@ -2998,23 +3272,45 @@ function editCategory(categoryId) {
 function deleteCategory(categoryId) {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     if (!confirm(S.deleteCategoryConfirm)) return;
-    
-    // First, delete all items in this category
-    db.collection('menuItems').where('category', '==', categoryId).get().then(function (snap) {
+
+    var isVirtual = !readCachedCategories().some(function (c) { return c.id === categoryId; });
+
+    if (isVirtual) {
+        removeCategoryFromCacheAndUi(categoryId);
+        alert((S.categoryDeleted || 'Category removed locally: ') + categoryId);
+        return;
+    }
+
+    if (!window.db) {
+        alert(S.itemSyncFailed + '\nFirebase not ready.');
+        return;
+    }
+
+    firestoreGetWithTimeout(db.collection('menuItems').where('category', '==', categoryId), 8000).then(function (snap) {
         var batch = db.batch();
         snap.forEach(function (doc) {
             batch.delete(doc.ref);
         });
-        
-        // Delete the category
+
         batch.delete(db.collection('categories').doc(categoryId));
 
         applyWrite(batch.commit(), function () {
+            removeCategoryFromCacheAndUi(categoryId);
             loadCategoriesList();
         }, function (err) {
             alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
         }, MENU_SYNC_WRITE);
-    }).catch(function (e) { alert(S.errorPrefix + e.message); });
+    }).catch(function (e) {
+        alert(S.errorPrefix + e.message);
+    });
+}
+
+function removeCategoryFromCacheAndUi(categoryId) {
+    var cats = readCachedCategories().filter(function (c) { return c.id !== categoryId; });
+    localStorage.setItem('cachedCategories', JSON.stringify(cats));
+    renderCategoriesListNow();
+    refreshItemCategoryDropdown();
+    refreshCategoryFilterOptions();
 }
 
 /* ============ CASHIER ============ */
@@ -3341,6 +3637,8 @@ function wireCashierEvents() {
             recordCashierSale(itemsCopy);
         });
     }
+
+    setupFlutterwaveCashierButton();
 }
 
 function recordCashierSale(items) {
@@ -3502,7 +3800,7 @@ function buildReceiptPrintHtml(options) {
     '<body class="' + langClass + '">' +
         '<div class="receipt">' +
             '<img class="brand-logo" src="' + escapeReceiptHtml(options.logoUrl || 'assets/shawarma demeshq-logo.jpg') + '" alt="" onerror="this.style.display=\'none\'">' +
-            '<div class="brand-title"><span class="en">Shawarma DeMeshq</span><span class="sep">|</span><span class="ku">شاورما الدمشقي</span></div>' +
+             '<div class="brand-title"><span class="en">Shawarma</span><span class="sep">|</span><span class="ku">Shawarma</span></div>' +
             '<div class="brand-tagline">Premium Coffee House</div>' +
             (options.location ? '<div class="brand-location">' + escapeReceiptHtml(options.location) + '</div>' : '') +
             '<hr class="rule">' +
@@ -4003,7 +4301,6 @@ function applyCafeTimePicker(prefix, lang) {
         btn.setAttribute('aria-expanded', 'false');
         btn.classList.remove('is-open');
     }
-    schedulePersistCafeHours();
 }
 
 function syncCafeTimePickerFromStorage(prefix, lang) {
@@ -4039,8 +4336,10 @@ function setupCafeTimePickers(lang) {
         var panel = document.getElementById(prefix + 'TimePanel');
         var applyBtn = document.getElementById(prefix + 'TimeApply');
         if (!btn || !panel) return;
+        var pickerEl = btn.closest('.cafe-time-picker');
 
-        btn.addEventListener('click', function (e) {
+        function togglePicker(e) {
+            if (e.target.closest('.cafe-time-picker-panel')) return;
             e.stopPropagation();
             var willOpen = panel.hidden;
             document.querySelectorAll('.cafe-time-picker-panel').forEach(function (p) {
@@ -4057,7 +4356,10 @@ function setupCafeTimePickers(lang) {
                 btn.classList.add('is-open');
             }
             btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-        });
+        }
+
+        if (pickerEl) pickerEl.addEventListener('click', togglePicker);
+        else btn.addEventListener('click', togglePicker);
 
         if (applyBtn) {
             applyBtn.addEventListener('click', function () {
@@ -4089,69 +4391,6 @@ function setupCafeTimePickers(lang) {
             });
         });
     }
-
-    var saveHoursBtn = document.getElementById('saveCafeHoursBtn');
-    if (saveHoursBtn && saveHoursBtn.dataset.wired !== '1') {
-        saveHoursBtn.dataset.wired = '1';
-        saveHoursBtn.addEventListener('click', saveCafeHoursOnly);
-    }
-}
-
-var cafeHoursSaveTimer = null;
-
-function persistCafeHoursToCloud(showAlert) {
-    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-    var lang = localStorage.getItem('selectedLang') || 'ku';
-    var cafeOpenTime = readCafeTimePickerValue('cafeOpen');
-    var cafeCloseTime = readCafeTimePickerValue('cafeClose');
-    if (!cafeOpenTime) {
-        var openHidden = document.getElementById('cafeOpenTime');
-        cafeOpenTime = openHidden ? openHidden.value : '14:00';
-    }
-    if (!cafeCloseTime) {
-        var closeHidden = document.getElementById('cafeCloseTime');
-        cafeCloseTime = closeHidden ? closeHidden.value : '02:00';
-    }
-    if (typeof normalizeCafeTimeValue === 'function') {
-        cafeOpenTime = normalizeCafeTimeValue(cafeOpenTime, '14:00');
-        cafeCloseTime = normalizeCafeTimeValue(cafeCloseTime, '02:00');
-    }
-
-    localStorage.setItem('cafeOpenTime', cafeOpenTime);
-    localStorage.setItem('cafeCloseTime', cafeCloseTime);
-
-    var openEl = document.getElementById('cafeOpenTime');
-    var closeEl = document.getElementById('cafeCloseTime');
-    if (openEl) openEl.value = cafeOpenTime;
-    if (closeEl) closeEl.value = cafeCloseTime;
-    updateCafeTimePickerDisplay('cafeOpen', lang);
-    updateCafeTimePickerDisplay('cafeClose', lang);
-
-    if (typeof saveCafeSettingsToFirestore === 'function') {
-        saveCafeSettingsToFirestore({
-            cafeOpenTime: cafeOpenTime,
-            cafeCloseTime: cafeCloseTime
-        }, function (err) {
-            if (showAlert) {
-                alert(err ? (S.saveHours + ' (local only)') : S.hoursSaved);
-            }
-        });
-    } else if (showAlert) {
-        alert(S.hoursSaved);
-    }
-}
-
-function schedulePersistCafeHours() {
-    if (cafeHoursSaveTimer) clearTimeout(cafeHoursSaveTimer);
-    cafeHoursSaveTimer = setTimeout(function () {
-        persistCafeHoursToCloud(false);
-    }, 500);
-}
-
-function saveCafeHoursOnly() {
-    applyCafeTimePicker('cafeOpen', localStorage.getItem('selectedLang') || 'ku');
-    applyCafeTimePicker('cafeClose', localStorage.getItem('selectedLang') || 'ku');
-    persistCafeHoursToCloud(true);
 }
 
 function loadSettings() {
@@ -4232,22 +4471,21 @@ function loadSettings() {
                       '<input type="text" id="cafeCurrency" value="IQD" readonly>' +
                   '</div>' +
               '</div>' +
-              '<div class="settings-social-field settings-hours-field">' +
-                  '<span class="settings-social-icon settings-social-icon--hours" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>' +
-                  '<div class="settings-social-input-wrap settings-hours-block">' +
-                      '<div class="settings-hours-row">' +
-                          '<div class="settings-hours-input">' +
-                              '<label>' + S.cafeOpenTimeLabel + '</label>' +
-                              buildCafeTimePickerMarkup('cafeOpen', openTimeStored, '14:00', S, settingsLang) +
-                          '</div>' +
-                          '<div class="settings-hours-input">' +
-                              '<label>' + S.cafeCloseTimeLabel + '</label>' +
-                              buildCafeTimePickerMarkup('cafeClose', closeTimeStored, '02:00', S, settingsLang) +
-                          '</div>' +
-                      '</div>' +
-                      '<button type="button" class="btn-primary cafe-hours-save-btn" id="saveCafeHoursBtn">' + S.saveHours + '</button>' +
-                  '</div>' +
-              '</div>' +
+               '<div class="settings-social-field settings-hours-field">' +
+                   '<span class="settings-social-icon settings-social-icon--hours" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>' +
+                   '<div class="settings-social-input-wrap settings-hours-block">' +
+                       '<div class="settings-hours-row">' +
+                           '<div class="settings-hours-input">' +
+                               '<label>' + S.cafeOpenTimeLabel + '</label>' +
+                               '<input type="time" id="cafeOpenTime" class="cafe-time-input" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(openTimeStored, '14:00') : openTimeStored) + '">' +
+                           '</div>' +
+                           '<div class="settings-hours-input">' +
+                               '<label>' + S.cafeCloseTimeLabel + '</label>' +
+                               '<input type="time" id="cafeCloseTime" class="cafe-time-input" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(closeTimeStored, '02:00') : closeTimeStored) + '">' +
+                           '</div>' +
+                       '</div>' +
+                   '</div>' +
+               '</div>' +
           '</div>' +
           '<div class="card settings-social-card" style="margin-top:20px;">' +
               '<div class="settings-section-label"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> ' + S.socialLinks + '</div>' +
@@ -4273,17 +4511,26 @@ function loadSettings() {
                       '<input type="url" id="cafeSnapchat" value="' + (localStorage.getItem('cafeSnapchat') || '') + '" placeholder="https://snapchat.com/add/...">' +
                   '</div>' +
               '</div>' +
-              '<button class="btn-primary" id="saveSettingsBtn" style="margin-top:8px;">' + S.saveSettings + '</button>' +
-          '</div>' +
-          '<div class="card" style="margin-top:20px;">' +
-              '<div class="settings-section-label">🎨 ' + TL.title + '</div>' +
+               '<button class="btn-primary" id="saveSettingsBtn" style="margin-top:8px;">' + S.saveSettings + '</button>' +
+           '</div>' +
+           '<div class="card settings-social-card" style="margin-top:20px;">' +
+               '<div class="settings-section-label"><i class="fa-solid fa-credit-card" aria-hidden="true"></i> ' + (S.flutterwaveSettings || 'Payment Gateway') + '</div>' +
+               '<div class="settings-section-hint">Flutterwave public key for card/mobile payments</div>' +
+               '<div class="settings-social-field">' +
+                   '<span class="settings-social-icon settings-social-icon--cafe" aria-hidden="true"><i class="fa-solid fa-key"></i></span>' +
+                   '<div class="settings-social-input-wrap">' +
+                       '<label for="flutterwavePublicKey">' + (S.flutterwavePublicKey || 'Flutterwave Public Key') + '</label>' +
+                       '<input type="text" id="flutterwavePublicKey" value="' + escapeHtmlAttr(localStorage.getItem('flutterwave_public_key') || '') + '" placeholder="FLWPUBK-...">' +
+                   '</div>' +
+               '</div>' +
+           '</div>' +
+           '<div class="card" style="margin-top:20px;">' +
+               '<div class="settings-section-label">🎨 ' + TL.title + '</div>' +
               '<div class="settings-section-hint">' + TL.hint + '</div>' +
               '<div class="theme-picker" id="themePicker">' + swatchesHtml + '</div>' +
-          '</div>' +
+           '</div>';
 
-      setupCafeTimePickers(settingsLang);
-
-      var themePicker = document.getElementById('themePicker');
+       var themePicker = document.getElementById('themePicker');
       if (themePicker) {
           themePicker.addEventListener('click', function (e) {
               var btn = e.target.closest('.theme-swatch');
@@ -4314,16 +4561,12 @@ function loadSettings() {
               var cafeSnapchat = typeof normalizeSocialUrl === 'function'
                   ? normalizeSocialUrl(document.getElementById('cafeSnapchat').value.trim(), 'snapchat')
                   : document.getElementById('cafeSnapchat').value.trim();
-              var cafeOpenTime = readCafeTimePickerValue('cafeOpen');
-              if (!cafeOpenTime) {
-                  var openHidden = document.getElementById('cafeOpenTime');
-                  cafeOpenTime = openHidden ? openHidden.value.trim() : '14:00';
-              }
-              var cafeCloseTime = readCafeTimePickerValue('cafeClose');
-              if (!cafeCloseTime) {
-                  var closeHidden = document.getElementById('cafeCloseTime');
-                  cafeCloseTime = closeHidden ? closeHidden.value.trim() : '02:00';
-              }
+              var openInput = document.getElementById('cafeOpenTime');
+              var closeInput = document.getElementById('cafeCloseTime');
+              var cafeOpenTime = openInput ? openInput.value.trim() : '';
+              var cafeCloseTime = closeInput ? closeInput.value.trim() : '';
+              if (!cafeOpenTime) cafeOpenTime = '14:00';
+              if (!cafeCloseTime) cafeCloseTime = '02:00';
               if (typeof normalizeCafeTimeValue === 'function') {
                   cafeOpenTime = normalizeCafeTimeValue(cafeOpenTime, '14:00');
                   cafeCloseTime = normalizeCafeTimeValue(cafeCloseTime, '02:00');
@@ -4337,30 +4580,29 @@ function loadSettings() {
                   }
               }
 
-              storeSetting('cafeName', cafeName);
-              storeSetting('whatsappPhone', whatsappPhone);
-              storeSetting('cafeLocationUrl', cafeLocationUrl);
-              storeSetting('cafeLocationLabel', cafeLocationLabel);
-              storeSetting('cafeInstagram', cafeInstagram);
-              storeSetting('cafeTiktok', cafeTiktok);
-              storeSetting('cafeSnapchat', cafeSnapchat);
-              storeSetting('cafeOpenTime', cafeOpenTime);
-              storeSetting('cafeCloseTime', cafeCloseTime);
-              try {
-                  localStorage.setItem('cafeSettingsUpdatedAt', String(Date.now()));
-              } catch (e) {}
+               storeSetting('cafeName', cafeName);
+               storeSetting('whatsappPhone', whatsappPhone);
+               storeSetting('cafeLocationUrl', cafeLocationUrl);
+               storeSetting('cafeLocationLabel', cafeLocationLabel);
+               storeSetting('cafeInstagram', cafeInstagram);
+               storeSetting('cafeTiktok', cafeTiktok);
+               storeSetting('cafeSnapchat', cafeSnapchat);
+               storeSetting('cafeOpenTime', cafeOpenTime);
+               storeSetting('cafeCloseTime', cafeCloseTime);
+               storeSetting('flutterwave_public_key', document.getElementById('flutterwavePublicKey') ? document.getElementById('flutterwavePublicKey').value.trim() : '');
+               try {
+                   localStorage.setItem('cafeSettingsUpdatedAt', String(Date.now()));
+               } catch (e) {}
 
               document.getElementById('whatsappPhone').value = whatsappPhone;
               document.getElementById('cafeInstagram').value = cafeInstagram;
               document.getElementById('cafeTiktok').value = cafeTiktok;
               document.getElementById('cafeSnapchat').value = cafeSnapchat;
               var selectedLang = localStorage.getItem('selectedLang') || 'ku';
-              var openHiddenSave = document.getElementById('cafeOpenTime');
-              var closeHiddenSave = document.getElementById('cafeCloseTime');
-              if (openHiddenSave) openHiddenSave.value = cafeOpenTime;
-              if (closeHiddenSave) closeHiddenSave.value = cafeCloseTime;
-              updateCafeTimePickerDisplay('cafeOpen', selectedLang);
-              updateCafeTimePickerDisplay('cafeClose', selectedLang);
+               var openHiddenSave = document.getElementById('cafeOpenTime');
+               var closeHiddenSave = document.getElementById('cafeCloseTime');
+               if (openHiddenSave) openHiddenSave.value = cafeOpenTime;
+               if (closeHiddenSave) closeHiddenSave.value = cafeCloseTime;
 
               var settingsPayload = {
                   cafeName: cafeName,
@@ -4374,17 +4616,22 @@ function loadSettings() {
                   cafeCloseTime: cafeCloseTime
               };
 
-              if (typeof saveCafeSettingsToFirestore === 'function') {
-                  saveCafeSettingsToFirestore(settingsPayload, function (err) {
-                      if (err) {
-                          alert(S.settingsSaved + ' (local only — cloud sync failed)');
-                      } else {
-                          alert(S.settingsSaved);
-                      }
-                  });
-              } else {
-                  alert(S.settingsSaved);
-              }
+               if (typeof saveCafeSettingsToFirestore === 'function') {
+                    saveCafeSettingsToFirestore(settingsPayload, function (err) {
+                        if (err) {
+                            var msg = (err && err.message ? String(err.message) : String(err)).toLowerCase();
+                            if (msg.indexOf('permission') !== -1 || msg.indexOf('insufficient') !== -1 || msg.indexOf('denied') !== -1) {
+                                alert('⚠️ Settings saved locally only.\n\nFirestore WRITE was DENIED. Fix:\n1) In Firebase Console → project shawarma-demashq-menu → Firestore → Rules tab, paste the rules and click PUBLISH.\n2) Make sure you are logged in as admin.\n\n(' + (err && err.message ? err.message : err) + ')');
+                            } else {
+                                alert('⚠️ ' + S.settingsSaved + '\n\nCloud sync failed: ' + (err && err.message ? err.message : err) + '\n\nChanges saved locally only.');
+                            }
+                        } else {
+                            alert(S.settingsSaved);
+                        }
+                    });
+                } else {
+                    alert(S.settingsSaved);
+                }
           });
       }
 
@@ -4408,9 +4655,10 @@ function loadSettings() {
                   }
                   input.value = value;
               });
-              var langLoaded = localStorage.getItem('selectedLang') || 'ku';
-              syncCafeTimePickerFromStorage('cafeOpen', langLoaded);
-              syncCafeTimePickerFromStorage('cafeClose', langLoaded);
+              var openLoaded = document.getElementById('cafeOpenTime');
+              var closeLoaded = document.getElementById('cafeCloseTime');
+              if (openLoaded) openLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeOpenTime') || '14:00', '14:00') : (localStorage.getItem('cafeOpenTime') || '14:00'));
+              if (closeLoaded) closeLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeCloseTime') || '02:00', '02:00') : (localStorage.getItem('cafeCloseTime') || '02:00'));
           });
       }
 
@@ -4961,6 +5209,14 @@ function loadSettings() {
 
 function handleLogout() {
     stopDashboardListeners();
+    if (USE_LOCAL_API) {
+        localStorage.removeItem('adminAuthToken');
+        localStorage.removeItem('adminUser');
+        window.currentAuthToken = null;
+        window.currentUser = null;
+        window.location.href = 'login.html';
+        return;
+    }
     if (window.auth) {
         auth.signOut().then(function () {
             window.location.href = 'login.html';
@@ -4970,4 +5226,146 @@ function handleLogout() {
     } else {
         window.location.href = 'login.html';
     }
+}
+
+/* ========================================
+   Flutterwave Payment Integration
+   ======================================== */
+
+function getFlutterwavePublicKey() {
+    return localStorage.getItem('flutterwave_public_key') || 'FLWPUBK_TEST-xxxxxxxxxx';
+}
+
+function loadFlutterwaveScript() {
+    return new Promise(function(resolve, reject) {
+        if (window.FlutterwaveCheckout) {
+            resolve();
+            return;
+        }
+        if (document.getElementById('flutterwave-script')) {
+            if (!window._flutterwaveLoadPromise) {
+                window._flutterwaveLoadPromise = new Promise(function(res, rej) {
+                    window._flutterwaveResolve = res;
+                    window._flutterwaveReject = rej;
+                });
+            }
+            window._flutterwaveLoadPromise.then(resolve).catch(reject);
+            return;
+        }
+        window._flutterwaveLoadPromise = new Promise(function(res, rej) {
+            window._flutterwaveResolve = res;
+            window._flutterwaveReject = rej;
+        });
+        var script = document.createElement('script');
+        script.id = 'flutterwave-script';
+        script.src = 'https://checkout.flutterwave.com/v3.js';
+        script.async = true;
+        script.onload = function() {
+            if (window._flutterwaveResolve) window._flutterwaveResolve();
+        };
+        script.onerror = function() {
+            if (window._flutterwaveReject) window._flutterwaveReject(new Error('Failed to load Flutterwave'));
+        };
+        document.head.appendChild(script);
+        window._flutterwaveLoadPromise.then(resolve).catch(reject);
+    });
+}
+
+function recordCashierFlutterwaveSale(items, total, paymentData) {
+    if (!items || items.length === 0) return null;
+    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+    var now = new Date();
+    var tempId = 'local-' + Date.now();
+    var cacheEntry = {
+        id: tempId,
+        items: (items || []).map(function(i) { return { name: i.name || '', price: i.price || 0, quantity: i.quantity || 1 }; }),
+        total: total,
+        timestampSeconds: Math.floor(now.getTime() / 1000),
+        cashier: (window.auth && auth.currentUser) ? auth.currentUser.email : S.unknown
+    };
+    upsertCachedSale(cacheEntry);
+
+    var saleWrite = db.collection('sales').add({
+        items: cacheEntry.items,
+        total: total,
+        timestamp: firebase.firestore.Timestamp.fromDate(now),
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        cashier: cacheEntry.cashier,
+        payment_method: 'flutterwave',
+        payment_ref: (paymentData && paymentData.transaction_id) ? paymentData.transaction_id : ''
+    });
+    applyWrite(saleWrite, function () {
+        orderItems.length = 0;
+        updateOrderDisplay();
+    });
+    if (saleWrite && typeof saleWrite.then === 'function') {
+        saleWrite.then(function(ref) {
+            if (ref && ref.id) {
+                removeCachedSale(tempId);
+                upsertCachedSale(Object.assign({}, cacheEntry, { id: ref.id }));
+            }
+        }).catch(function(err) {
+            console.error('Sale sync error:', err);
+        });
+    }
+    return total;
+}
+
+function setupFlutterwaveCashierButton() {
+    var actions = document.querySelector('.cashier-actions');
+    if (!actions) return;
+    if (actions.querySelector('.btn-flutterwave')) return;
+
+    var btn = document.createElement('button');
+    btn.className = 'btn-pay btn-flutterwave';
+    btn.type = 'button';
+    btn.textContent = '💳 Pay with Flutterwave';
+    btn.style.marginLeft = '8px';
+    btn.addEventListener('click', function() {
+        if (orderItems.length === 0) {
+            alert('Please add items first');
+            return;
+        }
+        var total = orderItems.reduce(function(s, i) { return s + i.price * i.quantity; }, 0);
+        var publicKey = getFlutterwavePublicKey();
+
+        if (publicKey.indexOf('FLWPUBK_TEST') !== -1 || publicKey.indexOf('xxxxxxxxxx') !== -1) {
+            alert('⚠️ Payment is not configured.\n\nPlease add your Flutterwave public key in Admin Settings → Payment Gateway.');
+            return;
+        }
+
+        var email = (window.auth && auth.currentUser && auth.currentUser.email) ? auth.currentUser.email : 'cashier@shawarma.com';
+
+        loadFlutterwaveScript().then(function() {
+            FlutterwaveCheckout({
+                public_key: publicKey,
+                tx_ref: 'Shawarma-Cashier-' + Date.now(),
+                amount: total,
+                currency: 'IQD',
+                country: 'IQ',
+                payment_options: 'card, mobilemoney, ussd',
+                redirect_url: window.location.href,
+                customer: {
+                    email: email,
+                    phone_number: '9647506454656',
+                    name: email.split('@')[0] || 'Cashier'
+                },
+                customizations: {
+                    title: 'Shawarma - Cashier',
+                    description: 'Cashier Order',
+                    logo: new URL('assets/shawarma demeshq-logo.jpg', window.location.href).href
+                },
+                callback: function(data) {
+                    var itemsCopy = orderItems.slice();
+                    recordCashierFlutterwaveSale(itemsCopy, total, data);
+                    alert('✅ Payment successful!\nTransaction: ' + data.transaction_id);
+                },
+                onclose: function() {}
+            });
+        }).catch(function(err) {
+            console.error('Flutterwave error:', err);
+            alert('Payment service temporarily unavailable. Please try again.');
+        });
+    });
+    actions.appendChild(btn);
 }

@@ -1,4 +1,4 @@
-// Sample Data for Shawarma DeMeshq
+// Sample Data for Shawarma
 // Run this in browser console after opening the Firebase console or create a simple HTML file to add sample items
 
 const sampleItems = [
