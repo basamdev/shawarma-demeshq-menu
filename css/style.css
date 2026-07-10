@@ -1185,10 +1185,6 @@ body.light-mode .category-divider {
     border-top-color: #B8910C;
 }
 
-.category-section {
-    margin-bottom: 28px;
-}
-
 .category-heading {
     margin: 24px 0 8px;
     font-family: var(--font-display);
@@ -1215,9 +1211,6 @@ body.light-mode .category-divider {
 
 .category-section {
     margin-bottom: 28px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
 }
 
 .category-heading {
