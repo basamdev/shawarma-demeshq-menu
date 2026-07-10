@@ -1627,6 +1627,7 @@ function scrollCategoryBarToActive() {
     if (!scroll) return;
     var activeBtn = scroll.querySelector('.category-btn.active');
     if (!activeBtn) return;
+    if (scroll.scrollWidth <= scroll.clientWidth) return;
     var scrollLeft = activeBtn.offsetLeft - (scroll.clientWidth / 2) + (activeBtn.clientWidth / 2);
     scroll.scrollTo({ left: scrollLeft, behavior: 'smooth' });
 }
@@ -2657,19 +2658,22 @@ function getCartFormLabels(lang) {
             needName: 'تکایە ناوی خۆت بنووسە پێش ناردن بە واتساپ',
             needPlace: 'تکایە شوێنەکەت بنووسە پێش ناردن بە واتساپ',
             needBoth: 'تکایە ناو و شوێن پڕبکەرەوە پێش ناردن بە واتساپ',
-            needLocation: 'تکایە لۆکەیشنەکەت بنێرە پێش ناردن بە واتساپ'
+            needLocation: 'تکایە لۆکەیشنەکەت بنێرە پێش ناردن بە واتساپ',
+            locationNotShared: 'لۆکەیشنەکەت نەنێردراوە'
         },
         ar: {
             needName: 'الرجاء إدخال اسمك قبل الإرسال عبر واتساب',
             needPlace: 'الرجاء إدخال موقعك قبل الإرسال عبر واتساب',
             needBoth: 'الرجاء إدخال الاسم والموقع قبل الإرسال عبر واتساب',
-            needLocation: 'الرجاء إرسال موقعك قبل الإرسال عبر واتساب'
+            needLocation: 'الرجاء إرسال موقعك قبل الإرسال عبر واتساب',
+            locationNotShared: 'لم يتم مشاركة الموقع'
         },
         en: {
             needName: 'Please enter your name before sending via WhatsApp',
             needPlace: 'Please enter your location before sending via WhatsApp',
             needBoth: 'Please fill in name and location before sending via WhatsApp',
-            needLocation: 'Please send your location before sending via WhatsApp'
+            needLocation: 'Please send your location before sending via WhatsApp',
+            locationNotShared: 'Location not shared'
         }
     };
     return labels[lang] || labels.ku;
@@ -2711,48 +2715,94 @@ function sendWhatsAppOrder() {
         return;
     }
 
-    if (!window._customerLocationUrl) {
-        showCartFormWarning(formT.needLocation, document.getElementById('cartLocationBtn'), [document.getElementById('cartLocationBtn')]);
+    var sendOrder = function() {
+        clearCartFormWarning();
+
+        var divider = '------------------------';
+        var LRM_TIME = '\u200E';
+        var lines = [];
+        lines.push(T.time + ': ' + LRM_TIME + new Date().toLocaleString());
+        lines.push(cafeName + ' - ' + T.order);
+        lines.push(T.name + ': ' + customerName);
+        lines.push(T.place + ': ' + customerPlace);
+        if (window._customerLocationUrl) {
+            lines.push('Maps: ' + window._customerLocationUrl);
+        } else {
+            lines.push(formT.locationNotShared || 'Location not shared');
+        }
+        lines.push(divider);
+
+        var LRM = '\u200E';
+        cartItems.forEach(function (item) {
+            lines.push(item.name);
+            var lineTotal = (item.price * item.quantity).toLocaleString();
+            if (item.quantity > 1) {
+                lines.push(LRM + item.quantity + ' x ' + item.price.toLocaleString() + ' = ' + lineTotal + ' IQD');
+            } else {
+                lines.push(LRM + lineTotal + ' IQD');
+            }
+        });
+
+        lines.push(divider);
+        lines.push(T.total + ': ' + LRM + getCartTotal().toLocaleString() + ' IQD');
+
+        var message = lines.join('\n');
+
+        var encoded = encodeURIComponent(message);
+        var url = 'https://wa.me/' + phone + '?text=' + encoded;
+
+        window.open(url, '_blank');
+    };
+
+    if (window._customerLocationUrl) {
+        sendOrder();
         return;
     }
 
-    clearCartFormWarning();
-
-    var divider = '------------------------';
-    var LRM_TIME = '\u200E';
-    var lines = [];
-    lines.push(T.time + ': ' + LRM_TIME + new Date().toLocaleString());
-    lines.push(cafeName + ' - ' + T.order);
-    lines.push(T.name + ': ' + customerName);
-    lines.push(T.place + ': ' + customerPlace);
-    if (window._customerLocationUrl) {
-        lines.push('Maps: ' + window._customerLocationUrl);
-    }
-    lines.push(divider);
-
-    // \u200E = Left-to-Right Mark. It keeps the numeric "qty x price = total"
-    // expression in correct left-to-right order even inside an RTL (Kurdish/
-    // Arabic) message, otherwise WhatsApp reorders the x/=/numbers.
-    var LRM = '\u200E';
-    cartItems.forEach(function (item) {
-        lines.push(item.name);
-        var lineTotal = (item.price * item.quantity).toLocaleString();
-        if (item.quantity > 1) {
-            lines.push(LRM + item.quantity + ' x ' + item.price.toLocaleString() + ' = ' + lineTotal + ' IQD');
-        } else {
-            lines.push(LRM + lineTotal + ' IQD');
+    var statusEl = document.getElementById('cartLocationStatus');
+    if (!navigator.geolocation) {
+        if (statusEl) {
+            statusEl.textContent = formT.locationNotShared || 'Location not shared';
+            statusEl.className = 'cart-location-status error';
+            statusEl.classList.remove('hidden');
         }
-    });
+        sendOrder();
+        return;
+    }
 
-    lines.push(divider);
-    lines.push(T.total + ': ' + LRM + getCartTotal().toLocaleString() + ' IQD');
+    if (statusEl) {
+        statusEl.textContent = 'Getting your location...';
+        statusEl.className = 'cart-location-status';
+        statusEl.classList.remove('hidden');
+    }
 
-    var message = lines.join('\n');
-
-    var encoded = encodeURIComponent(message);
-    var url = 'https://wa.me/' + phone + '?text=' + encoded;
-
-    window.open(url, '_blank');
+    navigator.geolocation.getCurrentPosition(
+        function (pos) {
+            var lat = pos.coords.latitude;
+            var lng = pos.coords.longitude;
+            window._customerLocationUrl = 'https://maps.google.com/?q=' + lat + ',' + lng;
+            if (statusEl) {
+                statusEl.textContent = 'Location captured ✓';
+                statusEl.className = 'cart-location-status success';
+                setTimeout(function() {
+                    statusEl.classList.add('hidden');
+                }, 2000);
+            }
+            sendOrder();
+        },
+        function (err) {
+            window._customerLocationUrl = '';
+            var msg = formT.locationNotShared || 'Location not shared';
+            if (err.code === 1) msg = msg + ' (Permission denied)';
+            if (statusEl) {
+                statusEl.textContent = msg;
+                statusEl.className = 'cart-location-status error';
+                statusEl.classList.remove('hidden');
+            }
+            sendOrder();
+        },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+    );
 }
 
 /* ========================================
