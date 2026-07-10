@@ -1215,6 +1215,9 @@ body.light-mode .category-divider {
 
 .category-section {
     margin-bottom: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .category-heading {
