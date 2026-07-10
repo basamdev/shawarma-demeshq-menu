@@ -1844,9 +1844,20 @@ function renderMenuItems(items) {
     }
 
     // Flat rendering (single category or legacy path)
-    availableItems.forEach(item => {
-        container.appendChild(createMenuCard(item, lang, strings));
-    });
+    if (availableItems.length > 0) {
+        const section = document.createElement('div');
+        section.className = 'category-section';
+        section.setAttribute('data-category-section', _activeCategory);
+        section.id = 'category-section-' + _activeCategory;
+
+        const heading = document.createElement('h3');
+        heading.className = 'category-heading';
+        heading.textContent = getCategoryDisplayName(_activeCategory, lang);
+        section.appendChild(heading);
+
+        availableItems.forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+        container.appendChild(section);
+    }
 }
 
 /* ========================================
