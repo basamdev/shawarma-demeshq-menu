@@ -1815,20 +1815,18 @@ function renderMenuItems(items) {
         } catch (e) {}
 
         const renderedCats = new Set();
-        const appendSection = (catId, catItems) => {
+const appendSection = (catId, catItems) => {
             renderedCats.add(catId);
-            const section = document.createElement('div');
-            section.className = 'category-section';
-            section.setAttribute('data-category-section', catId);
-            section.id = 'category-section-' + catId;
+            const heading = document.createElement('h3');
+            heading.className = 'category-heading';
+            heading.textContent = getCategoryDisplayName(catId, lang);
+            container.appendChild(heading);
 
-            const header = document.createElement('div');
-            header.className = 'category-section-header';
-            header.textContent = getCategoryDisplayName(catId, lang);
-            section.appendChild(header);
+            const rule = document.createElement('hr');
+            rule.className = 'category-divider';
+            container.appendChild(rule);
 
-            catItems.forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
-            container.appendChild(section);
+            catItems.forEach(item => container.appendChild(createMenuCard(item, lang, strings)));
         };
 
         categoryOrder.forEach(catId => { if (groups[catId]) appendSection(catId, groups[catId]); });

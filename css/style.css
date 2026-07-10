@@ -1161,54 +1161,48 @@ body.light-mode .category-btn.active .cat-icon {
    CATEGORY SECTIONS (All view grouping)
    ======================================== */
 
+.category-heading {
+    margin: 24px 0 8px;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-gold);
+    letter-spacing: 0.02em;
+}
+
+.category-divider {
+    border: none;
+    border-top: 2px solid var(--color-gold);
+    margin: 0 0 16px;
+    opacity: 0.6;
+}
+
+body.light-mode .category-heading {
+    color: #B8910C;
+}
+
+body.light-mode .category-divider {
+    border-top-color: #B8910C;
+}
+
 .category-section {
     margin-bottom: 28px;
 }
 
-.category-section-header {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 18px;
-    margin: 0 0 14px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, rgba(212,175,55,0.15) 0%, rgba(212,175,55,0.05) 100%);
-    border: 1px solid rgba(212,175,55,0.35);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-}
-
-.category-section-header::before {
-    content: '';
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #D4AF37;
-    box-shadow: 0 0 8px rgba(212,175,55,0.7);
-    flex-shrink: 0;
-}
-
-.category-section-header::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, rgba(212,175,55,0.4) 0%, transparent 100%);
-}
-
-.category-section-header {
+.category-heading {
     font-family: var(--font-display);
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     font-weight: 700;
     color: var(--color-text);
     letter-spacing: 0.02em;
+    margin: 24px 0 12px;
+    padding: 0 4px;
+    border-right: 3px solid var(--color-gold);
+    padding-right: 12px;
 }
 
-body.light-mode .category-section-header {
-    background: linear-gradient(135deg, rgba(212,175,55,0.2) 0%, rgba(212,175,55,0.05) 100%);
-    border-color: rgba(212,175,55,0.4);
+body.light-mode .category-heading {
+    color: var(--color-text);
 }
 
 /* ========================================
