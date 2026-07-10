@@ -1048,15 +1048,17 @@ body.detail-open .category-bar {
 
 .category-scroll {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-start;
     gap: 12px;
-    overflow: visible;
+    overflow-x: auto;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     padding: 4px 20px 8px;
     max-width: 1400px;
     margin: 0 auto;
+    scroll-padding-left: 20px;
 }
 
 .category-scroll::-webkit-scrollbar { display: none; }
@@ -1175,12 +1177,25 @@ body.light-mode .category-btn.active .cat-icon {
 }
 
 .category-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
     margin: 16px 0 8px;
     font-family: var(--font-display);
     font-size: 0.95rem;
     font-weight: 700;
     color: var(--color-gold);
     letter-spacing: 0.02em;
+}
+
+.category-heading::before {
+    content: '';
+    display: block;
+    width: 4px;
+    height: 22px;
+    border-radius: 4px;
+    background: var(--color-gold);
+    flex-shrink: 0;
 }
 
 .category-divider {
