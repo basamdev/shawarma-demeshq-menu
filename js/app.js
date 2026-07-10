@@ -1811,7 +1811,7 @@ function renderMenuItems(items) {
             groups[cat].push(item);
         });
 
-        let categoryOrder = PREFERRED_CATEGORY_ORDER.slice();
+        let categoryOrder = [];
         try {
             const cachedCats = JSON.parse(localStorage.getItem('cachedCategories') || '[]');
             cachedCats.forEach(function (c) {
@@ -1823,9 +1823,8 @@ function renderMenuItems(items) {
             if (catId && categoryOrder.indexOf(catId) === -1) categoryOrder.push(catId);
         });
 
-        const renderedCats = new Set();
-const appendSection = (catId, catItems) => {
-            renderedCats.add(catId);
+        categoryOrder.forEach(catId => {
+            if (!groups[catId]) return;
             const section = document.createElement('div');
             section.className = 'category-section';
             section.setAttribute('data-category-section', catId);
@@ -1836,11 +1835,9 @@ const appendSection = (catId, catItems) => {
             heading.textContent = getCategoryDisplayName(catId, lang);
             section.appendChild(heading);
 
-            catItems.forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+            groups[catId].forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
             container.appendChild(section);
-        };
-
-        categoryOrder.forEach(catId => { if (groups[catId]) appendSection(catId, groups[catId]); });
+        });
 
         if (window._observeCategorySections) window._observeCategorySections();
         return;
