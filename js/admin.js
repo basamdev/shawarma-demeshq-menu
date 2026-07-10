@@ -2843,14 +2843,10 @@ function deleteItem(itemId) {
 /* ============ CATEGORIES ============ */
 
 function mergeCategoryLists(serverCats, cachedCats) {
-    var map = {};
-    cachedCats.forEach(function (c) {
-        if (c && c.id) map[c.id] = c;
-    });
-    serverCats.forEach(function (c) {
-        if (c && c.id) map[c.id] = c;
-    });
-    return Object.keys(map).map(function (id) { return map[id]; });
+    if (serverCats && serverCats.length) {
+        return serverCats.filter(function (c) { return c && c.id; });
+    }
+    return (cachedCats || []).filter(function (c) { return c && c.id; });
 }
 
 function renderCategoriesListNow() {
@@ -3046,9 +3042,11 @@ function loadCategoriesList() {
                 renderCategoriesListNow();
                 return;
             }
+            var merged = mergeCategoryLists([], readCachedCategories());
+            localStorage.setItem('cachedCategories', JSON.stringify(merged));
             var haveEmpty = {};
-            readCachedCategories().forEach(function (c) { haveEmpty[c.id] = true; });
-            renderCategoriesTable(mergeMenuCategories(readCachedCategories(), haveEmpty));
+            merged.forEach(function (c) { haveEmpty[c.id] = true; });
+            renderCategoriesTable(mergeMenuCategories(merged, haveEmpty));
             return;
         }
         var fromServer = [];
@@ -3225,8 +3223,10 @@ function saveCategory() {
         onDone: function (offline) {
             upsertCachedCategory(savedId, plainData);
             document.getElementById('categoryModal').classList.remove('active');
-            renderCategoriesListNow();
             loadCategoriesDropdown();
+            refreshCategoriesCache(function () {
+                renderCategoriesListNow();
+            });
             alert(offline ? S.categorySavedOffline : S.categorySavedCloud);
         },
         onError: function (err) {
@@ -3308,6 +3308,13 @@ function deleteCategory(categoryId) {
 function removeCategoryFromCacheAndUi(categoryId) {
     var cats = readCachedCategories().filter(function (c) { return c.id !== categoryId; });
     localStorage.setItem('cachedCategories', JSON.stringify(cats));
+
+    try {
+        var names = JSON.parse(localStorage.getItem('cachedMenuCategoryNames') || '[]');
+        var filtered = names.filter(function (n) { return n !== categoryId; });
+        localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(filtered));
+    } catch (e) {}
+
     renderCategoriesListNow();
     refreshItemCategoryDropdown();
     refreshCategoryFilterOptions();
