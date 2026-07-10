@@ -69,7 +69,6 @@ document.addEventListener('DOMContentLoaded', function () {
             setupLanguageButtons();
             initHeroTitleSequence();
             setupInstallTutorial();
-            setupFlutterwaveCartButton();
         } else if (document.getElementById('heroTypewriter')) {
             initHeroTitleSequence();
         }
@@ -306,6 +305,8 @@ const i18n = {
         cartEmpty: 'سەبەتە بەتاڵە',
         cartTotal: 'کۆی گشتی',
         sendWhatsApp: 'ناردن بە واتساپ',
+        useCurrentLocation: '📍ناردن لینکی لۆکەیشن',
+        needLocation: 'تکایە لۆکەیشنەکەت بنێرە پێش ناردن بە واتساپ',
         whatsappPhone: 'ژمارەی واتساپ',
         phonePlaceholder: '٩٦٤٧٧٠١٢٣٤٥٦٧',
         orderSent: 'داواکاری نێردرا!',
@@ -341,8 +342,6 @@ const i18n = {
         installDontShow: 'دووبارە پیشان مەدە',
         installShowHelp: 'زیادکردن بۆ سکرینی سەرەکی',
         installNow: 'ئێستا دابمەزرێنە',
-        flutterwaveSettings: 'پارەدانی کارتی بانق',
-        flutterwavePublicKey: 'کلیلی publiki Flutterwave'
     },
     ar: {
         menuTitle: 'قائمتنا',
@@ -526,6 +525,8 @@ const i18n = {
         cartEmpty: 'السلة فارغة',
         cartTotal: 'الإجمالي',
         sendWhatsApp: 'إرسال واتساب',
+        useCurrentLocation: '📍 إرسال رابط الموقع',
+        needLocation: 'الرجاء إرسال موقعك قبل الإرسال عبر واتساب',
         whatsappPhone: 'رقم واتساب',
         phonePlaceholder: '٩٦٤٧٧٠١٢٣٤٥٦٧',
         orderSent: 'تم إرسال الطلب!',
@@ -561,16 +562,7 @@ const i18n = {
         installDontShow: 'لا تظهر مرة أخرى',
         installShowHelp: 'إضافة للشاشة الرئيسية',
         installNow: 'تثبيت الآن',
-        installImagesMissing: 'ضع صور الشرح في images/install/',
-        iosStep1: 'اضغط زر Share (↗) أسفل Safari',
-        iosStep2: 'اختر «Add to Home Screen»',
-        iosStep3: 'اضغط «Add» — يظهر أيقونة Shawarma على الشاشة',
-        androidStep1: 'اضغط القائمة (⋮) أعلى Chrome',
-        androidStep2: 'اختر «Add to Home screen»',
-        androidStep3: 'اختر «Install»',
         androidStep4: 'اضغط «Install» — يُثبت تطبيق Shawarma',
-        flutterwaveSettings: 'بوابة الدفع',
-        flutterwavePublicKey: 'مفتاح Flutterwave العام'
     },
     en: {
         menuTitle: 'Our Menu',
@@ -771,6 +763,8 @@ const i18n = {
         cartEmpty: 'Cart is empty',
         cartTotal: 'Total',
         sendWhatsApp: 'Send via WhatsApp',
+        useCurrentLocation: '📍 Use Current Location',
+        needLocation: 'Please send your location before sending via WhatsApp',
         whatsappPhone: 'WhatsApp Number',
         phonePlaceholder: '+9647701234567',
         orderSent: 'Order sent!',
@@ -814,8 +808,6 @@ const i18n = {
         androidStep2: 'Choose «Add to Home screen»',
         androidStep3: 'Choose «Install»',
         androidStep4: 'Tap «Install» — Shawarma is added to your phone',
-        flutterwaveSettings: 'Payment Gateway',
-        flutterwavePublicKey: 'Flutterwave Public Key'
     }
 };
 
@@ -826,6 +818,7 @@ const i18n = {
 let cachedMenuItems = [];
 let _activeCategory = null;
 const ALL_CATEGORY_ID = '__all__';
+const PREFERRED_CATEGORY_ORDER = ['Coffee', 'Tea', 'Cold Drinks', 'Dessert', 'Shisha', 'Special Drinks'];
 let _renderSerial = 0;
 let _currentDetailItem = null;
 let isOffline = false;
@@ -1426,20 +1419,29 @@ function renderCategories(items, options) {
          }
      }
 
-     // Merge item categories into the menu category list so any category used by items
-     // is shown even if there is no matching categories document or the IDs differ.
-     const existingIds = new Set(categories.map(c => c.id));
-     items.forEach(item => {
-         const cat = item.category;
-         if (!cat || cat === 'Water' || existingIds.has(cat)) return;
-         existingIds.add(cat);
-         categories.push({
-             id: cat,
-             data: { name_ku: cat, name_ar: cat, name_en: cat, image: '' }
-         });
-     });
+      // Merge item categories into the menu category list so any category used by items
+      // is shown even if there is no matching categories document or the IDs differ.
+      const existingIds = new Set(categories.map(c => c.id));
+      items.forEach(item => {
+          const cat = item.category;
+          if (!cat || cat === 'Water' || existingIds.has(cat)) return;
+          existingIds.add(cat);
+          categories.push({
+              id: cat,
+              data: { name_ku: cat, name_ar: cat, name_en: cat, image: '' }
+          });
+      });
 
-     const barSig = computeCategoryBarSig(categories, items, lang);
+      categories.sort(function (a, b) {
+          var ai = PREFERRED_CATEGORY_ORDER.indexOf(a.id);
+          var bi = PREFERRED_CATEGORY_ORDER.indexOf(b.id);
+          if (ai === -1 && bi === -1) return 0;
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+      });
+
+      const barSig = computeCategoryBarSig(categories, items, lang);
      if (!options.forceRebuild && scroll.dataset.categorySig === barSig) {
          if (options.autoSelect !== false) {
              autoSelectCategoryAfterRender(options.forceFirst);
@@ -1448,12 +1450,12 @@ function renderCategories(items, options) {
      }
      scroll.dataset.categorySig = barSig;
 
-     // If no Firebase categories, use fallback
-     if (categories.length === 0) {
-         const categoryOrder = ['Coffee', 'Tea', 'Cold Drinks', 'Dessert', 'Shisha', 'Special Drinks'];
-         const foundCategories = items.length > 0 ? new Set(items.map(i => i.category).filter(Boolean).filter(c => c !== 'Water')) : new Set(categoryOrder);
-         const ordered = categoryOrder.filter(c => foundCategories.has(c));
-         foundCategories.forEach(c => { if (!ordered.includes(c)) ordered.push(c); });
+      // If no Firebase categories, use fallback
+      if (categories.length === 0) {
+          const categoryOrder = PREFERRED_CATEGORY_ORDER.slice();
+          const foundCategories = items.length > 0 ? new Set(items.map(i => i.category).filter(Boolean).filter(c => c !== 'Water')) : new Set(categoryOrder);
+          const ordered = categoryOrder.filter(c => foundCategories.has(c));
+          foundCategories.forEach(c => { if (!ordered.includes(c)) ordered.push(c); });
 
         const categoryIcons = {
             'Coffee': '<img class="cat-icon" src="https://cdn-icons-png.flaticon.com/128/924/924514.png" alt="Coffee">',
@@ -1808,11 +1810,17 @@ function renderMenuItems(items) {
             groups[cat].push(item);
         });
 
-        let categoryOrder = [];
+        let categoryOrder = PREFERRED_CATEGORY_ORDER.slice();
         try {
             const cachedCats = JSON.parse(localStorage.getItem('cachedCategories') || '[]');
-            categoryOrder = cachedCats.map(c => c.id);
+            cachedCats.forEach(function (c) {
+                if (c.id && categoryOrder.indexOf(c.id) === -1) categoryOrder.push(c.id);
+            });
         } catch (e) {}
+
+        Object.keys(groups).forEach(function (catId) {
+            if (catId && categoryOrder.indexOf(catId) === -1) categoryOrder.push(catId);
+        });
 
         const renderedCats = new Set();
 const appendSection = (catId, catItems) => {
@@ -1832,7 +1840,6 @@ const appendSection = (catId, catItems) => {
         };
 
         categoryOrder.forEach(catId => { if (groups[catId]) appendSection(catId, groups[catId]); });
-        Object.keys(groups).forEach(catId => { if (!renderedCats.has(catId)) appendSection(catId, groups[catId]); });
 
         if (window._observeCategorySections) window._observeCategorySections();
         return;
@@ -2649,17 +2656,20 @@ function getCartFormLabels(lang) {
         ku: {
             needName: 'تکایە ناوی خۆت بنووسە پێش ناردن بە واتساپ',
             needPlace: 'تکایە شوێنەکەت بنووسە پێش ناردن بە واتساپ',
-            needBoth: 'تکایە ناو و شوێن پڕبکەرەوە پێش ناردن بە واتساپ'
+            needBoth: 'تکایە ناو و شوێن پڕبکەرەوە پێش ناردن بە واتساپ',
+            needLocation: 'تکایە لۆکەیشنەکەت بنێرە پێش ناردن بە واتساپ'
         },
         ar: {
             needName: 'الرجاء إدخال اسمك قبل الإرسال عبر واتساب',
             needPlace: 'الرجاء إدخال موقعك قبل الإرسال عبر واتساب',
-            needBoth: 'الرجاء إدخال الاسم والموقع قبل الإرسال عبر واتساب'
+            needBoth: 'الرجاء إدخال الاسم والموقع قبل الإرسال عبر واتساب',
+            needLocation: 'الرجاء إرسال موقعك قبل الإرسال عبر واتساب'
         },
         en: {
             needName: 'Please enter your name before sending via WhatsApp',
             needPlace: 'Please enter your location before sending via WhatsApp',
-            needBoth: 'Please fill in name and location before sending via WhatsApp'
+            needBoth: 'Please fill in name and location before sending via WhatsApp',
+            needLocation: 'Please send your location before sending via WhatsApp'
         }
     };
     return labels[lang] || labels.ku;
@@ -2698,6 +2708,11 @@ function sendWhatsAppOrder() {
 
     if (!customerPlace) {
         showCartFormWarning(formT.needPlace, placeEl, [placeEl]);
+        return;
+    }
+
+    if (!window._customerLocationUrl) {
+        showCartFormWarning(formT.needLocation, document.getElementById('cartLocationBtn'), [document.getElementById('cartLocationBtn')]);
         return;
     }
 
@@ -3750,137 +3765,4 @@ window.setupLogoClickActions = function (logoEl, onSingleClick, doubleClickHref)
     });
 };
 
-/* ========================================
-   Flutterwave Payment Integration
-   ======================================== */
 
-function getFlutterwavePublicKey() {
-    return localStorage.getItem('flutterwave_public_key') || 'FLWPUBK_TEST-xxxxxxxxxx';
-}
-
-function loadFlutterwaveScript() {
-    return new Promise(function(resolve, reject) {
-        if (window.FlutterwaveCheckout) {
-            resolve();
-            return;
-        }
-        if (document.getElementById('flutterwave-script')) {
-            if (!window._flutterwaveLoadPromise) {
-                window._flutterwaveLoadPromise = new Promise(function(res, rej) {
-                    window._flutterwaveResolve = res;
-                    window._flutterwaveReject = rej;
-                });
-            }
-            window._flutterwaveLoadPromise.then(resolve).catch(reject);
-            return;
-        }
-        window._flutterwaveLoadPromise = new Promise(function(res, rej) {
-            window._flutterwaveResolve = res;
-            window._flutterwaveReject = rej;
-        });
-        var script = document.createElement('script');
-        script.id = 'flutterwave-script';
-        script.src = 'https://checkout.flutterwave.com/v3.js';
-        script.async = true;
-        script.onload = function() {
-            if (window._flutterwaveResolve) window._flutterwaveResolve();
-        };
-        script.onerror = function() {
-            if (window._flutterwaveReject) window._flutterwaveReject(new Error('Failed to load Flutterwave'));
-        };
-        document.head.appendChild(script);
-        window._flutterwaveLoadPromise.then(resolve).catch(reject);
-    });
-}
-
-function recordMenuSale(items, total, paymentData) {
-    if (!window.db) return;
-    var saleData = {
-        items: (items || []).map(function(i) { return { name: i.name || i.name_en || '', price: i.price || 0, quantity: i.quantity || 1 }; }),
-        total: total,
-        timestamp: firebase.firestore.Timestamp.fromDate(new Date()),
-        created_at: firebase.firestore.FieldValue.serverTimestamp(),
-        cashier: 'Customer',
-        payment_method: 'flutterwave',
-        payment_ref: (paymentData && paymentData.transaction_id) ? paymentData.transaction_id : ''
-    };
-    db.collection('sales').add(saleData).catch(function(err) {
-        console.error('Failed to record sale:', err);
-    });
-}
-
-function handleCartFlutterwavePayment() {
-    if (!cartItems.length) return;
-    var lang = localStorage.getItem('selectedLang') || 'ku';
-    var S = i18n[lang] || i18n.en;
-    var total = getCartTotal();
-    var publicKey = getFlutterwavePublicKey();
-
-    if (publicKey.indexOf('FLWPUBK_TEST') !== -1 || publicKey.indexOf('xxxxxxxxxx') !== -1) {
-        alert('⚠️ Payment is not configured.\n\nPlease add your Flutterwave public key in Admin Settings → Payment Gateway.');
-        return;
-    }
-
-    var customerNameEl = document.getElementById('customerName');
-    var customerPlaceEl = document.getElementById('customerPlace');
-    var customerName = customerNameEl ? customerNameEl.value.trim() : '';
-    var customerPhone = customerPlaceEl ? customerPlaceEl.value.trim() : '';
-
-    if (!customerName || !customerPhone) {
-        alert((S.needBoth || 'Please fill in name and location before payment.'));
-        if (!customerName && customerNameEl) customerNameEl.focus();
-        else if (customerPlaceEl) customerPlaceEl.focus();
-        return;
-    }
-
-    var txRef = 'Shawarma-' + Date.now();
-
-    loadFlutterwaveScript().then(function() {
-        FlutterwaveCheckout({
-            public_key: publicKey,
-            tx_ref: txRef,
-            amount: total,
-            currency: 'IQD',
-            country: 'IQ',
-            payment_options: 'card, mobilemoney, ussd',
-            redirect_url: window.location.href,
-            customer: {
-                email: 'customer@shawarma.com',
-                phone_number: customerPhone.replace(/\D/g, ''),
-                name: customerName
-            },
-            customizations: {
-                title: 'Shawarma',
-                description: 'Order #' + txRef.split('-')[1],
-                logo: new URL('assets/shawarma demeshq-logo.jpg', window.location.href).href
-            },
-            callback: function(data) {
-                recordMenuSale(cartItems.slice(), total, data);
-                clearCart();
-                updateCartBadge();
-                alert('✅ Payment successful!\nTransaction: ' + data.transaction_id + '\n\nThank you, ' + customerName + '!');
-                closeCartPanel();
-            },
-            onclose: function() {
-                console.log('Flutterwave payment closed');
-            }
-        });
-    }).catch(function(err) {
-        console.error('Flutterwave error:', err);
-        alert('Payment service temporarily unavailable.\n\nPlease try WhatsApp order instead or contact us directly.');
-    });
-}
-
-function setupFlutterwaveCartButton() {
-    var actions = document.querySelector('.cart-actions');
-    if (!actions) return;
-    if (actions.querySelector('.cart-flutterwave')) return;
-
-    var btn = document.createElement('button');
-    btn.className = 'cart-flutterwave';
-    btn.type = 'button';
-    btn.textContent = '💳 Pay with Card';
-    btn.style.cssText = 'flex:1;padding:12px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;';
-    btn.addEventListener('click', handleCartFlutterwavePayment);
-    actions.appendChild(btn);
-}

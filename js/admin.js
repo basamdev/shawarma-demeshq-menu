@@ -3637,8 +3637,6 @@ function wireCashierEvents() {
             recordCashierSale(itemsCopy);
         });
     }
-
-    setupFlutterwaveCashierButton();
 }
 
 function recordCashierSale(items) {
