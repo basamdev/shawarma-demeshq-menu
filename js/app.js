@@ -1827,10 +1827,6 @@ const appendSection = (catId, catItems) => {
             heading.textContent = getCategoryDisplayName(catId, lang);
             section.appendChild(heading);
 
-            const rule = document.createElement('hr');
-            rule.className = 'category-divider';
-            section.appendChild(rule);
-
             catItems.forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
             container.appendChild(section);
         };
