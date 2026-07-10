@@ -1185,6 +1185,42 @@ body.light-mode .category-divider {
     border-top-color: #B8910C;
 }
 
+/* Force vertical stacking inside category sections */
+.category-section {
+    grid-column: 1 / -1;  /* span all grid columns */
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ========================================
+   MENU GRID
+   ======================================== */
+
+.category-heading {
+    margin: 24px 0 8px;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-gold);
+    letter-spacing: 0.02em;
+}
+
+.category-divider {
+    border: none;
+    border-top: 2px solid var(--color-gold);
+    margin: 0 0 16px;
+    opacity: 0.6;
+}
+
+body.light-mode .category-heading {
+    color: #B8910C;
+}
+
+body.light-mode .category-divider {
+    border-top-color: #B8910C;
+}
+
 .category-section {
     margin-bottom: 28px;
 }
