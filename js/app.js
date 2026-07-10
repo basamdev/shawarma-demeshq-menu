@@ -1054,7 +1054,7 @@ async function loadCategoriesFromFirebase() {
     if (!window.db) return false;
     if (window._firestoreApiDisabled) return false;
     try {
-        const catSnap = await firestoreGetWithTimeout(window.db.collection('categories'), 8000);
+        const catSnap = await firestoreGetWithTimeout(window.db.collection('categories').orderBy('order', 'asc'), 8000);
         const categories = [];
         catSnap.forEach(doc => {
             categories.push({ id: doc.id, data: doc.data() });
@@ -1249,7 +1249,7 @@ async function loadMenuItems() {
         );
 
         if (window._categoriesUnsubscribe) window._categoriesUnsubscribe();
-        window._categoriesUnsubscribe = window.db.collection('categories').onSnapshot(
+        window._categoriesUnsubscribe = window.db.collection('categories').orderBy('order', 'asc').onSnapshot(
             snap => {
                 const cats = [];
                 snap.forEach(doc => cats.push({ id: doc.id, data: doc.data() }));
@@ -1432,14 +1432,14 @@ function renderCategories(items, options) {
           });
       });
 
-      categories.sort(function (a, b) {
-          var ai = PREFERRED_CATEGORY_ORDER.indexOf(a.id);
-          var bi = PREFERRED_CATEGORY_ORDER.indexOf(b.id);
-          if (ai === -1 && bi === -1) return 0;
-          if (ai === -1) return 1;
-          if (bi === -1) return -1;
-          return ai - bi;
-      });
+       categories.sort(function (a, b) {
+           var ao = (a.data && a.data.order) != null ? Number(a.data.order) : NaN;
+           var bo = (b.data && b.data.order) != null ? Number(b.data.order) : NaN;
+           if (!isNaN(ao) && !isNaN(bo)) return ao - bo;
+           if (!isNaN(ao)) return -1;
+           if (!isNaN(bo)) return 1;
+           return 0;
+       });
 
       const barSig = computeCategoryBarSig(categories, items, lang);
      if (!options.forceRebuild && scroll.dataset.categorySig === barSig) {
