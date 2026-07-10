@@ -4511,21 +4511,10 @@ function loadSettings() {
                       '<input type="url" id="cafeSnapchat" value="' + (localStorage.getItem('cafeSnapchat') || '') + '" placeholder="https://snapchat.com/add/...">' +
                   '</div>' +
               '</div>' +
-               '<button class="btn-primary" id="saveSettingsBtn" style="margin-top:8px;">' + S.saveSettings + '</button>' +
-           '</div>' +
-           '<div class="card settings-social-card" style="margin-top:20px;">' +
-               '<div class="settings-section-label"><i class="fa-solid fa-credit-card" aria-hidden="true"></i> ' + (S.flutterwaveSettings || 'Payment Gateway') + '</div>' +
-               '<div class="settings-section-hint">Flutterwave public key for card/mobile payments</div>' +
-               '<div class="settings-social-field">' +
-                   '<span class="settings-social-icon settings-social-icon--cafe" aria-hidden="true"><i class="fa-solid fa-key"></i></span>' +
-                   '<div class="settings-social-input-wrap">' +
-                       '<label for="flutterwavePublicKey">' + (S.flutterwavePublicKey || 'Flutterwave Public Key') + '</label>' +
-                       '<input type="text" id="flutterwavePublicKey" value="' + escapeHtmlAttr(localStorage.getItem('flutterwave_public_key') || '') + '" placeholder="FLWPUBK-...">' +
-                   '</div>' +
-               '</div>' +
-           '</div>' +
-           '<div class="card" style="margin-top:20px;">' +
-               '<div class="settings-section-label">🎨 ' + TL.title + '</div>' +
+'<button class="btn-primary" id="saveSettingsBtn" style="margin-top:8px;">' + S.saveSettings + '</button>' +
+            '</div>' +
+            '<div class="card" style="margin-top:20px;">' +
+                '<div class="settings-section-label">🎨 ' + TL.title + '</div>' +
               '<div class="settings-section-hint">' + TL.hint + '</div>' +
               '<div class="theme-picker" id="themePicker">' + swatchesHtml + '</div>' +
            '</div>';
@@ -4583,14 +4572,13 @@ function loadSettings() {
                storeSetting('cafeName', cafeName);
                storeSetting('whatsappPhone', whatsappPhone);
                storeSetting('cafeLocationUrl', cafeLocationUrl);
-               storeSetting('cafeLocationLabel', cafeLocationLabel);
-               storeSetting('cafeInstagram', cafeInstagram);
-               storeSetting('cafeTiktok', cafeTiktok);
-               storeSetting('cafeSnapchat', cafeSnapchat);
-               storeSetting('cafeOpenTime', cafeOpenTime);
-               storeSetting('cafeCloseTime', cafeCloseTime);
-               storeSetting('flutterwave_public_key', document.getElementById('flutterwavePublicKey') ? document.getElementById('flutterwavePublicKey').value.trim() : '');
-               try {
+storeSetting('cafeLocationLabel', cafeLocationLabel);
+            storeSetting('cafeInstagram', cafeInstagram);
+            storeSetting('cafeTiktok', cafeTiktok);
+            storeSetting('cafeSnapchat', cafeSnapchat);
+            storeSetting('cafeOpenTime', cafeOpenTime);
+            storeSetting('cafeCloseTime', cafeCloseTime);
+            try {
                    localStorage.setItem('cafeSettingsUpdatedAt', String(Date.now()));
                } catch (e) {}
 
@@ -5226,146 +5214,4 @@ function handleLogout() {
     } else {
         window.location.href = 'login.html';
     }
-}
-
-/* ========================================
-   Flutterwave Payment Integration
-   ======================================== */
-
-function getFlutterwavePublicKey() {
-    return localStorage.getItem('flutterwave_public_key') || 'FLWPUBK_TEST-xxxxxxxxxx';
-}
-
-function loadFlutterwaveScript() {
-    return new Promise(function(resolve, reject) {
-        if (window.FlutterwaveCheckout) {
-            resolve();
-            return;
-        }
-        if (document.getElementById('flutterwave-script')) {
-            if (!window._flutterwaveLoadPromise) {
-                window._flutterwaveLoadPromise = new Promise(function(res, rej) {
-                    window._flutterwaveResolve = res;
-                    window._flutterwaveReject = rej;
-                });
-            }
-            window._flutterwaveLoadPromise.then(resolve).catch(reject);
-            return;
-        }
-        window._flutterwaveLoadPromise = new Promise(function(res, rej) {
-            window._flutterwaveResolve = res;
-            window._flutterwaveReject = rej;
-        });
-        var script = document.createElement('script');
-        script.id = 'flutterwave-script';
-        script.src = 'https://checkout.flutterwave.com/v3.js';
-        script.async = true;
-        script.onload = function() {
-            if (window._flutterwaveResolve) window._flutterwaveResolve();
-        };
-        script.onerror = function() {
-            if (window._flutterwaveReject) window._flutterwaveReject(new Error('Failed to load Flutterwave'));
-        };
-        document.head.appendChild(script);
-        window._flutterwaveLoadPromise.then(resolve).catch(reject);
-    });
-}
-
-function recordCashierFlutterwaveSale(items, total, paymentData) {
-    if (!items || items.length === 0) return null;
-    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-    var now = new Date();
-    var tempId = 'local-' + Date.now();
-    var cacheEntry = {
-        id: tempId,
-        items: (items || []).map(function(i) { return { name: i.name || '', price: i.price || 0, quantity: i.quantity || 1 }; }),
-        total: total,
-        timestampSeconds: Math.floor(now.getTime() / 1000),
-        cashier: (window.auth && auth.currentUser) ? auth.currentUser.email : S.unknown
-    };
-    upsertCachedSale(cacheEntry);
-
-    var saleWrite = db.collection('sales').add({
-        items: cacheEntry.items,
-        total: total,
-        timestamp: firebase.firestore.Timestamp.fromDate(now),
-        created_at: firebase.firestore.FieldValue.serverTimestamp(),
-        cashier: cacheEntry.cashier,
-        payment_method: 'flutterwave',
-        payment_ref: (paymentData && paymentData.transaction_id) ? paymentData.transaction_id : ''
-    });
-    applyWrite(saleWrite, function () {
-        orderItems.length = 0;
-        updateOrderDisplay();
-    });
-    if (saleWrite && typeof saleWrite.then === 'function') {
-        saleWrite.then(function(ref) {
-            if (ref && ref.id) {
-                removeCachedSale(tempId);
-                upsertCachedSale(Object.assign({}, cacheEntry, { id: ref.id }));
-            }
-        }).catch(function(err) {
-            console.error('Sale sync error:', err);
-        });
-    }
-    return total;
-}
-
-function setupFlutterwaveCashierButton() {
-    var actions = document.querySelector('.cashier-actions');
-    if (!actions) return;
-    if (actions.querySelector('.btn-flutterwave')) return;
-
-    var btn = document.createElement('button');
-    btn.className = 'btn-pay btn-flutterwave';
-    btn.type = 'button';
-    btn.textContent = '💳 Pay with Flutterwave';
-    btn.style.marginLeft = '8px';
-    btn.addEventListener('click', function() {
-        if (orderItems.length === 0) {
-            alert('Please add items first');
-            return;
-        }
-        var total = orderItems.reduce(function(s, i) { return s + i.price * i.quantity; }, 0);
-        var publicKey = getFlutterwavePublicKey();
-
-        if (publicKey.indexOf('FLWPUBK_TEST') !== -1 || publicKey.indexOf('xxxxxxxxxx') !== -1) {
-            alert('⚠️ Payment is not configured.\n\nPlease add your Flutterwave public key in Admin Settings → Payment Gateway.');
-            return;
-        }
-
-        var email = (window.auth && auth.currentUser && auth.currentUser.email) ? auth.currentUser.email : 'cashier@shawarma.com';
-
-        loadFlutterwaveScript().then(function() {
-            FlutterwaveCheckout({
-                public_key: publicKey,
-                tx_ref: 'Shawarma-Cashier-' + Date.now(),
-                amount: total,
-                currency: 'IQD',
-                country: 'IQ',
-                payment_options: 'card, mobilemoney, ussd',
-                redirect_url: window.location.href,
-                customer: {
-                    email: email,
-                    phone_number: '9647506454656',
-                    name: email.split('@')[0] || 'Cashier'
-                },
-                customizations: {
-                    title: 'Shawarma - Cashier',
-                    description: 'Cashier Order',
-                    logo: new URL('assets/shawarma demeshq-logo.jpg', window.location.href).href
-                },
-                callback: function(data) {
-                    var itemsCopy = orderItems.slice();
-                    recordCashierFlutterwaveSale(itemsCopy, total, data);
-                    alert('✅ Payment successful!\nTransaction: ' + data.transaction_id);
-                },
-                onclose: function() {}
-            });
-        }).catch(function(err) {
-            console.error('Flutterwave error:', err);
-            alert('Payment service temporarily unavailable. Please try again.');
-        });
-    });
-    actions.appendChild(btn);
 }
