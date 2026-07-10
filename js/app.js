@@ -2383,6 +2383,8 @@ function applyMenuTheme(themeId) {
         body.setAttribute('data-menu-theme', themeId);
         body.classList.toggle('light-mode', theme.light);
         body.style.setProperty('--emenu-brown', theme.brown);
+        body.style.setProperty('--heading-accent', theme.brown);
+        body.style.setProperty('--heading-fg', theme.brown);
         body.style.setProperty('--emenu-bg', theme.bg);
         body.style.setProperty('--emenu-cat-bg', theme.cat);
         body.style.setProperty('--emenu-card-bg', theme.card);
