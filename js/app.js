@@ -911,7 +911,7 @@ function showFirestoreApiDisabledAlert() {
     window._firestoreApiDisabledAlerted = true;
     var lang = localStorage.getItem('selectedLang') || 'ku';
     var strings = i18n[lang] || i18n.en;
-    var projectId = (window.firebaseConfig && window.firebaseConfig.projectId) || 'shawarma-demashq-menu';
+    var projectId = (window.firebaseConfig && window.firebaseConfig.projectId) || 'shawarma-demeshq-menu';
     var url = 'https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=' + encodeURIComponent(projectId);
     alert('⚠️ ' + (strings.errorPrefix || 'Error:') + '\n\nCloud Firestore API is disabled for this project.\n\nPlease enable it here:\n' + url + '\n\nAfter enabling, wait a few minutes and refresh this page.');
 }

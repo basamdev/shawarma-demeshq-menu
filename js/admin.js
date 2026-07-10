@@ -1105,7 +1105,7 @@ function showFirestoreApiDisabledAlert() {
     if (window._firestoreApiDisabledAlerted) return;
     window._firestoreApiDisabledAlerted = true;
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-    var projectId = (window.firebaseConfig && window.firebaseConfig.projectId) || 'shawarma-demashq-menu';
+    var projectId = (window.firebaseConfig && window.firebaseConfig.projectId) || 'shawarma-demeshq-menu';
     var url = 'https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=' + encodeURIComponent(projectId);
     alert('⚠️ ' + (S.errorPrefix || 'Error:') + '\n\nCloud Firestore API is disabled for this project.\n\nPlease enable it here:\n' + url + '\n\nAfter enabling, wait a few minutes and refresh this page.');
 }
@@ -4607,7 +4607,7 @@ storeSetting('cafeLocationLabel', cafeLocationLabel);
                         if (err) {
                             var msg = (err && err.message ? String(err.message) : String(err)).toLowerCase();
                             if (msg.indexOf('permission') !== -1 || msg.indexOf('insufficient') !== -1 || msg.indexOf('denied') !== -1) {
-                                alert('⚠️ Settings saved locally only.\n\nFirestore WRITE was DENIED. Fix:\n1) In Firebase Console → project shawarma-demashq-menu → Firestore → Rules tab, paste the rules and click PUBLISH.\n2) Make sure you are logged in as admin.\n\n(' + (err && err.message ? err.message : err) + ')');
+                                 alert('⚠️ Settings saved locally only.\n\nFirestore WRITE was DENIED. Fix:\n1) In Firebase Console → project shawarma-demeshq-menu → Firestore → Rules tab, paste the rules and click PUBLISH.\n2) Make sure you are logged in as admin.\n\n(' + (err && err.message ? err.message : err) + ')');
                             } else {
                                 alert('⚠️ ' + S.settingsSaved + '\n\nCloud sync failed: ' + (err && err.message ? err.message : err) + '\n\nChanges saved locally only.');
                             }

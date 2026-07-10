@@ -35,9 +35,9 @@ function getFirebaseAuthDomain(config) {
 function getDefaultFirebaseConfig() {
     return {
         apiKey: "AIzaSyCPJ5fx88XnG_8xo_hb7y_DnHE3h_QntP0",
-        authDomain: "shawarma-demashq-menu.firebaseapp.com",
-        projectId: "shawarma-demashq-menu",
-        storageBucket: "shawarma-demashq-menu.firebasestorage.app",
+        authDomain: "shawarma-demeshq-menu.firebaseapp.com",
+        projectId: "shawarma-demeshq-menu",
+        storageBucket: "shawarma-demeshq-menu.firebasestorage.app",
         messagingSenderId: "954186813753",
         appId: "1:954186813753:web:ef0b07813a9fdeccb118e8",
         measurementId: "G-HWB8F12K7K"
