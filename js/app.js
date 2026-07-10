@@ -2793,11 +2793,14 @@ function sendWhatsAppOrder() {
         function (err) {
             window._customerLocationUrl = '';
             var msg = formT.locationNotShared || 'Location not shared';
-            if (err.code === 1) msg = msg + ' (Permission denied)';
+            if (err.code === 1) msg = 'Location permission denied — you can continue without it';
             if (statusEl) {
                 statusEl.textContent = msg;
                 statusEl.className = 'cart-location-status error';
                 statusEl.classList.remove('hidden');
+                setTimeout(function() {
+                    statusEl.classList.add('hidden');
+                }, 3000);
             }
             sendOrder();
         },

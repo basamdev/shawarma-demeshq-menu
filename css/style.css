@@ -1225,7 +1225,7 @@ body.light-mode .category-divider {
 }
 
 .active-category-title {
-    display: none;
+    display: none !important;
     font-family: var(--font-display);
     font-size: clamp(1.1rem, 3.5vw, 1.6rem);
     font-weight: 700;
@@ -1234,10 +1234,6 @@ body.light-mode .category-divider {
     margin: 0 4px 14px;
     padding-bottom: 8px;
     border-bottom: 1px solid rgba(212,175,55,0.18);
-}
-
-body.category-selected .active-category-title {
-    display: block;
 }
 
 .active-category-title:empty {
@@ -3867,7 +3863,7 @@ body.light-mode.emenu-layout .category-btn.active {
 
 /* Section title with accent line — title + icon + bar aligned to the right */
 .menu-section-head {
-    display: flex;
+    display: none !important;
     flex-direction: row;
     align-items: center;
     justify-content: flex-end;
