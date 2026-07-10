@@ -1185,17 +1185,9 @@ body.light-mode .category-divider {
     border-top-color: #B8910C;
 }
 
-/* Force vertical stacking inside category sections */
 .category-section {
-    grid-column: 1 / -1;  /* span all grid columns */
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    margin-bottom: 28px;
 }
-
-/* ========================================
-   MENU GRID
-   ======================================== */
 
 .category-heading {
     margin: 24px 0 8px;
