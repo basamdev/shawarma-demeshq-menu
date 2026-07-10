@@ -79,6 +79,47 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 /* ========================================
+   Customer Location (cart → WhatsApp)
+   ======================================== */
+
+window._customerLocationUrl = '';
+
+function useCurrentLocation() {
+    var statusEl = document.getElementById('cartLocationStatus');
+    if (!statusEl) return;
+
+    if (!navigator.geolocation) {
+        statusEl.textContent = 'Geolocation is not supported by your browser. You can continue without it.';
+        statusEl.className = 'cart-location-status error';
+        statusEl.classList.remove('hidden');
+        return;
+    }
+
+    statusEl.textContent = 'Getting your location...';
+    statusEl.className = 'cart-location-status';
+    statusEl.classList.remove('hidden');
+
+    navigator.geolocation.getCurrentPosition(
+        function (pos) {
+            var lat = pos.coords.latitude;
+            var lng = pos.coords.longitude;
+            window._customerLocationUrl = 'https://maps.google.com/?q=' + lat + ',' + lng;
+            statusEl.textContent = 'Location captured ✓';
+            statusEl.className = 'cart-location-status success';
+        },
+        function (err) {
+            window._customerLocationUrl = '';
+            var msg = 'Unable to get location. You can continue without it.';
+            if (err.code === 1) msg = 'Location permission denied. You can continue without it.';
+            statusEl.textContent = msg;
+            statusEl.className = 'cart-location-status error';
+            statusEl.classList.remove('hidden');
+        },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+    );
+}
+
+/* ========================================
    i18n
    ======================================== */
 
@@ -913,6 +954,7 @@ function paintMenuFromItems(items, options) {
         autoSelectCategoryAfterRender(true);
     }
     _menuUiReady = true;
+    setupCategoryScrollSpy();
     return true;
 }
 
@@ -1074,6 +1116,7 @@ function applyMenuItemsUpdate(items, options) {
     } else {
         container.innerHTML = '';
     }
+    setupCategoryScrollSpy();
 }
 
 function showCachedMenuIfAvailable() {
@@ -1470,17 +1513,17 @@ function autoSelectCategoryAfterRender(forceFirst) {
     if (!scroll) return;
     var target = _activeCategory;
     if (forceFirst || !target) {
-        if (isEmenuPage()) {
-            target = ALL_CATEGORY_ID;
-        } else {
-            var firstBtn = scroll.querySelector('.category-btn');
-            target = firstBtn ? firstBtn.getAttribute('data-category') : null;
-        }
+        target = ALL_CATEGORY_ID;
     }
     if (target) {
         var exists = scroll.querySelector('.category-btn[data-category="' + target + '"]');
         if (exists) {
             switchCategory(target, { immediate: true });
+            scrollCategoryBarToActive();
+        } else if (scroll.querySelector('.category-btn')) {
+            var firstBtn = scroll.querySelector('.category-btn');
+            switchCategory(firstBtn.getAttribute('data-category'), { immediate: true });
+            scrollCategoryBarToActive();
         }
     }
 }
@@ -1546,6 +1589,8 @@ function switchCategory(category, options) {
         btn.classList.toggle('active', btn.getAttribute('data-category') === category);
     });
 
+    scrollCategoryBarToActive();
+
     const grid = document.getElementById('menuGrid');
     if (!grid) return;
 
@@ -1562,86 +1607,124 @@ function switchCategory(category, options) {
         renderMenuCardsWithFeatures();
         grid.classList.remove('category-switching');
     }, 200);
+
+    if (options.immediate) return;
+    var targetSection = document.getElementById('category-section-' + category);
+    if (targetSection) {
+        setTimeout(function () {
+            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 250);
+    } else {
+        var gridTop = grid.getBoundingClientRect().top + window.scrollY - 100;
+        window.scrollTo({ top: gridTop, behavior: 'smooth' });
+    }
+}
+
+function scrollCategoryBarToActive() {
+    var scroll = document.getElementById('categoryScroll');
+    if (!scroll) return;
+    var activeBtn = scroll.querySelector('.category-btn.active');
+    if (!activeBtn) return;
+    var scrollLeft = activeBtn.offsetLeft - (scroll.clientWidth / 2) + (activeBtn.clientWidth / 2);
+    scroll.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+}
+
+function setupCategoryScrollSpy() {
+    if (window._categoryScrollSpy) return;
+    window._categoryScrollSpy = true;
+
+    var sections = [];
+    var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            var cat = entry.target.getAttribute('data-category-section');
+            if (!cat) return;
+            document.querySelectorAll('.category-btn').forEach(function (btn) {
+                btn.classList.toggle('active', btn.getAttribute('data-category') === cat);
+            });
+            scrollCategoryBarToActive();
+        });
+    }, {
+        root: null,
+        rootMargin: '-20% 0px -60% 0px',
+        threshold: 0
+    });
+
+    function observeSections() {
+        sections.forEach(function (s) { observer.unobserve(s); });
+        sections = [];
+        document.querySelectorAll('[data-category-section]').forEach(function (el) {
+            sections.push(el);
+            observer.observe(el);
+        });
+    }
+
+    window._observeCategorySections = observeSections;
+    observeSections();
 }
 
 /* ========================================
    Menu Items Rendering
    ======================================== */
 
-function renderMenuItems(items) {
-    const container = document.getElementById('menuGrid');
-    if (!container) return;
+/* ========================================
+   Menu Items Rendering
+   ======================================== */
 
-    _renderSerial++;
-    const serial = _renderSerial;
-    const lang = localStorage.getItem('selectedLang') || 'ku';
-    const strings = i18n[lang] || i18n.en;
+function createMenuCard(item, lang, strings) {
+    const card = document.createElement('div');
+    card.className = 'menu-card';
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('data-item-id', item.id);
 
-    container.innerHTML = '';
+    const name = item[`name_${lang}`] || item.name_en || item.name_ar || item.name_ku || 'Unnamed Item';
+    const description = item[`description_${lang}`] || item.description_en || item.description_ar || item.description_ku || '';
+    const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect fill=%231a1a1a width=%27400%27 height=%27300%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 font-size=%2740%27 text-anchor=%27middle%27 dy=%27.3em%27 fill=%23D4AF37%27%3E%E2%98%95%3C/text%3E%3C/svg%3E';
+    const imageUrl = normalizeImageUrl(item.image) || fallbackImage;
 
-    if (!items || items.length === 0) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">☕</div><p>${strings.noCategoryItems}</p></div>`;
-        return;
+    let categoryName = '';
+    const cachedCats = localStorage.getItem('cachedCategories');
+    if (cachedCats && item.category) {
+        try {
+            const categories = JSON.parse(cachedCats);
+            const cat = categories.find(c => c.id === item.category);
+            if (cat) {
+                categoryName = cat.data['name_' + lang] || cat.data.name_en || '';
+            }
+        } catch (e) {}
+    }
+    if (!categoryName && item.category) {
+        const key = item.category.replace(/\s+/g, '');
+        const lookupKey = key.charAt(0).toLowerCase() + key.slice(1);
+        categoryName = strings[lookupKey] || item.category;
     }
 
-    const availableItems = items.filter(item => item.available !== false);
+    const isEmenu = document.body.classList.contains('emenu-layout');
+    const priceText = isEmenu
+        ? (item.price ? item.price.toLocaleString() : '0') + ' د.ع'
+        : (item.price ? item.price.toLocaleString() : '0') + ' IQD';
 
-    availableItems.forEach(item => {
-        const name = item[`name_${lang}`] || item.name_en || item.name_ar || item.name_ku || 'Unnamed Item';
-        const description = item[`description_${lang}`] || item.description_en || item.description_ar || item.description_ku || '';
-        const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect fill=%231a1a1a width=%27400%27 height=%27300%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 font-size=%2740%27 text-anchor=%27middle%27 dy=%27.3em%27 fill=%23D4AF37%27%3E%E2%98%95%3C/text%3E%3C/svg%3E';
-        const imageUrl = normalizeImageUrl(item.image) || fallbackImage;
-
-        // Get category name for badge
-        let categoryName = '';
-        const cachedCats = localStorage.getItem('cachedCategories');
-        if (cachedCats && item.category) {
-            try {
-                const categories = JSON.parse(cachedCats);
-                const cat = categories.find(c => c.id === item.category);
-                if (cat) {
-                    categoryName = cat.data['name_' + lang] || cat.data.name_en || '';
-                }
-            } catch (e) {}
-        }
-        // Fallback to old category name
-        if (!categoryName && item.category) {
-            const key = item.category.replace(/\s+/g, '');
-            const lookupKey = key.charAt(0).toLowerCase() + key.slice(1);
-            categoryName = strings[lookupKey] || item.category;
-        }
-
-        const card = document.createElement('div');
-        card.className = 'menu-card';
-        card.setAttribute('role', 'button');
-        card.setAttribute('tabindex', '0');
-        card.setAttribute('data-item-id', item.id);
-
-        const isEmenu = document.body.classList.contains('emenu-layout');
-        const priceText = isEmenu
-            ? (item.price ? item.price.toLocaleString() : '0') + ' د.ع'
-            : (item.price ? item.price.toLocaleString() : '0') + ' IQD';
-
-        if (isEmenu) {
-            card.innerHTML = `
-                <div class="menu-card-img-wrapper">
-                    <img src="${imageUrl}" alt="${name}" class="menu-card-img" loading="lazy"
-                         onerror="this.onerror=null;this.src='${fallbackImage}';">
-                    <span class="menu-card-price-badge">${priceText}</span>
-                </div>
-                <div class="menu-card-foot">
-                    <span class="menu-card-foot-title">${name}</span>
-                    <button class="menu-card-cart" data-item-id="${item.id}" aria-label="Add to Cart">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                            <circle cx="9" cy="21" r="1"></circle>
-                            <circle cx="20" cy="21" r="1"></circle>
-                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                        </svg>
-                    </button>
-                </div>
-            `;
-        } else {
-            card.innerHTML = `
+    if (isEmenu) {
+        card.innerHTML = `
+            <div class="menu-card-img-wrapper">
+                <img src="${imageUrl}" alt="${name}" class="menu-card-img" loading="lazy"
+                     onerror="this.onerror=null;this.src='${fallbackImage}';">
+                <span class="menu-card-price-badge">${priceText}</span>
+            </div>
+            <div class="menu-card-foot">
+                <span class="menu-card-foot-title">${name}</span>
+                <button class="menu-card-cart" data-item-id="${item.id}" aria-label="Add to Cart">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+    } else {
+        card.innerHTML = `
             <div class="menu-card-img-wrapper">
                 <img src="${imageUrl}" alt="${name}" class="menu-card-img" loading="lazy"
                      onerror="this.onerror=null;this.src='${fallbackImage}';">
@@ -1665,25 +1748,99 @@ function renderMenuItems(items) {
                 </div>
             </div>
         `;
-        }
+    }
 
-        // Open detail on click
-        const openDetail = () => openProductDetail(item);
-        card.addEventListener('click', openDetail);
-        card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(); } });
+    const openDetail = () => openProductDetail(item);
+    card.addEventListener('click', openDetail);
+    card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(); } });
 
-        // Cart / fav button
-        const cartBtn = card.querySelector('.menu-card-cart');
-        if (cartBtn) {
-            cartBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                addToCart(item);
-                cartBtn.classList.add('added');
-                setTimeout(() => cartBtn.classList.remove('added'), 600);
-            });
-        }
+    const cartBtn = card.querySelector('.menu-card-cart');
+    if (cartBtn) {
+        cartBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            addToCart(item);
+            cartBtn.classList.add('added');
+            setTimeout(() => cartBtn.classList.remove('added'), 600);
+        });
+    }
 
-        container.appendChild(card);
+    return card;
+}
+
+function appendCategorySection(container, catId, catItems, lang, strings) {
+    const section = document.createElement('div');
+    section.className = 'category-section';
+    section.setAttribute('data-category-section', catId);
+    section.id = 'category-section-' + catId;
+
+    const header = document.createElement('div');
+    header.className = 'category-section-header';
+    header.textContent = getCategoryDisplayName(catId, lang);
+    section.appendChild(header);
+
+    catItems.forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+    return section;
+}
+
+function renderMenuItems(items) {
+    const container = document.getElementById('menuGrid');
+    if (!container) return;
+
+    _renderSerial++;
+    const lang = localStorage.getItem('selectedLang') || 'ku';
+    const strings = i18n[lang] || i18n.en;
+
+    container.innerHTML = '';
+
+    if (!items || items.length === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">☕</div><p>${strings.noCategoryItems}</p></div>`;
+        return;
+    }
+
+    const availableItems = items.filter(item => item.available !== false);
+
+    // Grouped "All" view: render items inside category sections
+    if (_activeCategory === ALL_CATEGORY_ID && availableItems.length > 0) {
+        const groups = {};
+        availableItems.forEach(item => {
+            const cat = item.category || '__uncategorized';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(item);
+        });
+
+        let categoryOrder = [];
+        try {
+            const cachedCats = JSON.parse(localStorage.getItem('cachedCategories') || '[]');
+            categoryOrder = cachedCats.map(c => c.id);
+        } catch (e) {}
+
+        const renderedCats = new Set();
+        const appendSection = (catId, catItems) => {
+            renderedCats.add(catId);
+            const section = document.createElement('div');
+            section.className = 'category-section';
+            section.setAttribute('data-category-section', catId);
+            section.id = 'category-section-' + catId;
+
+            const header = document.createElement('div');
+            header.className = 'category-section-header';
+            header.textContent = getCategoryDisplayName(catId, lang);
+            section.appendChild(header);
+
+            catItems.forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+            container.appendChild(section);
+        };
+
+        categoryOrder.forEach(catId => { if (groups[catId]) appendSection(catId, groups[catId]); });
+        Object.keys(groups).forEach(catId => { if (!renderedCats.has(catId)) appendSection(catId, groups[catId]); });
+
+        if (window._observeCategorySections) window._observeCategorySections();
+        return;
+    }
+
+    // Flat rendering (single category or legacy path)
+    availableItems.forEach(item => {
+        container.appendChild(createMenuCard(item, lang, strings));
     });
 }
 
@@ -1860,6 +2017,13 @@ document.addEventListener('DOMContentLoaded', function () {
     if (cartWhatsapp) {
         cartWhatsapp.addEventListener('click', function() {
             sendWhatsAppOrder();
+        });
+    }
+
+    var cartLocationBtn = document.getElementById('cartLocationBtn');
+    if (cartLocationBtn) {
+        cartLocationBtn.addEventListener('click', function() {
+            useCurrentLocation();
         });
     }
 
@@ -2546,6 +2710,9 @@ function sendWhatsAppOrder() {
     lines.push(cafeName + ' - ' + T.order);
     lines.push(T.name + ': ' + customerName);
     lines.push(T.place + ': ' + customerPlace);
+    if (window._customerLocationUrl) {
+        lines.push('Maps: ' + window._customerLocationUrl);
+    }
     lines.push(divider);
 
     // \u200E = Left-to-Right Mark. It keeps the numeric "qty x price = total"
