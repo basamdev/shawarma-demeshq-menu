@@ -2750,8 +2750,10 @@ function sendWhatsAppOrder() {
 
         var encoded = encodeURIComponent(message);
         var url = 'https://wa.me/' + phone + '?text=' + encoded;
-
-        window.open(url, '_blank');
+        var opened = window.open(url, '_blank', 'noopener,noreferrer');
+        if (!opened) {
+            window.location.href = url;
+        }
     };
 
     if (window._customerLocationUrl) {
@@ -2765,15 +2767,12 @@ function sendWhatsAppOrder() {
             statusEl.textContent = formT.locationNotShared || 'Location not shared';
             statusEl.className = 'cart-location-status error';
             statusEl.classList.remove('hidden');
+            setTimeout(function() {
+                statusEl.classList.add('hidden');
+            }, 3000);
         }
         sendOrder();
         return;
-    }
-
-    if (statusEl) {
-        statusEl.textContent = 'Getting your location...';
-        statusEl.className = 'cart-location-status';
-        statusEl.classList.remove('hidden');
     }
 
     navigator.geolocation.getCurrentPosition(
@@ -2793,7 +2792,7 @@ function sendWhatsAppOrder() {
         function (err) {
             window._customerLocationUrl = '';
             var msg = formT.locationNotShared || 'Location not shared';
-            if (err.code === 1) msg = 'Location permission denied — you can continue without it';
+            if (err && err.code === 1) msg = 'Location permission denied — you can continue without it';
             if (statusEl) {
                 statusEl.textContent = msg;
                 statusEl.className = 'cart-location-status error';
