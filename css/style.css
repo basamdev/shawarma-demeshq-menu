@@ -1216,9 +1216,7 @@ body.light-mode .category-divider {
 .category-section {
     margin-bottom: 28px;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-auto-flow: column;
-    grid-auto-rows: minmax(min-content, auto);
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
 }
 
