@@ -983,7 +983,10 @@ function parseMenuItemsFromRest(json) {
             available: restFieldValue(f.available) !== false,
             description_ku: restFieldValue(f.description_ku),
             description_ar: restFieldValue(f.description_ar),
-            description_en: restFieldValue(f.description_en)
+            description_en: restFieldValue(f.description_en),
+            group_ku: restFieldValue(f.group_ku),
+            group_ar: restFieldValue(f.group_ar),
+            group_en: restFieldValue(f.group_en)
         });
     });
     return items;
@@ -1039,7 +1042,8 @@ function menuItemsSignature(items) {
     return items.map(function (i) {
         return i.id + '|' + (i.available === false ? '0' : '1') + '|' + (i.price || 0) +
             '|' + (i.category || '') + '|' + (i.image || '') +
-            '|' + (i.name_ku || '') + '|' + (i.name_ar || '') + '|' + (i.name_en || '');
+            '|' + (i.name_ku || '') + '|' + (i.name_ar || '') + '|' + (i.name_en || '') +
+            '|' + (i.group_ku || '') + '|' + (i.group_ar || '') + '|' + (i.group_en || '');
     }).sort().join(';');
 }
 
@@ -1393,7 +1397,7 @@ function allCategoryIconSvg() {
 }
 
 function buildAllCategoryButton(label) {
-    return '<button class="category-btn category-btn-all" data-category="' + ALL_CATEGORY_ID + '">' +
+    return '<button class="category-btn category-btn-all active" data-category="' + ALL_CATEGORY_ID + '">' +
         '<span class="cat-all-mark" aria-hidden="true">' + allCategoryIconSvg() + '</span>' +
         '<span class="cat-label">' + label + '</span></button>';
 }
@@ -1446,13 +1450,18 @@ function renderCategories(items, options) {
       });
 
        categories.sort(function (a, b) {
-           var ai = PREFERRED_CATEGORY_ORDER.indexOf(a.id);
-           var bi = PREFERRED_CATEGORY_ORDER.indexOf(b.id);
-           if (ai === -1 && bi === -1) return 0;
-           if (ai === -1) return 1;
-           if (bi === -1) return -1;
-           return ai - bi;
-       });
+            var ao = (a.data && a.data.order) != null ? a.data.order : null;
+            var bo = (b.data && b.data.order) != null ? b.data.order : null;
+            if (ao != null && bo != null) return ao - bo;
+            if (ao != null) return -1;
+            if (bo != null) return 1;
+            var ai = PREFERRED_CATEGORY_ORDER.indexOf(a.id);
+            var bi = PREFERRED_CATEGORY_ORDER.indexOf(b.id);
+            if (ai === -1 && bi === -1) return 0;
+            if (ai === -1) return 1;
+            if (bi === -1) return -1;
+            return ai - bi;
+        });
 
       const barSig = computeCategoryBarSig(categories, items, lang);
      if (!options.forceRebuild && scroll.dataset.categorySig === barSig) {
@@ -1489,7 +1498,6 @@ function renderCategories(items, options) {
          });
 
          scroll.innerHTML = html;
-
          scroll.querySelectorAll('.category-btn').forEach(btn => {
              btn.addEventListener('click', () => {
                  const cat = btn.getAttribute('data-category');
@@ -1499,8 +1507,13 @@ function renderCategories(items, options) {
          if (options.autoSelect !== false) {
              autoSelectCategoryAfterRender(options.forceFirst);
          }
+
+         if (isEmenuPage()) {
+             const allBtnEl = scroll.querySelector('.category-btn-all');
+             if (allBtnEl) allBtnEl.classList.add('active');
+         }
          return;
-     }
+    }
 
       let html = allBtn;
       categories.forEach(cat => {
@@ -1509,19 +1522,29 @@ function renderCategories(items, options) {
           html += `<button class="category-btn" data-category="${cat.id}">${icon}<span class="cat-label">${name}</span></button>`;
       });
 
-     scroll.innerHTML = html;
+      scroll.innerHTML = html;
 
-     scroll.querySelectorAll('.category-btn').forEach(btn => {
-         btn.addEventListener('click', () => {
-             const cat = btn.getAttribute('data-category');
-             switchCategory(cat);
-         });
-     });
+      scroll.querySelectorAll('.category-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+              const cat = btn.getAttribute('data-category');
+              switchCategory(cat);
+          });
+      });
+      if (options.autoSelect !== false) {
+          autoSelectCategoryAfterRender(options.forceFirst);
+      }
 
-     if (options.autoSelect !== false) {
-         autoSelectCategoryAfterRender(options.forceFirst);
-     }
- }
+      if (isEmenuPage()) {
+          const allBtnEl = scroll.querySelector('.category-btn-all');
+          if (allBtnEl) {
+              allBtnEl.classList.add('active');
+          }
+      }
+
+      if (!options.forceRebuild) {
+          if (window._observeCategorySections) window._observeCategorySections();
+      }
+  }
 
 function autoSelectCategoryAfterRender(forceFirst) {
     var scroll = document.getElementById('categoryScroll');
@@ -1651,15 +1674,26 @@ function setupCategoryScrollSpy() {
 
     var sections = [];
     var observer = new IntersectionObserver(function (entries) {
+        var anyIntersecting = false;
+        var activeCat = null;
         entries.forEach(function (entry) {
             if (!entry.isIntersecting) return;
+            anyIntersecting = true;
             var cat = entry.target.getAttribute('data-category-section');
-            if (!cat) return;
-            document.querySelectorAll('.category-btn').forEach(function (btn) {
-                btn.classList.toggle('active', btn.getAttribute('data-category') === cat);
-            });
-            scrollCategoryBarToActive();
+            if (cat) activeCat = cat;
         });
+        if (!anyIntersecting) return;
+        document.querySelectorAll('.category-btn').forEach(function (btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-category') === activeCat);
+        });
+        if (!activeCat || !document.querySelector('.category-btn.active')) {
+            var allBtn = document.querySelector('.category-btn-all');
+            if (allBtn) {
+                document.querySelectorAll('.category-btn').forEach(function (btn) { btn.classList.remove('active'); });
+                allBtn.classList.add('active');
+            }
+        }
+        scrollCategoryBarToActive();
     }, {
         root: null,
         rootMargin: '-20% 0px -60% 0px',
@@ -1827,6 +1861,14 @@ function renderMenuItems(items) {
         let categoryOrder = [];
         try {
             const cachedCats = JSON.parse(localStorage.getItem('cachedCategories') || '[]');
+            cachedCats.sort(function (a, b) {
+                var ao = (a.data && a.data.order) != null ? a.data.order : null;
+                var bo = (b.data && b.data.order) != null ? b.data.order : null;
+                if (ao != null && bo != null) return ao - bo;
+                if (ao != null) return -1;
+                if (bo != null) return 1;
+                return 0;
+            });
             cachedCats.forEach(function (c) {
                 if (c.id && categoryOrder.indexOf(c.id) === -1) categoryOrder.push(c.id);
             });
