@@ -3822,7 +3822,7 @@ body.emenu-layout.light-mode .menu-fab .icon-sun { display: inline; }
 body.emenu-layout .category-bar {
     padding: 0;
     border-bottom: none;
-    background: transparent;
+    background: var(--emenu-bg, #FFFFFF);
 }
 
 body.emenu-layout .category-scroll {
