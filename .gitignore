@@ -1,2 +1,16 @@
 firebase-debug.log
 .vercel
+.vscode
+.cursor
+.venv
+database/
+sample-data.js
+seed-menu.html
+video-test.html
+index-new.html
+js/admin-new.js
+js/settings-manager.js
+js/favicon.ico
+css/style.css.bak
+netlify.toml
+vercel.json
