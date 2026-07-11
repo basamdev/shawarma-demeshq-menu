@@ -1786,7 +1786,11 @@ function loadManageItems() {
                                  '</select>' +
                                  '<button type="button" class="btn-primary" id="addNewCategoryBtn" style="padding:8px 12px;">+</button>' +
                              '</div></div>' +
-                         '<div class="form-group"><label>' + (S.group || 'Group') + '</label><input type="text" id="itemGroup" placeholder="' + (S.groupPlaceholder || 'Optional group/section') + '"></div>' +
+                          '<div class="form-group"><label>' + (S.group || 'Group') + '</label>' +
+                              '<input type="text" id="itemGroupKu" placeholder="' + (S.kurdishName || 'Kurdish') + '">' +
+                              '<input type="text" id="itemGroupAr" placeholder="' + (S.arabicName || 'Arabic') + '" style="margin-top:6px;">' +
+                              '<input type="text" id="itemGroupEn" placeholder="' + (S.englishName || 'English') + '" style="margin-top:6px;">' +
+                          '</div>' +
                         '<div class="form-group"><label><input type="checkbox" id="itemAvailable" checked> ' + S.available + '</label></div>' +
                         '<button type="button" class="btn-primary" id="saveItemBtn">' + S.saveItem + '</button>' +
                         '<button type="button" class="btn-secondary" id="cancelItemBtn" style="margin-left:8px;">' + S.cancel + '</button>' +
@@ -2258,7 +2262,7 @@ function renderItemsList(items) {
             var img = item.image || 'https://placehold.co/50x50?text=No+Image';
             var avail = item.available ? '<span style="color:#2E7D32;">' + S.yes + '</span>' : '<span style="color:#C62828;">' + S.no + '</span>';
             var catName = getCategoryLabel(item.category, lang, catMap);
-            var groupName = item.group || '';
+            var groupName = item.group_ku || item.group_ar || item.group_en || '';
             html += '<tr>' +
                 '<td><img src="' + img + '" alt="' + name + '" width="48" height="48"></td>' +
                 '<td>' + name + '</td>' +
@@ -2698,7 +2702,9 @@ function saveItem() {
          description_en: document.getElementById('itemDescEn').value.trim(),
          price: parseFloat(price) || 0,
          category: category,
-         group: (document.getElementById('itemGroup') || {}).value || '',
+         group_ku: (document.getElementById('itemGroupKu') || {}).value || '',
+         group_ar: (document.getElementById('itemGroupAr') || {}).value || '',
+         group_en: (document.getElementById('itemGroupEn') || {}).value || '',
          image: finalImg,
          available: document.getElementById('itemAvailable').checked,
          updated_at: now
@@ -2784,8 +2790,12 @@ function editItem(itemId) {
         document.getElementById('itemDescEn').value = item.description_en || '';
         document.getElementById('itemPrice').value = item.price || '';
         document.getElementById('itemAvailable').checked = item.available !== false;
-        var groupEl = document.getElementById('itemGroup');
-        if (groupEl) groupEl.value = item.group || '';
+        var groupEl = document.getElementById('itemGroupKu');
+        if (groupEl) groupEl.value = item.group_ku || '';
+        groupEl = document.getElementById('itemGroupAr');
+        if (groupEl) groupEl.value = item.group_ar || '';
+        groupEl = document.getElementById('itemGroupEn');
+        if (groupEl) groupEl.value = item.group_en || '';
         if (item.image) {
             document.getElementById('itemImageURL').value = item.image;
             var pr = document.getElementById('itemImagePreview');
