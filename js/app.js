@@ -2082,22 +2082,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     });
-
-    var menuSyncBtn = document.getElementById('menuSyncBtn');
-    if (menuSyncBtn) {
-        menuSyncBtn.addEventListener('click', function () {
-            [
-                'cachedMenuItems',
-                'cachedMenuItemsSig',
-                'cachedCategories',
-                'cachedCategoriesSig'
-            ].forEach(function (key) { localStorage.removeItem(key); });
-            if (loadMenuItems && typeof loadMenuItems === 'function') {
-                loadMenuItems._inProgress = false;
-                loadMenuItems();
-            }
-        });
-    }
 });
 
 /* ========================================
