@@ -1198,6 +1198,16 @@ body.light-mode .category-btn.active .cat-icon {
     flex-shrink: 0;
 }
 
+.group-heading {
+    grid-column: 1 / -1;
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--heading-fg, var(--color-gold));
+    margin: 8px 0 6px;
+    opacity: 0.9;
+}
+
 .category-divider {
     border: none;
     border-top: 2px solid var(--heading-accent, var(--color-gold));

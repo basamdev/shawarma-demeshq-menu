@@ -1779,13 +1779,14 @@ function loadManageItems() {
                             '<input type="text" id="itemImageURL" placeholder="' + (S.imageUrlOrUpload || 'Paste image URL or upload above') + '">' +
                             '<img id="itemImagePreview" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;"></div>' +
                         '<div class="form-group"><label>' + S.price + '</label><input type="text" inputmode="decimal" id="itemPrice" autocomplete="off"></div>' +
-                        '<div class="form-group"><label>' + S.category + '</label>' +
-                            '<div style="display:flex;gap:8px;">' +
-                                '<select id="itemCategory" style="flex:1;">' +
-                                    '<option value="">' + S.select + '</option>' +
-                                '</select>' +
-                                '<button type="button" class="btn-primary" id="addNewCategoryBtn" style="padding:8px 12px;">+</button>' +
-                            '</div></div>' +
+                         '<div class="form-group"><label>' + S.category + '</label>' +
+                             '<div style="display:flex;gap:8px;">' +
+                                 '<select id="itemCategory" style="flex:1;">' +
+                                     '<option value="">' + S.select + '</option>' +
+                                 '</select>' +
+                                 '<button type="button" class="btn-primary" id="addNewCategoryBtn" style="padding:8px 12px;">+</button>' +
+                             '</div></div>' +
+                         '<div class="form-group"><label>' + (S.group || 'Group') + '</label><input type="text" id="itemGroup" placeholder="' + (S.groupPlaceholder || 'Optional group/section') + '"></div>' +
                         '<div class="form-group"><label><input type="checkbox" id="itemAvailable" checked> ' + S.available + '</label></div>' +
                         '<button type="button" class="btn-primary" id="saveItemBtn">' + S.saveItem + '</button>' +
                         '<button type="button" class="btn-secondary" id="cancelItemBtn" style="margin-left:8px;">' + S.cancel + '</button>' +
@@ -2250,17 +2251,19 @@ function renderItemsList(items) {
     var lang = localStorage.getItem('selectedLang') || 'ku';
 
     function paintRows(catMap) {
-        var html = '<div class="table-responsive"><table class="admin-table"><thead><tr><th>Image</th><th>Name</th><th>' + S.category + '</th><th>' + S.price + '</th><th>' + S.available + '</th><th>Actions</th></tr></thead><tbody>';
+        var html = '<div class="table-responsive"><table class="admin-table"><thead><tr><th>Image</th><th>Name</th><th>' + S.category + '</th><th>' + (S.group || 'Group') + '</th><th>' + S.price + '</th><th>' + S.available + '</th><th>Actions</th></tr></thead><tbody>';
         items.forEach(function (doc) {
             var item = doc.data();
             var name = item['name_' + lang] || item.name_ku || item.name_ar || item.name_en || S.unnamed;
             var img = item.image || 'https://placehold.co/50x50?text=No+Image';
             var avail = item.available ? '<span style="color:#2E7D32;">' + S.yes + '</span>' : '<span style="color:#C62828;">' + S.no + '</span>';
             var catName = getCategoryLabel(item.category, lang, catMap);
+            var groupName = item.group || '';
             html += '<tr>' +
                 '<td><img src="' + img + '" alt="' + name + '" width="48" height="48"></td>' +
                 '<td>' + name + '</td>' +
                 '<td>' + catName + '</td>' +
+                '<td>' + escapeHtmlText(groupName) + '</td>' +
                 '<td>' + (item.price || 0) + ' IQD</td>' +
                 '<td>' + avail + '</td>' +
                 '<td><button class="btn-primary btn-sm edit-item" data-id="' + doc.id + '">' + S.edit + '</button> ' +
@@ -2688,17 +2691,18 @@ function saveItem() {
 
     var itemId = document.getElementById('itemId').value;
     var now = new Date().toISOString();
-    var plainData = {
-        name_ku: nameKu, name_ar: nameAr, name_en: nameEn,
-        description_ku: document.getElementById('itemDescKu').value.trim(),
-        description_ar: document.getElementById('itemDescAr').value.trim(),
-        description_en: document.getElementById('itemDescEn').value.trim(),
-        price: parseFloat(price) || 0,
-        category: category,
-        image: finalImg,
-        available: document.getElementById('itemAvailable').checked,
-        updated_at: now
-    };
+     var plainData = {
+         name_ku: nameKu, name_ar: nameAr, name_en: nameEn,
+         description_ku: document.getElementById('itemDescKu').value.trim(),
+         description_ar: document.getElementById('itemDescAr').value.trim(),
+         description_en: document.getElementById('itemDescEn').value.trim(),
+         price: parseFloat(price) || 0,
+         category: category,
+         group: (document.getElementById('itemGroup') || {}).value || '',
+         image: finalImg,
+         available: document.getElementById('itemAvailable').checked,
+         updated_at: now
+     };
 
     var ref;
     var promise;
@@ -2780,6 +2784,8 @@ function editItem(itemId) {
         document.getElementById('itemDescEn').value = item.description_en || '';
         document.getElementById('itemPrice').value = item.price || '';
         document.getElementById('itemAvailable').checked = item.available !== false;
+        var groupEl = document.getElementById('itemGroup');
+        if (groupEl) groupEl.value = item.group || '';
         if (item.image) {
             document.getElementById('itemImageURL').value = item.image;
             var pr = document.getElementById('itemImagePreview');

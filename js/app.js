@@ -635,6 +635,7 @@ const i18n = {
         imageURL: 'Image URL',
         price: 'Price (IQD)',
         category: 'Category',
+        group: 'Group',
         available: 'Available',
         notAvailable: 'Not available',
         saveItem: 'Save Item',
@@ -1844,7 +1845,26 @@ function renderMenuItems(items) {
             heading.textContent = getCategoryDisplayName(catId, lang);
             section.appendChild(heading);
 
-            groups[catId].forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+            const itemsByGroup = {};
+            groups[catId].forEach(item => {
+                const g = item.group || '__ungrouped';
+                if (!itemsByGroup[g]) itemsByGroup[g] = [];
+                itemsByGroup[g].push(item);
+            });
+
+            const groupOrder = Object.keys(itemsByGroup);
+            groupOrder.forEach(g => {
+                if (g === '__ungrouped') {
+                    itemsByGroup[g].forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+                    return;
+                }
+                const groupHeading = document.createElement('h4');
+                groupHeading.className = 'group-heading';
+                groupHeading.textContent = g;
+                section.appendChild(groupHeading);
+                itemsByGroup[g].forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+            });
+
             container.appendChild(section);
         });
 
@@ -1864,7 +1884,26 @@ function renderMenuItems(items) {
         heading.textContent = getCategoryDisplayName(_activeCategory, lang);
         section.appendChild(heading);
 
-        availableItems.forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+        const itemsByGroup = {};
+        availableItems.forEach(item => {
+            const g = item.group || '__ungrouped';
+            if (!itemsByGroup[g]) itemsByGroup[g] = [];
+            itemsByGroup[g].push(item);
+        });
+
+        const groupOrder = Object.keys(itemsByGroup);
+        groupOrder.forEach(g => {
+            if (g === '__ungrouped') {
+                itemsByGroup[g].forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+                return;
+            }
+            const groupHeading = document.createElement('h4');
+            groupHeading.className = 'group-heading';
+            groupHeading.textContent = g;
+            section.appendChild(groupHeading);
+            itemsByGroup[g].forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+        });
+
         container.appendChild(section);
     }
 }
