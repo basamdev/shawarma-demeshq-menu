@@ -104,8 +104,33 @@ function safeSetItem(key, value) {
     try {
         localStorage.setItem(key, value);
     } catch (e) {
-        console.warn('[storage] setItem failed for', key, ':', e.message);
+        if (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(e.message || '')) {
+            console.warn('[storage] quota full — purging old cache keys and retrying', key);
+            clearQuotaKeys();
+            try { localStorage.setItem(key, value); } catch (e2) {
+                console.warn('[storage] setItem still failed after cleanup for', key, ':', e2.message);
+            }
+        } else {
+            console.warn('[storage] setItem failed for', key, ':', e.message);
+        }
     }
+}
+
+var QUOTA_KEYS = [
+    'cachedMenuItems',
+    'cachedMenuItemsSig',
+    'cachedCategories',
+    'cachedCategoriesSig',
+    'cachedCashierItems',
+    'cachedMenuCategoryNames',
+    'cachedSales',
+    'cachedExpenses'
+];
+
+function clearQuotaKeys() {
+    QUOTA_KEYS.forEach(function (k) {
+        try { localStorage.removeItem(k); } catch (e) {}
+    });
 }
 
 function serializableFirestoreData(data) {
