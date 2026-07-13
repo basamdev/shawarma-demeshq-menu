@@ -105,9 +105,10 @@ function safeSetItem(key, value) {
         localStorage.setItem(key, value);
     } catch (e) {
         if (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(e.message || '')) {
-            console.warn('[storage] quota full — purging old cache keys and retrying', key);
-            clearQuotaKeys();
-            try { localStorage.setItem(key, value); } catch (e2) {
+            evictNonEssentialCacheKeys();
+            try {
+                localStorage.setItem(key, value);
+            } catch (e2) {
                 console.warn('[storage] setItem still failed after cleanup for', key, ':', e2.message);
             }
         } else {
@@ -116,19 +117,19 @@ function safeSetItem(key, value) {
     }
 }
 
-var QUOTA_KEYS = [
+// Keys that can be dropped to free space when the quota is hit. `cachedCategories`
+// is intentionally excluded so the category bar keeps rendering with images/order.
+var NON_ESSENTIAL_CACHE_KEYS = [
     'cachedMenuItems',
     'cachedMenuItemsSig',
-    'cachedCategories',
-    'cachedCategoriesSig',
     'cachedCashierItems',
     'cachedMenuCategoryNames',
     'cachedSales',
     'cachedExpenses'
 ];
 
-function clearQuotaKeys() {
-    QUOTA_KEYS.forEach(function (k) {
+function evictNonEssentialCacheKeys() {
+    NON_ESSENTIAL_CACHE_KEYS.forEach(function (k) {
         try { localStorage.removeItem(k); } catch (e) {}
     });
 }
@@ -3035,7 +3036,12 @@ function renderCategoriesTable(categories) {
         if (ao != null && bo != null) return ao - bo;
         if (ao != null) return -1;
         if (bo != null) return 1;
-        return 0;
+        var ai = categoryPreferredIndex(a);
+        var bi = categoryPreferredIndex(b);
+        if (ai === -1 && bi === -1) return 0;
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
     });
 
     var html = '<div class="table-responsive"><table class="admin-table"><thead><tr><th>' + (S.image || 'Image') + '</th><th>' + (S.name || 'Name') + '</th><th>' + (S.actions || 'Actions') + '</th></tr></thead><tbody>';

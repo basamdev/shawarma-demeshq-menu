@@ -11,9 +11,15 @@ function safeSetItem(key, value) {
         localStorage.setItem(key, value);
     } catch (e) {
         if (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(e.message || '')) {
-            console.warn('[storage] quota full — purging old cache keys and retrying', key);
-            clearQuotaKeys();
-            try { localStorage.setItem(key, value); } catch (e2) {
+            // Make room by evicting only NON-essential cache keys. Never evict
+            // `cachedCategories` (the menu needs it to render with images/order)
+            // and never evict the key we are currently trying to write.
+            evictNonEssentialCacheKeys();
+            try {
+                localStorage.setItem(key, value);
+            } catch (e2) {
+                // Data is larger than the remaining quota — skip caching and let
+                // the app run from memory / live Firestore. Do NOT wipe categories.
                 console.warn('[storage] setItem still failed after cleanup for', key, ':', e2.message);
             }
         } else {
@@ -22,11 +28,12 @@ function safeSetItem(key, value) {
     }
 }
 
-var QUOTA_KEYS = [
+// Keys that can be dropped to free space when the quota is hit. `cachedCategories`
+// is intentionally excluded: it is required to render the category bar with images
+// and correct order, so wiping it would break the UI.
+var NON_ESSENTIAL_CACHE_KEYS = [
     'cachedMenuItems',
     'cachedMenuItemsSig',
-    'cachedCategories',
-    'cachedCategoriesSig',
     'cachedCashierItems',
     'cachedMenuCategoryNames',
     'cachedSales',
@@ -35,8 +42,8 @@ var QUOTA_KEYS = [
     'menu_ratings'
 ];
 
-function clearQuotaKeys() {
-    QUOTA_KEYS.forEach(function (k) {
+function evictNonEssentialCacheKeys() {
+    NON_ESSENTIAL_CACHE_KEYS.forEach(function (k) {
         try { localStorage.removeItem(k); } catch (e) {}
     });
 }
@@ -862,6 +869,27 @@ let cachedMenuItems = [];
 let _activeCategory = null;
 const ALL_CATEGORY_ID = '__all__';
 const PREFERRED_CATEGORY_ORDER = ['Chicken Shawarma', 'Pizza', 'Western', 'Bread', 'Appetizer', 'Salad', 'Drinks', 'Coffee', 'Tea', 'Cold Drinks', 'Dessert', 'Shisha', 'Special Drinks'];
+
+// Resolve a category's preferred ordering index, matching by id OR by any of its
+// localized name fields (categories created with an auto-generated id, e.g.
+// "Chicken Shawarma", would otherwise fall to the end of the list).
+function categoryPreferredIndex(cat) {
+    if (!cat) return -1;
+    var id = (cat.id || '').toLowerCase().trim();
+    var names = [];
+    if (cat.data) {
+        ['name_en', 'name_ar', 'name_ku'].forEach(function (k) {
+            var n = cat.data[k];
+            if (n) names.push(String(n).toLowerCase().trim());
+        });
+    }
+    for (var i = 0; i < PREFERRED_CATEGORY_ORDER.length; i++) {
+        var p = PREFERRED_CATEGORY_ORDER[i].toLowerCase().trim();
+        if (id === p) return i;
+        if (names.indexOf(p) !== -1) return i;
+    }
+    return -1;
+}
 let _renderSerial = 0;
 let _currentDetailItem = null;
 let isOffline = false;
@@ -936,7 +964,7 @@ function firestoreGetWithTimeout(ref, ms) {
     ]);
 }
 
-var APP_VERSION = 'v90';
+var APP_VERSION = 'v91';
 
 function isFirestoreApiDisabledError(err) {
     if (!err || !err.message) return false;
@@ -1495,7 +1523,14 @@ function renderCategories(items, options) {
             if (ao != null && bo != null) return ao - bo;
             if (ao != null) return -1;
             if (bo != null) return 1;
-            return 0;
+            // No `order` field (e.g. categories created before ordering existed):
+            // fall back to the preferred manual sequence so the bar stays ordered.
+            var ai = categoryPreferredIndex(a);
+            var bi = categoryPreferredIndex(b);
+            if (ai === -1 && bi === -1) return 0;
+            if (ai === -1) return 1;
+            if (bi === -1) return -1;
+            return ai - bi;
         });
 
       const barSig = computeCategoryBarSig(categories, items, lang);
