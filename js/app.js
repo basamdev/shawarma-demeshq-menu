@@ -909,7 +909,7 @@ function firestoreGetWithTimeout(ref, ms) {
     ]);
 }
 
-var APP_VERSION = 'v88';
+var APP_VERSION = 'v89';
 
 function isFirestoreApiDisabledError(err) {
     if (!err || !err.message) return false;
