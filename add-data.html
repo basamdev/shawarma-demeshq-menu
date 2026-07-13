@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Sample Data to Firebase</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        button { padding: 10px 20px; background: #3B82F6; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #2563EB; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        input, select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        .result { padding: 10px; margin-top: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>Add Sample Data to Firebase</h1>
+    
+    <div class="card">
+        <h2>Categories</h2>
+        <p>This will add your requested categories: Chicken Shawarma, Pizza, Western, Bread, Appetizer, Salad, Drinks</p>
+        <button id="addCategoriesBtn">Add Categories</button>
+        <div id="categoriesResult"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Sample Items</h2>
+        <p>This will add sample menu items for each category</p>
+        <button id="addItemsBtn">Add Sample Items</button>
+        <div id="itemsResult"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Check Firestore Connection</h2>
+        <button id="checkConnectionBtn">Check Connection</button>
+        <div id="connectionResult"></div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="js/firebase.js"></script>
+    <script>
+        function showResult(elementId, message, type) {
+            var el = document.getElementById(elementId);
+            el.innerHTML = '<div class="result ' + type + '">' + message + '</div>';
+        }
+        
+        document.getElementById('checkConnectionBtn').addEventListener('click', function() {
+            var btn = this;
+            btn.disabled = true;
+            btn.textContent = 'Checking...';
+            
+            if (!window.db) {
+                showResult('connectionResult', 'Firebase not initialized. Check console for errors.', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Check Connection';
+                return;
+            }
+            
+            db.collection('categories').limit(1).get()
+                .then(function(snapshot) {
+                    showResult('connectionResult', 'Connected to Firestore! Found ' + snapshot.size + ' categories.', 'success');
+                })
+                .catch(function(error) {
+                    var msg = 'Connection error: ' + error.message;
+                    if (error.message.includes('API has not been used')) {
+                        msg += '<br><br><a href="https://console.firebase.google.com/project/shawarma-demashq-menu/overview" target="_blank">Enable Firestore API</a>';
+                    }
+                    showResult('connectionResult', msg, 'error');
+                })
+                .then(function() {
+                    btn.disabled = false;
+                    btn.textContent = 'Check Connection';
+                });
+        });
+        
+        document.getElementById('addCategoriesBtn').addEventListener('click', function() {
+            var btn = this;
+            btn.disabled = true;
+            btn.textContent = 'Adding categories...';
+            var resultDiv = document.getElementById('categoriesResult');
+            
+            var categories = [
+                { id: 'Chicken Shawarma', name_ku: 'شاورمەی چیکەن', name_ar: 'شاورما الدجاج', name_en: 'Chicken Shawarma', order: 1 },
+                { id: 'Pizza', name_ku: 'پیتزا', name_ar: 'بيتزا', name_en: 'Pizza', order: 2 },
+                { id: 'Western', name_ku: 'وەستەرن', name_ar: 'غربى', name_en: 'Western', order: 3 },
+                { id: 'Bread', name_ku: 'نان', name_ar: 'خبز', name_en: 'Bread', order: 4 },
+                { id: 'Appetizer', name_ku: 'پیش‌خورە', name_ar: 'مقبلات', name_en: 'Appetizer', order: 5 },
+                { id: 'Salad', name_ku: 'سالاد', name_ar: 'سالدا', name_en: 'Salad', order: 6 },
+                { id: 'Drinks', name_ku: 'خواردنەوە', name_ar: 'مشروبات', name_en: 'Drinks', order: 7 }
+            ];
+            
+            var promises = categories.map(function(cat) {
+                return db.collection('categories').doc(cat.id).set({
+                    name_ku: cat.name_ku,
+                    name_ar: cat.name_ar,
+                    name_en: cat.name_en,
+                    order: cat.order,
+                    created_at: firebase.firestore.FieldValue.serverTimestamp(),
+                    updated_at: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            });
+            
+            Promise.all(promises)
+                .then(function() {
+                    showResult('categoriesResult', 'Added ' + categories.length + ' categories successfully!', 'success');
+                })
+                .catch(function(error) {
+                    showResult('categoriesResult', 'Error: ' + error.message, 'error');
+                })
+                .then(function() {
+                    btn.disabled = false;
+                    btn.textContent = 'Add Categories';
+                });
+        });
+        
+        document.getElementById('addItemsBtn').addEventListener('click', function() {
+            var btn = this;
+            btn.disabled = true;
+            btn.textContent = 'Adding items...';
+            var resultDiv = document.getElementById('itemsResult');
+            
+            var items = [
+                { id: 'chicken-shawarma', name_ku: 'شاورمەی چیکەن', name_ar: 'شاورما الدجاج', name_en: 'Chicken Shawarma', category: 'Chicken Shawarma', price: 5000, available: true, image: 'https://images.unsplash.com/photo-1563493063328-5c23a2c6c2b4?w=400' },
+                { id: 'shawarma-wrap', name_ku: 'ولپ بە شاورمە', name_ar: 'ورش الشاورما', name_en: 'Shawarma Wrap', category: 'Chicken Shawarma', price: 4500, available: true, image: 'https://images.unsplash.com/photo-156890134737-83c6e64c9a47?w=400' },
+                { id: 'margherita', name_ku: 'مارگێریتا', name_ar: 'مارغيريتا', name_en: 'Margherita Pizza', category: 'Pizza', price: 8000, available: true, image: 'https://images.unsplash.com/photo-1565299624946-b07a2c6a9c5d?w=400' },
+                { id: 'pepperoni', name_ku: 'پەیپەرونی', name_ar: 'بيبروني', name_en: 'Pepperoni Pizza', category: 'Pizza', price: 9000, available: true, image: 'https://images.unsplash.com/photo-1574074771010-7c3c4e20e3e8?w=400' },
+                { id: 'western-burger', name_ku: 'بێرگەی وەستەرن', name_ar: 'برجر غربى', name_en: 'Western Burger', category: 'Western', price: 6000, available: true, image: 'https://images.unsplash.com/photo-1550547660-d9450f5c2fda?w=400' },
+                { id: 'sandwich', name_ku: 'ساندویچ', name_ar: 'ساندوتش', name_en: 'Sandwich', category: 'Western', price: 4000, available: true, image: 'https://images.unsplash.com/photo-1528739879582-6f4b7c6b0a5a?w=400' },
+                { id: 'naan', name_ku: 'نان', name_ar: 'خبز', name_en: 'Naan Bread', category: 'Bread', price: 1000, available: true, image: 'https://images.unsplash.com/photo-1593423808894-6b55c8c1c1aa?w=400' },
+                { id: 'pita', name_ku: 'پیتا', name_ar: 'بيتا', name_en: 'Pita Bread', category: 'Bread', price: 800, available: true, image: 'https://images.unsplash.com/photo-1593423808894-6b55c8c1c1aa?w=400' },
+                { id: 'spring-rolls', name_ku: 'سپرینگ-رولز', name_ar: 'رولز شتاء', name_en: 'Spring Rolls', category: 'Appetizer', price: 3000, available: true, image: 'https://images.unsplash.com/photo-1556912993-7d5d0f5a1c8c?w=400' },
+                { id: 'samosa', name_ku: 'سموسا', name_ar: 'سموسة', name_en: 'Samosa', category: 'Appetizer', price: 2500, available: true, image: 'https://images.unsplash.com/photo-1556912993-7d5d0f5a1c8c?w=400' },
+                { id: 'greek-salad', name_ku: 'سالاد یونانی', name_ar: 'سلطة اليونان', name_en: 'Greek Salad', category: 'Salad', price: 3500, available: true, image: 'https://images.unsplash.com/product-photo-1556912993-7d5d0f5a1c8c-w_400,h_400,c_fit,g_auto,f_jpg,q_80,m_g2a5f5b5.jpg?w=400' },
+                { id: 'caesar-salad', name_ku: 'سالاد سیزر', name_ar: 'سلطة سيزر', name_en: 'Caesar Salad', category: 'Salad', price: 4000, available: true, image: 'https://images.unsplash.com/product-photo-1556912993-7d5d0f5a1c8c-w_400,h_400,c_fit,g_auto,f_jpg,q_80,m_g2a5f5b5.jpg?w=400' },
+                { id: 'cola', name_ku: 'کۆکا کولا', name_ar: 'كوكا كولا', name_en: 'Coca-Cola', category: 'Drinks', price: 1500, available: true, image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400' },
+                { id: 'orange-juice', name_ku: 'ئاژنە', name_ar: 'عصير برتقال', name_en: 'Orange Juice', category: 'Drinks', price: 2500, available: true, image: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?w=400' },
+                { id: 'water-bottle', name_ku: 'ئاو', name_ar: 'ماء', name_en: 'Water', category: 'Drinks', price: 500, available: true, image: 'https://images.unsplash.com/photo-1548839140-29a749e1cf52?w=400' }
+            ];
+            
+            var promises = items.map(function(item) {
+                var docRef = db.collection('menuItems').doc(item.id);
+                return docRef.set({
+                    name_ku: item.name_ku,
+                    name_ar: item.name_ar,
+                    name_en: item.name_en,
+                    category: item.category,
+                    price: item.price,
+                    available: item.available,
+                    image: item.image,
+                    created_at: firebase.firestore.FieldValue.serverTimestamp(),
+                    updated_at: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            });
+            
+            Promise.all(promises)
+                .then(function() {
+                    showResult('itemsResult', 'Added ' + items.length + ' menu items successfully!', 'success');
+                })
+                .catch(function(error) {
+                    showResult('itemsResult', 'Error: ' + error.message, 'error');
+                })
+                .then(function() {
+                    btn.disabled = false;
+                    btn.textContent = 'Add Sample Items';
+                });
+        });
+    </script>
+</body>
+</html>

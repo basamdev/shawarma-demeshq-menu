@@ -1,4 +1,4 @@
-﻿/* ========================================
+/* ========================================
    ALI CAFE — Premium Menu Styles
    ======================================== */
 
@@ -5236,6 +5236,10 @@ body.emenu-layout .menu-hero-brand.hero-theme-pulse .menu-hero-logo-ring {
     background: #fffc00;
     color: #000;
     border-color: rgba(0, 0, 0, 0.08);
+}
+
+.cafe-social-btn--facebook {
+    background: linear-gradient(135deg, #1877F2, #145dbf);
 }
 
 .cafe-social-btn:hover {
