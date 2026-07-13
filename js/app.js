@@ -332,6 +332,8 @@ const i18n = {
         instagramUrl: 'ئینستاگرام',
         tiktokUrl: 'تیکتۆک',
         snapchatUrl: 'سنەپچات',
+        facebookUrl: 'فەيسبۆک',
+        cafeFacebook: 'فەيسبۆک',
         cafeInfoTitle: 'Shawarma',
         linkCopied: 'بەستەر کۆپی کرا!',
         installTitle: 'زیادکردن بۆ سکرینی سەرەکی',
@@ -548,10 +550,11 @@ const i18n = {
         cafeHoursValue: 'يومياً: ٢:٠٠ مساءً — ٢:٠٠ صباحاً',
         cafeFollowUs: 'تابعنا',
         socialLinks: 'روابط التواصل',
-        socialLinksHint: 'روابط إنستغرام وتيك توك وسناب شات — تظهر في «تابعنا»',
+        socialLinksHint: 'روابط إنستغرام وتيك توك وسناب شات وفيسبوك — تظهر في «تابعنا»',
         instagramUrl: 'إنستغرام',
         tiktokUrl: 'تيك توك',
         snapchatUrl: 'سناب شات',
+        facebookUrl: 'فيسبوك',
         cafeInfoTitle: 'Shawarma',
         linkCopied: 'تم نسخ الرابط!',
         installTitle: 'إضافة إلى الشاشة الرئيسية',
@@ -790,10 +793,11 @@ const i18n = {
         cafeHoursValue: 'Daily: 2:00 PM — 2:00 AM',
         cafeFollowUs: 'Follow us',
         socialLinks: 'Social media links',
-        socialLinksHint: 'Instagram, TikTok & Snapchat URLs — shown in Follow us',
+        socialLinksHint: 'Instagram, TikTok, Snapchat & Facebook URLs — shown in Follow us',
         instagramUrl: 'Instagram',
         tiktokUrl: 'TikTok',
         snapchatUrl: 'Snapchat',
+        facebookUrl: 'Facebook',
         cafeInfoTitle: 'Shawarma',
         linkCopied: 'Link copied!',
         installTitle: 'Add to Home Screen',
@@ -822,7 +826,7 @@ const i18n = {
 let cachedMenuItems = [];
 let _activeCategory = null;
 const ALL_CATEGORY_ID = '__all__';
-const PREFERRED_CATEGORY_ORDER = ['Coffee', 'Tea', 'Cold Drinks', 'Dessert', 'Shisha', 'Special Drinks'];
+const PREFERRED_CATEGORY_ORDER = ['Chicken Shawarma', 'Pizza', 'Western', 'Bread', 'Appetizer', 'Salad', 'Drinks', 'Coffee', 'Tea', 'Cold Drinks', 'Dessert', 'Shisha', 'Special Drinks'];
 let _renderSerial = 0;
 let _currentDetailItem = null;
 let isOffline = false;
@@ -838,7 +842,8 @@ function parseMenuItemsFromSnapshot(snapshot) {
     const items = [];
     snapshot.forEach(doc => {
         const data = { id: doc.id, ...doc.data() };
-        if (data.category !== 'Water') items.push(data);
+        if (data.category && data.category.toLowerCase().trim() === 'water') return;
+        items.push(data);
     });
     return items;
 }
@@ -854,7 +859,7 @@ function normalizeMenuItemEntry(item) {
 function normalizeMenuItemsList(items) {
     if (!Array.isArray(items)) return [];
     return items.map(normalizeMenuItemEntry).filter(function (item) {
-        return item && item.category && item.category !== 'Water';
+        return item && item.category && item.category.toLowerCase().trim() !== 'water';
     });
 }
 
@@ -971,7 +976,7 @@ function parseMenuItemsFromRest(json) {
         var f = doc.fields || {};
         var id = doc.name.split('/').pop();
         var category = restFieldValue(f.category);
-        if (category === 'Water') return;
+        if (category && category.toLowerCase().trim() === 'water') return;
         items.push({
             id: id,
             name_ku: restFieldValue(f.name_ku),
@@ -1409,11 +1414,11 @@ function filterItemsByCategory(items, category) {
         try {
             var categories = JSON.parse(cachedCats);
             if (categories.some(function (c) { return c.id === category; })) {
-                return items.filter(function (i) { return i.category === category; });
+                return items.filter(function (i) { return i.category && i.category.toLowerCase().trim() === category.toLowerCase().trim(); });
             }
         } catch (e) {}
     }
-    return items.filter(function (i) { return i.category === category; });
+    return items.filter(function (i) { return i.category && i.category.toLowerCase().trim() === category.toLowerCase().trim(); });
 }
 
 function renderCategories(items, options) {
@@ -1436,27 +1441,27 @@ function renderCategories(items, options) {
          }
      }
 
-      // Merge item categories into the menu category list so any category used by items
-      // is shown even if there is no matching categories document or the IDs differ.
-      const existingIds = new Set(categories.map(c => c.id));
-      items.forEach(item => {
-          const cat = item.category;
-          if (!cat || cat === 'Water' || existingIds.has(cat)) return;
-          existingIds.add(cat);
-          categories.push({
-              id: cat,
-              data: { name_ku: cat, name_ar: cat, name_en: cat, image: '' }
-          });
-      });
+       // Merge item categories into the menu category list so any category used by items
+       // is shown even if there is no matching categories document or the IDs differ.
+       const existingIds = new Set(categories.map(function(c){ return c.id.toLowerCase().trim(); }));
+       items.forEach(item => {
+           const cat = item.category;
+            if (!cat || cat.toLowerCase().trim() === 'water' || existingIds.has(cat.toLowerCase().trim())) return;
+           existingIds.add(cat.toLowerCase().trim());
+           categories.push({
+               id: cat,
+               data: { name_ku: cat, name_ar: cat, name_en: cat, image: '' }
+           });
+       });
 
-       categories.sort(function (a, b) {
+        categories.sort(function (a, b) {
             var ao = (a.data && a.data.order) != null ? a.data.order : null;
             var bo = (b.data && b.data.order) != null ? b.data.order : null;
             if (ao != null && bo != null) return ao - bo;
             if (ao != null) return -1;
             if (bo != null) return 1;
-            var ai = PREFERRED_CATEGORY_ORDER.indexOf(a.id);
-            var bi = PREFERRED_CATEGORY_ORDER.indexOf(b.id);
+            var ai = PREFERRED_CATEGORY_ORDER.findIndex(function(preferred){ return preferred.toLowerCase().trim() === a.id.toLowerCase().trim(); });
+            var bi = PREFERRED_CATEGORY_ORDER.findIndex(function(preferred){ return preferred.toLowerCase().trim() === b.id.toLowerCase().trim(); });
             if (ai === -1 && bi === -1) return 0;
             if (ai === -1) return 1;
             if (bi === -1) return -1;
@@ -1472,12 +1477,17 @@ function renderCategories(items, options) {
      }
      scroll.dataset.categorySig = barSig;
 
-      // If no Firebase categories, use fallback
-      if (categories.length === 0) {
-          const categoryOrder = PREFERRED_CATEGORY_ORDER.slice();
-          const foundCategories = items.length > 0 ? new Set(items.map(i => i.category).filter(Boolean).filter(c => c !== 'Water')) : new Set(categoryOrder);
-          const ordered = categoryOrder.filter(c => foundCategories.has(c));
-          foundCategories.forEach(c => { if (!ordered.includes(c)) ordered.push(c); });
+       // If no Firebase categories, use fallback
+       if (categories.length === 0) {
+           const categoryOrder = PREFERRED_CATEGORY_ORDER.slice();
+           const foundCategories = items.length > 0 ? new Set(items.map(i => i.category).filter(Boolean).filter(c => c !== 'Water')) : new Set(categoryOrder);
+           const ordered = categoryOrder.filter(function(c){ 
+               const found = Array.from(foundCategories).some(function(fc){ return fc.toLowerCase().trim() === c.toLowerCase().trim(); });
+               return found;
+           });
+           foundCategories.forEach(function(c) { 
+               if (!ordered.some(function(o){ return o.toLowerCase().trim() === c.toLowerCase().trim(); })) ordered.push(c); 
+           });
 
         const categoryIcons = {
             'Coffee': '<img class="cat-icon" src="https://cdn-icons-png.flaticon.com/128/924/924514.png" alt="Coffee">',
@@ -1847,36 +1857,46 @@ function renderMenuItems(items) {
         return;
     }
 
-    const availableItems = items.filter(item => item.available !== false);
+     const availableItems = items.filter(item => item.available !== false);
 
-    // Grouped "All" view: render items inside category sections
-    if (_activeCategory === ALL_CATEGORY_ID && availableItems.length > 0) {
-        const groups = {};
-        availableItems.forEach(item => {
-            const cat = item.category || '__uncategorized';
-            if (!groups[cat]) groups[cat] = [];
-            groups[cat].push(item);
-        });
+     // Grouped "All" view: render items inside category sections
+     if (_activeCategory === ALL_CATEGORY_ID && availableItems.length > 0) {
+         const groups = {};
+         let categoryOrder = [];
+         const categoryNormalizedMap = {};
+         try {
+             const cachedCats = JSON.parse(localStorage.getItem('cachedCategories') || '[]');
+             cachedCats.sort(function (a, b) {
+                 var ao = (a.data && a.data.order) != null ? a.data.order : null;
+                 var bo = (b.data && b.data.order) != null ? b.data.order : null;
+                 if (ao != null && bo != null) return ao - bo;
+                 if (ao != null) return -1;
+                 if (bo != null) return 1;
+                 return 0;
+             });
+             cachedCats.forEach(function (c) {
+                 if (c.id) {
+                     categoryNormalizedMap[c.id.toLowerCase().trim()] = c.id;
+                     if (categoryOrder.indexOf(c.id) === -1) categoryOrder.push(c.id);
+                 }
+             });
+         } catch (e) {}
 
-        let categoryOrder = [];
-        try {
-            const cachedCats = JSON.parse(localStorage.getItem('cachedCategories') || '[]');
-            cachedCats.sort(function (a, b) {
-                var ao = (a.data && a.data.order) != null ? a.data.order : null;
-                var bo = (b.data && b.data.order) != null ? b.data.order : null;
-                if (ao != null && bo != null) return ao - bo;
-                if (ao != null) return -1;
-                if (bo != null) return 1;
-                return 0;
-            });
-            cachedCats.forEach(function (c) {
-                if (c.id && categoryOrder.indexOf(c.id) === -1) categoryOrder.push(c.id);
-            });
-        } catch (e) {}
+         availableItems.forEach(item => {
+             let cat = item.category || '__uncategorized';
+             if (cat !== '__uncategorized') {
+                 const normalizedCat = cat.toLowerCase().trim();
+                 if (categoryNormalizedMap[normalizedCat]) {
+                     cat = categoryNormalizedMap[normalizedCat];
+                 }
+             }
+             if (!groups[cat]) groups[cat] = [];
+             groups[cat].push(item);
+         });
 
-        Object.keys(groups).forEach(function (catId) {
-            if (catId && categoryOrder.indexOf(catId) === -1) categoryOrder.push(catId);
-        });
+         Object.keys(groups).forEach(function (catId) {
+             if (catId && categoryOrder.indexOf(catId) === -1) categoryOrder.push(catId);
+         });
 
         categoryOrder.forEach(catId => {
             if (!groups[catId]) return;
@@ -3088,6 +3108,9 @@ function normalizeSocialUrl(url, platform) {
     if (platform === 'snapchat') {
         return 'https://www.snapchat.com/add/' + cleaned.replace(/^@+/, '').replace(/^snapchat\.com\/add\/?/i, '');
     }
+    if (platform === 'facebook') {
+        return 'https://www.facebook.com/' + cleaned.replace(/^@+/, '').replace(/^facebook\.com\/?/i, '');
+    }
 
     return 'https://' + cleaned;
 }
@@ -3273,6 +3296,7 @@ function getCafeInfo() {
         instagram: localStorage.getItem('cafeInstagram') || '',
         tiktok: localStorage.getItem('cafeTiktok') || '',
         snapchat: localStorage.getItem('cafeSnapchat') || '',
+        facebook: localStorage.getItem('cafeFacebook') || '',
         openTime: openTime,
         closeTime: closeTime,
         openHour: Math.floor(openMinutes / 60),
@@ -3349,11 +3373,13 @@ function updateCafeInfoPanel() {
     var instaBtn = document.getElementById('cafeInstagramBtn');
     var tiktokBtn = document.getElementById('cafeTiktokBtn');
     var snapBtn = document.getElementById('cafeSnapchatBtn');
+    var facebookBtn = document.getElementById('cafeFacebookBtn');
     var socialBlock = document.querySelector('.cafe-info-block--social');
 
     var instagramUrl = normalizeSocialUrl(info.instagram, 'instagram');
     var tiktokUrl = normalizeSocialUrl(info.tiktok, 'tiktok');
     var snapchatUrl = normalizeSocialUrl(info.snapchat, 'snapchat');
+    var facebookUrl = normalizeSocialUrl(info.facebook, 'facebook');
 
     function wireSocialLink(btn, url) {
         if (!btn) return;
@@ -3371,9 +3397,10 @@ function updateCafeInfoPanel() {
     wireSocialLink(instaBtn, instagramUrl);
     wireSocialLink(tiktokBtn, tiktokUrl);
     wireSocialLink(snapBtn, snapchatUrl);
+    wireSocialLink(facebookBtn, facebookUrl);
 
     if (socialBlock) {
-        socialBlock.style.display = (instagramUrl || tiktokUrl || snapchatUrl) ? '' : 'none';
+        socialBlock.style.display = (instagramUrl || tiktokUrl || snapchatUrl || facebookUrl) ? '' : 'none';
     }
 }
 

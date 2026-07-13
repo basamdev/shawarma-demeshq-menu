@@ -90,7 +90,7 @@ function writeCachedMenuItemsFlat(items) {
 function syncCashierCacheFromMenuFlat(items) {
     var cashier = [];
     (items || []).forEach(function (it) {
-        if (!it || !it.id || it.category === 'Water' || it.available === false) return;
+        if (!it || !it.id || (it.category && it.category.toLowerCase().trim() === 'water') || it.available === false) return;
         var v = Object.assign({}, it);
         delete v.id;
         cashier.push({ id: it.id, v: v });
@@ -116,9 +116,49 @@ function fakeFirestoreDoc(id, data) {
     };
 }
 
+function getCurrentAdminEmail() {
+    if (window.currentUser && window.currentUser.email) return window.currentUser.email;
+    if (window.auth && auth.currentUser && auth.currentUser.email) return auth.currentUser.email;
+    return null;
+}
+
+function withOwnerFilter(query) {
+    var email = getCurrentAdminEmail();
+    if (!email) return query;
+    // NOTE: Firestore does NOT support `null` inside an `in`/`array-contains-any`
+    // query, so we use a plain equality filter. Items created before ownership
+    // tracking existed are backfilled by backfillCreatedByForCurrentAdmin().
+    return query.where('createdBy', '==', email);
+}
+
+function backfillCreatedByForCurrentAdmin() {
+    var email = getCurrentAdminEmail();
+    if (!email || !window.db) return;
+    if (localStorage.getItem('createdByBackfilled_' + email)) return;
+    db.collection('menuItems').get().then(function (snap) {
+        var batch = db.batch();
+        var updated = 0;
+        snap.forEach(function (doc) {
+            var data = doc.data();
+            if (!data.createdBy) {
+                batch.update(doc.ref, { createdBy: email });
+                updated++;
+            }
+        });
+        if (updated > 0) {
+            batch.commit().then(function () {
+                localStorage.setItem('createdByBackfilled_' + email, '1');
+                console.log('[backfill] Tagged ' + updated + ' items with createdBy');
+            }).catch(function () {});
+        } else {
+            localStorage.setItem('createdByBackfilled_' + email, '1');
+        }
+    }).catch(function () {});
+}
+
 function getItemDocsFromLocalCache() {
     return readCachedMenuItemsFlat()
-        .filter(function (it) { return it && it.id && it.category !== 'Water'; })
+        .filter(function (it) { return it && it.id && it.category && it.category.toLowerCase().trim() !== 'water'; })
         .map(function (it) {
             var data = Object.assign({}, it);
             var id = data.id;
@@ -271,6 +311,14 @@ function sumExpensesInRange(start, end) {
 function hydrateItemsUiFromCache() {
     var docs = getItemDocsFromLocalCache();
     if (!docs.length) return false;
+    var email = getCurrentAdminEmail();
+    if (email) {
+        docs = docs.filter(function (d) {
+            var cb = d.data && d.data().createdBy;
+            return !cb || cb === email;
+        });
+    }
+    if (!docs.length) return false;
     _itemsSnapDocs = docs;
     refreshCategoryFilterOptions();
     refreshItemCategoryDropdown();
@@ -286,7 +334,7 @@ function warmAdminOfflineCache(done) {
         return;
     }
     var tasks = [];
-    tasks.push(db.collection('menuItems').get().then(function (snap) {
+    tasks.push(withOwnerFilter(db.collection('menuItems')).get().then(function (snap) {
         var menu = [];
         snap.forEach(function (d) {
             menu.push(Object.assign({ id: d.id }, d.data()));
@@ -1835,7 +1883,7 @@ function collectItemDocsFromSnap(snap) {
     var docs = [];
     snap.forEach(function (d) {
         var data = d.data();
-        if (data.category === 'Water') return;
+        if (data.category && data.category.toLowerCase().trim() === 'water') return;
         docs.push(d);
     });
     return docs;
@@ -1860,6 +1908,7 @@ function filterItemDocs(docs, searchTerm, cat) {
 
 function startItemsListener() {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+    backfillCreatedByForCurrentAdmin();
     if (!document.getElementById('itemsList')) return;
 
     if (itemsUnsubscribe) {
@@ -1877,7 +1926,7 @@ function startItemsListener() {
                     data: function() { return item; }
                 };
             });
-            _itemsSnapDocs = docs.filter(function(d) { return d.data().category !== 'Water'; });
+             _itemsSnapDocs = docs.filter(function(d) { return d.data().category && d.data().category.toLowerCase().trim() !== 'water'; });
             refreshCategoryFilterOptions();
             refreshItemCategoryDropdown();
             var searchEl = document.getElementById('itemSearch');
@@ -1899,7 +1948,7 @@ function startItemsListener() {
             var catNames = {};
             _itemsSnapDocs.forEach(function(d) {
                 var c = d.data().category;
-                if (c && c !== 'Water') catNames[c] = true;
+                if (c && c.toLowerCase().trim() !== 'water') catNames[c] = true;
             });
             localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(catNames)));
         }).catch(function(err) {
@@ -1952,7 +2001,7 @@ function startItemsListener() {
         localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(catNames)));
     }
 
-    adminGetWithTimeout(db.collection('menuItems'), 8000).then(applyItemsSnap).catch(function (e) {
+    adminGetWithTimeout(withOwnerFilter(db.collection('menuItems')), 8000).then(applyItemsSnap).catch(function (e) {
         console.warn('[admin items] get failed:', e.message);
         if (isFirestoreApiDisabledError(e)) {
             showFirestoreApiDisabledAlert();
@@ -1979,7 +2028,7 @@ function startItemsListener() {
         clearAdminLoadingEl('itemsList', '<p>' + S.noItemsFound + '</p>');
     }, 10000);
 
-    itemsUnsubscribe = db.collection('menuItems').onSnapshot(function (snap) {
+     itemsUnsubscribe = withOwnerFilter(db.collection('menuItems')).onSnapshot(function (snap) {
         applyItemsSnap(snap);
     }, function (e) {
         console.error('Items listener error:', e);
@@ -1991,6 +2040,7 @@ function startItemsListener() {
 
 function loadItemsList() {
      var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+     backfillCreatedByForCurrentAdmin();
      if (hydrateItemsUiFromCache()) {
          loadCategoryFilter();
          return;
@@ -2000,9 +2050,9 @@ function loadItemsList() {
          if (el) el.innerHTML = '<p>' + S.noItemsFound + '</p>';
          return;
      }
-     adminGetWithTimeout(db.collection('menuItems'), 8000).then(function (snap) {
+      adminGetWithTimeout(withOwnerFilter(db.collection('menuItems')), 8000).then(function (snap) {
          var docs = [];
-         snap.forEach(function (d) { var data = d.data(); if (data.category !== 'Water') { docs.push(d); } });
+          snap.forEach(function (d) { var data = d.data(); if (data.category && data.category.toLowerCase().trim() !== 'water') { docs.push(d); } });
          _itemsSnapDocs = docs;
          renderItemsList(docs);
          loadCategoryFilter();
@@ -2063,7 +2113,7 @@ function getUniqueItemCategoryIds(docs) {
     var names = {};
     (docs || []).forEach(function (d) {
         var c = typeof d.data === 'function' ? d.data().category : (d.category || null);
-        if (c && c !== 'Water') names[c] = true;
+        if (c && c.toLowerCase().trim() !== 'water') names[c] = true;
     });
     return Object.keys(names);
 }
@@ -2071,7 +2121,7 @@ function getUniqueItemCategoryIds(docs) {
 function getAllItemCategoryIdsForFilter() {
     var names = {};
     function addName(c) {
-        if (c && c !== 'Water') names[c] = true;
+        if (c && c.toLowerCase().trim() !== 'water') names[c] = true;
     }
     getUniqueItemCategoryIds(_itemsSnapDocs).forEach(addName);
     readCachedCategories().forEach(function (c) {
@@ -2442,8 +2492,11 @@ function applyItemFilter(searchTerm, cat) {
         renderItemsList(filterItemDocs(_itemsSnapDocs, searchTerm, cat));
         return;
     }
-    db.collection('menuItems').get().then(function (snap) {
-        var docs = snap.docs.filter(function (d) { return d.data().category !== 'Water'; });
+    withOwnerFilter(db.collection('menuItems')).get().then(function (snap) {
+        var docs = snap.docs.filter(function (d) { 
+            var category = d.data().category;
+            return !(category && category.toLowerCase().trim() === 'water'); 
+        });
         if (searchTerm) {
             var lang = localStorage.getItem('selectedLang') || 'ku';
             var term = searchTerm.toLowerCase();
@@ -2695,20 +2748,21 @@ function saveItem() {
 
     var itemId = document.getElementById('itemId').value;
     var now = new Date().toISOString();
-     var plainData = {
-         name_ku: nameKu, name_ar: nameAr, name_en: nameEn,
-         description_ku: document.getElementById('itemDescKu').value.trim(),
-         description_ar: document.getElementById('itemDescAr').value.trim(),
-         description_en: document.getElementById('itemDescEn').value.trim(),
-         price: parseFloat(price) || 0,
-         category: category,
-         group_ku: (document.getElementById('itemGroupKu') || {}).value || '',
-         group_ar: (document.getElementById('itemGroupAr') || {}).value || '',
-         group_en: (document.getElementById('itemGroupEn') || {}).value || '',
-         image: finalImg,
-         available: document.getElementById('itemAvailable').checked,
-         updated_at: now
-     };
+      var plainData = {
+          name_ku: nameKu, name_ar: nameAr, name_en: nameEn,
+          description_ku: document.getElementById('itemDescKu').value.trim(),
+          description_ar: document.getElementById('itemDescAr').value.trim(),
+          description_en: document.getElementById('itemDescEn').value.trim(),
+          price: parseFloat(price) || 0,
+          category: category,
+          group_ku: (document.getElementById('itemGroupKu') || {}).value || '',
+          group_ar: (document.getElementById('itemGroupAr') || {}).value || '',
+          group_en: (document.getElementById('itemGroupEn') || {}).value || '',
+          image: finalImg,
+          available: document.getElementById('itemAvailable').checked,
+          updated_at: now,
+          createdBy: getCurrentAdminEmail() || ''
+      };
 
     var ref;
     var promise;
@@ -3044,7 +3098,7 @@ function loadCategoriesList() {
         });
     }
 
-    adminGetWithTimeout(db.collection('menuItems'), 8000).then(function (snap) {
+    adminGetWithTimeout(withOwnerFilter(db.collection('menuItems')), 8000).then(function (snap) {
         var names = {};
         snap.forEach(function (d) { var c = (d.data() || {}).category; if (c) names[c] = true; });
         localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(names)));
@@ -3142,11 +3196,11 @@ function syncCategoriesFromItems() {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     if (!confirm(S.syncCategoriesConfirm || 'Create editable category entries from the categories used by your menu items?')) return;
 
-    db.collection('menuItems').get().then(function (itemSnap) {
+    withOwnerFilter(db.collection('menuItems')).get().then(function (itemSnap) {
         var names = {};
         itemSnap.forEach(function (d) {
             var c = (d.data() || {}).category;
-            if (c && c !== 'Water') names[c] = true;
+            if (c && c.toLowerCase().trim() !== 'water') names[c] = true;
         });
         return db.collection('categories').get().then(function (catSnap) {
             var have = {};
@@ -3302,7 +3356,7 @@ function deleteCategory(categoryId) {
         return;
     }
 
-    firestoreGetWithTimeout(db.collection('menuItems').where('category', '==', categoryId), 8000).then(function (snap) {
+    firestoreGetWithTimeout(withOwnerFilter(db.collection('menuItems')).where('category', '==', categoryId), 8000).then(function (snap) {
         var batch = db.batch();
         snap.forEach(function (doc) {
             batch.delete(doc.ref);
@@ -3352,14 +3406,14 @@ function invalidateCashierCache() {
 function normalizeCashierItemEntry(it) {
     if (!it) return null;
     if (it.v) {
-        if (it.v.available === false || it.v.category === 'Water') return null;
+        if (it.v.available === false || (it.v.category && it.v.category.toLowerCase().trim() === 'water')) return null;
         return it;
     }
     var id = it.id;
     if (!id) return null;
     var v = Object.assign({}, it);
     delete v.id;
-    if (v.available === false || v.category === 'Water') return null;
+    if (v.available === false || (v.category && v.category.toLowerCase().trim() === 'water')) return null;
     return { id: id, v: v };
 }
 
@@ -3393,7 +3447,7 @@ function normalizeCashierItems(snapshot) {
     snapshot.forEach(function (d) {
         var data = d.data();
         if (data.available === false) return;
-        if (data.category === 'Water') return;
+        if (data.category && data.category.toLowerCase().trim() === 'water') return;
         items.push({ id: d.id, v: data });
     });
     return items;
@@ -3590,7 +3644,7 @@ function loadCashierItems() {
 
     stopCashierListener();
 
-    adminGetWithTimeout(db.collection('menuItems'), 8000).then(applyCashierItemsSnap).catch(function (e) {
+    adminGetWithTimeout(withOwnerFilter(db.collection('menuItems')), 8000).then(applyCashierItemsSnap).catch(function (e) {
         console.warn('[cashier] get failed:', e.message);
         loadCashierItemsFromCache();
     });
@@ -3600,7 +3654,7 @@ function loadCashierItems() {
             if (!flatItems || !flatItems.length) return;
             writeCachedMenuItemsFlat(flatItems);
             var items = flatItems.filter(function (it) {
-                return it && it.available !== false && it.category !== 'Water';
+                return it && it.available !== false && !(it.category && it.category.toLowerCase().trim() === 'water');
             }).map(function (it) {
                 var v = Object.assign({}, it);
                 var id = v.id;
@@ -3614,7 +3668,7 @@ function loadCashierItems() {
         });
     }
 
-    cashierUnsubscribe = db.collection('menuItems').onSnapshot(applyCashierItemsSnap, function (e) {
+    cashierUnsubscribe = withOwnerFilter(db.collection('menuItems')).onSnapshot(applyCashierItemsSnap, function (e) {
         console.error('Error loading cashier items:', e);
         loadCashierItemsFromCache();
     });
@@ -4118,7 +4172,8 @@ function populateTestData() {
                 price: sample.price,
                 image: sample.image,
                 category: cat.id,
-                available: true
+                available: true,
+                createdBy: getCurrentAdminEmail() || ''
             };
             
             var promise = db.collection('menuItems').add(item).then(function () {
@@ -4532,6 +4587,13 @@ function loadSettings() {
                       '<input type="url" id="cafeSnapchat" value="' + (localStorage.getItem('cafeSnapchat') || '') + '" placeholder="https://snapchat.com/add/...">' +
                   '</div>' +
               '</div>' +
+              '<div class="settings-social-field">' +
+                  '<span class="settings-social-icon settings-social-icon--facebook" aria-hidden="true"><i class="fa-brands fa-facebook-f"></i></span>' +
+                  '<div class="settings-social-input-wrap">' +
+                      '<label for="cafeFacebook">' + S.facebookUrl + '</label>' +
+                      '<input type="url" id="cafeFacebook" value="' + (localStorage.getItem('cafeFacebook') || '') + '" placeholder="https://facebook.com/...">' +
+                  '</div>' +
+              '</div>' +
 '<button class="btn-primary" id="saveSettingsBtn" style="margin-top:8px;">' + S.saveSettings + '</button>' +
             '</div>' +
             '<div class="card" style="margin-top:20px;">' +
@@ -4571,6 +4633,9 @@ function loadSettings() {
               var cafeSnapchat = typeof normalizeSocialUrl === 'function'
                   ? normalizeSocialUrl(document.getElementById('cafeSnapchat').value.trim(), 'snapchat')
                   : document.getElementById('cafeSnapchat').value.trim();
+              var cafeFacebook = typeof normalizeSocialUrl === 'function'
+                  ? normalizeSocialUrl(document.getElementById('cafeFacebook').value.trim(), 'facebook')
+                  : document.getElementById('cafeFacebook').value.trim();
               var openInput = document.getElementById('cafeOpenTime');
               var closeInput = document.getElementById('cafeCloseTime');
               var cafeOpenTime = openInput ? openInput.value.trim() : '';
@@ -4597,6 +4662,7 @@ storeSetting('cafeLocationLabel', cafeLocationLabel);
             storeSetting('cafeInstagram', cafeInstagram);
             storeSetting('cafeTiktok', cafeTiktok);
             storeSetting('cafeSnapchat', cafeSnapchat);
+            storeSetting('cafeFacebook', cafeFacebook);
             storeSetting('cafeOpenTime', cafeOpenTime);
             storeSetting('cafeCloseTime', cafeCloseTime);
             try {
@@ -4607,6 +4673,7 @@ storeSetting('cafeLocationLabel', cafeLocationLabel);
               document.getElementById('cafeInstagram').value = cafeInstagram;
               document.getElementById('cafeTiktok').value = cafeTiktok;
               document.getElementById('cafeSnapchat').value = cafeSnapchat;
+              document.getElementById('cafeFacebook').value = cafeFacebook;
               var selectedLang = localStorage.getItem('selectedLang') || 'ku';
                var openHiddenSave = document.getElementById('cafeOpenTime');
                var closeHiddenSave = document.getElementById('cafeCloseTime');
@@ -4621,6 +4688,7 @@ storeSetting('cafeLocationLabel', cafeLocationLabel);
                   cafeInstagram: cafeInstagram,
                   cafeTiktok: cafeTiktok,
                   cafeSnapchat: cafeSnapchat,
+                  cafeFacebook: cafeFacebook,
                   cafeOpenTime: cafeOpenTime,
                   cafeCloseTime: cafeCloseTime
               };

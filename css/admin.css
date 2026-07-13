@@ -378,6 +378,10 @@
     color: #000;
 }
 
+.settings-social-icon--facebook {
+    background: linear-gradient(135deg, #1877F2, #145dbf);
+}
+
 .settings-social-icon--cafe {
     background: linear-gradient(135deg, #6F4E37, #9B6135);
 }
