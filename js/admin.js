@@ -345,14 +345,6 @@ function sumExpensesInRange(start, end) {
 function hydrateItemsUiFromCache() {
     var docs = getItemDocsFromLocalCache();
     if (!docs.length) return false;
-    var email = getCurrentAdminEmail();
-    if (email) {
-        docs = docs.filter(function (d) {
-            var cb = d.data && d.data().createdBy;
-            return !cb || cb === email;
-        });
-    }
-    if (!docs.length) return false;
     _itemsSnapDocs = docs;
     refreshCategoryFilterOptions();
     refreshItemCategoryDropdown();
@@ -368,7 +360,7 @@ function warmAdminOfflineCache(done) {
         return;
     }
     var tasks = [];
-    tasks.push(withOwnerFilter(db.collection('menuItems')).get().then(function (snap) {
+    tasks.push(db.collection('menuItems').get().then(function (snap) {
         var menu = [];
         snap.forEach(function (d) {
             menu.push(Object.assign({ id: d.id }, d.data()));
@@ -1974,7 +1966,7 @@ function startItemsListener() {
             var catEl = document.getElementById('categoryFilter');
             var searchTerm = searchEl ? searchEl.value : '';
             var cat = catEl ? catEl.value : itemsActiveCategory;
-            renderItemsList(filterLocalItemDocs(_itemsSnapDocs, searchTerm, cat));
+             renderItemsList(filterItemDocs(_itemsSnapDocs, searchTerm, cat));
 
             var cashierCache = [];
             var menuCache = [];
@@ -2042,7 +2034,7 @@ function startItemsListener() {
         localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(catNames)));
     }
 
-    adminGetWithTimeout(withOwnerFilter(db.collection('menuItems')), 8000).then(applyItemsSnap).catch(function (e) {
+    adminGetWithTimeout(db.collection('menuItems'), 8000).then(applyItemsSnap).catch(function (e) {
         console.warn('[admin items] get failed:', e.message);
         if (isFirestoreApiDisabledError(e)) {
             showFirestoreApiDisabledAlert();
@@ -2069,7 +2061,7 @@ function startItemsListener() {
         clearAdminLoadingEl('itemsList', '<p>' + S.noItemsFound + '</p>');
     }, 10000);
 
-     itemsUnsubscribe = withOwnerFilter(db.collection('menuItems')).onSnapshot(function (snap) {
+     itemsUnsubscribe = db.collection('menuItems').onSnapshot(function (snap) {
         applyItemsSnap(snap);
     }, function (e) {
         console.error('Items listener error:', e);
@@ -2091,7 +2083,7 @@ function loadItemsList() {
          if (el) el.innerHTML = '<p>' + S.noItemsFound + '</p>';
          return;
      }
-      adminGetWithTimeout(withOwnerFilter(db.collection('menuItems')), 8000).then(function (snap) {
+      adminGetWithTimeout(db.collection('menuItems'), 8000).then(function (snap) {
          var docs = [];
           snap.forEach(function (d) { var data = d.data(); if (data.category && data.category.toLowerCase().trim() !== 'water') { docs.push(d); } });
          _itemsSnapDocs = docs;
@@ -2533,7 +2525,7 @@ function applyItemFilter(searchTerm, cat) {
         renderItemsList(filterItemDocs(_itemsSnapDocs, searchTerm, cat));
         return;
     }
-    withOwnerFilter(db.collection('menuItems')).get().then(function (snap) {
+    db.collection('menuItems').get().then(function (snap) {
         var docs = snap.docs.filter(function (d) { 
             var category = d.data().category;
             return !(category && category.toLowerCase().trim() === 'water'); 
@@ -3152,7 +3144,7 @@ function loadCategoriesList() {
         });
     }
 
-    adminGetWithTimeout(withOwnerFilter(db.collection('menuItems')), 8000).then(function (snap) {
+    adminGetWithTimeout(db.collection('menuItems'), 8000).then(function (snap) {
         var names = {};
         snap.forEach(function (d) { var c = (d.data() || {}).category; if (c) names[c] = true; });
         localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(names)));
@@ -3250,7 +3242,7 @@ function syncCategoriesFromItems() {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     if (!confirm(S.syncCategoriesConfirm || 'Create editable category entries from the categories used by your menu items?')) return;
 
-    withOwnerFilter(db.collection('menuItems')).get().then(function (itemSnap) {
+    db.collection('menuItems').get().then(function (itemSnap) {
         var names = {};
         itemSnap.forEach(function (d) {
             var c = (d.data() || {}).category;
@@ -3410,7 +3402,7 @@ function deleteCategory(categoryId) {
         return;
     }
 
-    firestoreGetWithTimeout(withOwnerFilter(db.collection('menuItems')).where('category', '==', categoryId), 8000).then(function (snap) {
+    firestoreGetWithTimeout(db.collection('menuItems').where('category', '==', categoryId), 8000).then(function (snap) {
         var batch = db.batch();
         snap.forEach(function (doc) {
             batch.delete(doc.ref);
@@ -3698,7 +3690,7 @@ function loadCashierItems() {
 
     stopCashierListener();
 
-    adminGetWithTimeout(withOwnerFilter(db.collection('menuItems')), 8000).then(applyCashierItemsSnap).catch(function (e) {
+    adminGetWithTimeout(db.collection('menuItems'), 8000).then(applyCashierItemsSnap).catch(function (e) {
         console.warn('[cashier] get failed:', e.message);
         loadCashierItemsFromCache();
     });
@@ -3722,7 +3714,7 @@ function loadCashierItems() {
         });
     }
 
-    cashierUnsubscribe = withOwnerFilter(db.collection('menuItems')).onSnapshot(applyCashierItemsSnap, function (e) {
+    cashierUnsubscribe = db.collection('menuItems').onSnapshot(applyCashierItemsSnap, function (e) {
         console.error('Error loading cashier items:', e);
         loadCashierItemsFromCache();
     });

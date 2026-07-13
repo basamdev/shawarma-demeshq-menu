@@ -875,16 +875,16 @@ const PREFERRED_CATEGORY_ORDER = ['Chicken Shawarma', 'Pizza', 'Western', 'Bread
 // "Chicken Shawarma", would otherwise fall to the end of the list).
 function categoryPreferredIndex(cat) {
     if (!cat) return -1;
-    var id = (cat.id || '').toLowerCase().trim();
+    var id = (cat.id || '').trim();
     var names = [];
     if (cat.data) {
         ['name_en', 'name_ar', 'name_ku'].forEach(function (k) {
             var n = cat.data[k];
-            if (n) names.push(String(n).toLowerCase().trim());
+            if (n) names.push(String(n).trim());
         });
     }
     for (var i = 0; i < PREFERRED_CATEGORY_ORDER.length; i++) {
-        var p = PREFERRED_CATEGORY_ORDER[i].toLowerCase().trim();
+        var p = PREFERRED_CATEGORY_ORDER[i].trim();
         if (id === p) return i;
         if (names.indexOf(p) !== -1) return i;
     }
@@ -1477,11 +1477,11 @@ function filterItemsByCategory(items, category) {
         try {
             var categories = JSON.parse(cachedCats);
             if (categories.some(function (c) { return c.id === category; })) {
-                return items.filter(function (i) { return i.category && i.category.toLowerCase().trim() === category.toLowerCase().trim(); });
+                return items.filter(function (i) { return i.category && i.category === category; });
             }
         } catch (e) {}
     }
-    return items.filter(function (i) { return i.category && i.category.toLowerCase().trim() === category.toLowerCase().trim(); });
+    return items.filter(function (i) { return i.category && i.category === category; });
 }
 
 function renderCategories(items, options) {
@@ -1506,16 +1506,16 @@ function renderCategories(items, options) {
 
        // Merge item categories into the menu category list so any category used by items
        // is shown even if there is no matching categories document or the IDs differ.
-       const existingIds = new Set(categories.map(function(c){ return c.id.toLowerCase().trim(); }));
-       items.forEach(item => {
-           const cat = item.category;
-            if (!cat || cat.toLowerCase().trim() === 'water' || existingIds.has(cat.toLowerCase().trim())) return;
-           existingIds.add(cat.toLowerCase().trim());
-           categories.push({
-               id: cat,
-               data: { name_ku: cat, name_ar: cat, name_en: cat, image: '' }
-           });
-       });
+        const existingIds = new Set(categories.map(function(c){ return c.id; }));
+        items.forEach(item => {
+            const cat = item.category;
+             if (!cat || cat === 'Water' || existingIds.has(cat)) return;
+            existingIds.add(cat);
+            categories.push({
+                id: cat,
+                data: { name_ku: cat, name_ar: cat, name_en: cat, image: '' }
+            });
+        });
 
         categories.sort(function (a, b) {
             var ao = (a.data && a.data.order) != null ? a.data.order : null;
@@ -1544,15 +1544,14 @@ function renderCategories(items, options) {
 
        // If no Firebase categories, use fallback
        if (categories.length === 0) {
-           const categoryOrder = PREFERRED_CATEGORY_ORDER.slice();
-           const foundCategories = items.length > 0 ? new Set(items.map(i => i.category).filter(Boolean).filter(c => c !== 'Water')) : new Set(categoryOrder);
-           const ordered = categoryOrder.filter(function(c){ 
-               const found = Array.from(foundCategories).some(function(fc){ return fc.toLowerCase().trim() === c.toLowerCase().trim(); });
-               return found;
-           });
-           foundCategories.forEach(function(c) { 
-               if (!ordered.some(function(o){ return o.toLowerCase().trim() === c.toLowerCase().trim(); })) ordered.push(c); 
-           });
+            const categoryOrder = PREFERRED_CATEGORY_ORDER.slice();
+            const foundCategories = items.length > 0 ? new Set(items.map(i => i.category).filter(Boolean).filter(c => c !== 'Water')) : new Set(categoryOrder);
+            const ordered = categoryOrder.filter(function(c){ 
+                return Array.from(foundCategories).indexOf(c) !== -1;
+            });
+            foundCategories.forEach(function(c) { 
+                if (ordered.indexOf(c) === -1) ordered.push(c); 
+            });
 
         const categoryIcons = {
             'Coffee': '<img class="cat-icon" src="https://cdn-icons-png.flaticon.com/128/924/924514.png" alt="Coffee">',
@@ -1926,38 +1925,37 @@ function renderMenuItems(items) {
 
      // Grouped "All" view: render items inside category sections
      if (_activeCategory === ALL_CATEGORY_ID && availableItems.length > 0) {
-         const groups = {};
-         let categoryOrder = [];
-         const categoryNormalizedMap = {};
-         try {
-             const cachedCats = JSON.parse(localStorage.getItem('cachedCategories') || '[]');
-             cachedCats.sort(function (a, b) {
-                 var ao = (a.data && a.data.order) != null ? a.data.order : null;
-                 var bo = (b.data && b.data.order) != null ? b.data.order : null;
-                 if (ao != null && bo != null) return ao - bo;
-                 if (ao != null) return -1;
-                 if (bo != null) return 1;
-                 return 0;
-             });
-             cachedCats.forEach(function (c) {
-                 if (c.id) {
-                     categoryNormalizedMap[c.id.toLowerCase().trim()] = c.id;
-                     if (categoryOrder.indexOf(c.id) === -1) categoryOrder.push(c.id);
-                 }
-             });
-         } catch (e) {}
+          const groups = {};
+          let categoryOrder = [];
+          const categoryExactMap = {};
+          try {
+              const cachedCats = JSON.parse(localStorage.getItem('cachedCategories') || '[]');
+              cachedCats.sort(function (a, b) {
+                  var ao = (a.data && a.data.order) != null ? a.data.order : null;
+                  var bo = (b.data && b.data.order) != null ? b.data.order : null;
+                  if (ao != null && bo != null) return ao - bo;
+                  if (ao != null) return -1;
+                  if (bo != null) return 1;
+                  return 0;
+              });
+              cachedCats.forEach(function (c) {
+                  if (c.id) {
+                      categoryExactMap[c.id] = c.id;
+                      if (categoryOrder.indexOf(c.id) === -1) categoryOrder.push(c.id);
+                  }
+              });
+          } catch (e) {}
 
-         availableItems.forEach(item => {
-             let cat = item.category || '__uncategorized';
-             if (cat !== '__uncategorized') {
-                 const normalizedCat = cat.toLowerCase().trim();
-                 if (categoryNormalizedMap[normalizedCat]) {
-                     cat = categoryNormalizedMap[normalizedCat];
-                 }
-             }
-             if (!groups[cat]) groups[cat] = [];
-             groups[cat].push(item);
-         });
+          availableItems.forEach(item => {
+              let cat = item.category || '__uncategorized';
+              if (cat !== '__uncategorized') {
+                  if (categoryExactMap[cat]) {
+                      cat = categoryExactMap[cat];
+                  }
+              }
+              if (!groups[cat]) groups[cat] = [];
+              groups[cat].push(item);
+          });
 
          Object.keys(groups).forEach(function (catId) {
              if (catId && categoryOrder.indexOf(catId) === -1) categoryOrder.push(catId);
