@@ -2201,8 +2201,10 @@ function buildCategorySelectOptions(categories, itemCategoryIds, lang, S, allOpt
     var seen = {};
     var html = allOption ? '<option value="all">' + S.allCategories + '</option>' : '<option value="">' + S.select + '</option>';
     (categories || []).forEach(function (c) {
-        if (!c || !c.id || seen[c.id]) return;
-        seen[c.id] = true;
+        if (!c || !c.id) return;
+        var lower = String(c.id).toLowerCase();
+        if (seen[lower]) return;
+        seen[lower] = true;
         var cat = c.data || {};
         var name = cat['name_' + lang] || cat.name_en || cat.name_ku || cat.name_ar || c.id || S.unnamed;
         html += '<option value="' + escapeHtmlAttr(c.id) + '">' + escapeHtmlText(name) + '</option>';
