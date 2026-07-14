@@ -1943,9 +1943,11 @@ function loadManageItems() {
     hydrateItemsUiFromCache();
 
     var loadTimer = setTimeout(function () {
-        var el = document.getElementById('itemsList');
-        if (el && el.querySelector('.loading')) {
-            el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
+        if (MenuData.getItems().length === 0) {
+            var el = document.getElementById('itemsList');
+            if (el) {
+                el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
+            }
         }
     }, 15000);
 
@@ -2155,34 +2157,7 @@ function loadItemsList() {
          });
          renderItemsList(_itemsSnapDocs);
          loadCategoryFilter();
-     } else {
-         var list = document.getElementById('itemsList');
-         if (list && !list.querySelector('.loading')) {
-             list.innerHTML = '<p>' + S.loading + '</p>';
-         }
      }
-
-     var loadTimer = setTimeout(function () {
-         var el = document.getElementById('itemsList');
-         if (el && el.querySelector('.loading')) {
-             el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
-         }
-     }, 15000);
-
-     MenuData.loadItems(8000, function (items) {
-         clearTimeout(loadTimer);
-         _itemsSnapDocs = items.map(function (d) {
-             return { id: d.id, data: function () { return d; } };
-         });
-         renderItemsList(_itemsSnapDocs);
-         loadCategoryFilter();
-     }, function (err) {
-         clearTimeout(loadTimer);
-         console.error('Error loading items:', err);
-         if (hydrateItemsUiFromCache()) return;
-         var el = document.getElementById('itemsList');
-         if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + err.message + '</p>';
-     });
 }
 
 function loadCategoriesDropdown() {
@@ -3106,17 +3081,18 @@ function renderCategoriesTable(categories) {
 
     try {
         categories.sort(function (a, b) {
-            var ao = (a.data && a.data.order) != null ? a.data.order : null;
-            var bo = (b.data && b.data.order) != null ? b.data.order : null;
-            if (ao != null && bo != null) return Number(ao) - Number(bo);
+            var ao = (a.data && a.data.order) != null ? Number(a.data.order) : null;
+            var bo = (b.data && b.data.order) != null ? Number(b.data.order) : null;
+            if (ao != null && bo != null) {
+                if (ao !== bo) return ao - bo;
+                return String(a.id).localeCompare(String(b.id));
+            }
             if (ao != null) return -1;
             if (bo != null) return 1;
             var ai = safeCategoryPreferredIndex(a);
             var bi = safeCategoryPreferredIndex(b);
-            if (ai === -1 && bi === -1) return 0;
-            if (ai === -1) return 1;
-            if (bi === -1) return -1;
-            return ai - bi;
+            if (ai !== bi) return ai - bi;
+            return String(a.id).localeCompare(String(b.id));
         });
     } catch (sortErr) {
         console.warn('[admin categories] sort failed, using original order:', sortErr);
@@ -3137,7 +3113,7 @@ function renderCategoriesTable(categories) {
                 html += '<tr>' +
                     '<td><img src="' + escapeHtmlAttr(img) + '" alt="" width="48" height="48" style="border-radius:8px;object-fit:cover;" onerror="this.src=\'https://placehold.co/50x50?text=Error\'"></td>' +
                     '<td>' + escapeHtmlText(name) + virtualBadge + '</td>' +
-                    '<td>' + escapeHtmlText(actions) + '</td>' +
+                    '<td>' + actions + '</td>' +
                     '</tr>';
             } catch (rowErr) {
                 console.warn('[admin categories] row render error:', rowErr, c);
