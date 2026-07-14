@@ -2773,7 +2773,7 @@ function saveItem() {
     var nameAr = nameArEl.value.trim();
     var nameEn = nameEnEl.value.trim();
     var price = priceEl.value.trim().replace(',', '.');
-    var category = categoryEl.value.trim().toLowerCase();
+    var category = categoryEl.value.trim();
 
     if (!nameKu || !nameAr || !nameEn || !price) {
         alert(S.fillAll);
@@ -3323,10 +3323,9 @@ function syncCategoriesFromItems() {
                 if (have[name]) return;
                 // Use the name as the document id so existing items (which
                 // reference the category by this value) keep matching.
-                var normalizedName = name.toLowerCase();
-                var ref = db.collection('categories').doc(normalizedName);
+                var ref = db.collection('categories').doc(name);
                 batch.set(ref, {
-                    name_ku: name, name_ar: name, name_en: normalizedName,
+                    name_ku: name, name_ar: name, name_en: name,
                     image: '',
                     created_at: firebase.firestore.FieldValue.serverTimestamp(),
                     updated_at: firebase.firestore.FieldValue.serverTimestamp()
@@ -3363,7 +3362,7 @@ function saveCategory() {
     var categoryId = document.getElementById('categoryId').value.trim();
     var isCreate = !categoryId;
     if (isCreate) {
-        categoryId = normalizeCategoryId(nameEn || nameKu || nameAr);
+        categoryId = nameEn || nameKu || nameAr;
     }
     var now = new Date().toISOString();
     var plainData = {
@@ -3578,20 +3577,6 @@ function runCategoryCleanup() {
         });
 
         return chunkBatchOps(catOps).then(function () {
-            return db.collection('menuItems').get();
-        }).then(function (itemSnap) {
-            var itemOps = [];
-            itemSnap.forEach(function (doc) {
-                var data = doc.data() || {};
-                var cat = data.category;
-                if (!cat) return;
-                var lowerCat = cat.toLowerCase();
-                if (lowerCat !== cat) {
-                    itemOps.push({ type: 'update', ref: doc.ref, data: { category: lowerCat } });
-                }
-            });
-            return chunkBatchOps(itemOps);
-        }).then(function () {
             try { localStorage.removeItem('cachedCategories'); } catch (e) {}
             try { localStorage.removeItem('cachedMenuCategoryNames'); } catch (e) {}
             alert('Category cleanup complete. Reloading admin…');
@@ -3612,8 +3597,8 @@ function maybeRunCategoryRename() {
     var m = window.location.search.match(/[?&]renameCategory=([^:]+):([^&]+)/);
     if (!m) return;
     var oldName = m[1];
-    var newName = m[2].toLowerCase().trim();
-    if (!oldName || !newName || oldName.toLowerCase() === newName) return;
+    var newName = m[2].trim();
+    if (!oldName || !newName || oldName.toLowerCase() === newName.toLowerCase()) return;
     whenAdminReady(function () {
         runCategoryRename(oldName, newName);
     });
