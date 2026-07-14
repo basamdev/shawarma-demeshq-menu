@@ -2622,7 +2622,7 @@ function setupMenuThemePicker() {
 
 var HERO_TYPE_PHRASES = [
     { text: 'شاورمة الدمشقیة', dir: 'rtl' },
-    { text: 'Shawarma', dir: 'ltr' }
+    { text: 'Shawarma Aldemashqe', dir: 'ltr' }
 ];
 
 function heroTypeChars(str) {
