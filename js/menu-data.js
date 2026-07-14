@@ -38,12 +38,11 @@
 
         _itemsUnsub = window.db.collection('menuItems').onSnapshot(
             function (snap) {
-                var docs = collectItemDocs(snap);
-                if (docs.length > 0) {
+                if (!snap.metadata.fromCache && snap.size > 0) {
                     clearTimeout(timer);
                 }
                 _items.length = 0;
-                _items.push.apply(_items, docs);
+                _items.push.apply(_items, collectItemDocs(snap));
                 onUpdate(_items.slice());
             },
             function (err) {
@@ -71,7 +70,7 @@
 
         _categoriesUnsub = window.db.collection('categories').orderBy('order', 'asc').onSnapshot(
             function (snap) {
-                if (snap.size > 0) {
+                if (!snap.metadata.fromCache && snap.size > 0) {
                     clearTimeout(timer);
                 }
                 _categories.length = 0;

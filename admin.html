@@ -4,86 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Shawarma - لوحة التحكم</title>
-    <link rel="manifest" href="manifest.json?v=86">
-    <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
-    <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/shawarma demeshq-logo.jpg?v=1">
-    <meta name="application-name" content="Shawarma">
-    <meta name="msapplication-TileColor" content="#5C4033">
-    <meta name="msapplication-TileImage" content="assets/shawarma demeshq-logo.jpg?v=1">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Shawarma">
-    <meta name="theme-color" content="#3B82F6">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="css/admin.css?v=40">
-    <script>
-        (function () {
-            try {
-                var a = localStorage.getItem('adminAccent') || 'sapphire';
-                document.documentElement.setAttribute('data-accent', a);
-            } catch (e) {
-                document.documentElement.setAttribute('data-accent', 'sapphire');
-            }
-        })();
-    </script>
-</head>
-<body class="admin-page">
-    <div class="admin-container admin-layout">
-        <div class="sidebar-overlay" id="sidebarOverlay"></div>
-        <div class="admin-sidebar" id="adminSidebar">
-            <div class="sidebar-header">
-                <div class="sidebar-brand">
-                    <img src="assets/shawarma demeshq-logo.jpg?v=1" alt="Shawarma" class="sidebar-brand-icon" onclick="window.location.href='menu.html'" onerror="fallbackLogo(this)">
-                    <span class="sidebar-brand-text">Shawarma</span>
-                </div>
-                <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">✕</button>
-            </div>
-            <div class="sidebar-nav">
-                <button class="nav-item admin-nav-btn" data-section="items">
-                    <span class="nav-item-icon">🍽️</span><span data-i18n="manageItems">Items</span>
-                </button>
-                <button class="nav-item admin-nav-btn" data-section="categories">
-                    <span class="nav-item-icon">📁</span><span data-i18n="manageCategories">Categories</span>
-                </button>
-                <button class="nav-item admin-nav-btn" data-section="settings">
-                    <span class="nav-item-icon">⚙️</span><span data-i18n="settings">Settings</span>
-                </button>
-                <button class="nav-item admin-nav-btn nav-item--logout" data-section="logout">
-                    <span class="nav-item-icon">🚪</span><span data-i18n="logout">Logout</span>
-                </button>
-            </div>
-        </div>
-        <div class="admin-main">
-            <div class="admin-header">
-                <div class="admin-header-left">
-                    <button class="sidebar-hamburger" id="sidebarHamburger" aria-label="Open menu">
-                        <span></span><span></span><span></span>
-                    </button>
-                    <h1 class="admin-title">Admin Panel</h1>
-                </div>
-                <div class="admin-header-actions">
-                    <div class="admin-lang-switcher">
-                        <button class="admin-lang-btn" data-lang="ku">KU</button>
-                        <button class="admin-lang-btn" data-lang="ar">AR</button>
-                        <button class="admin-lang-btn active" data-lang="en">EN</button>
-                    </div>
-                    <button class="admin-theme-toggle" id="adminThemeToggle">🌙</button>
-                </div>
-            </div>
-            <div id="adminContent"></div>
-        </div>
-    </div>
+    <link rel="manifest" href="manifest.json?v=113">
+    <link rel="stylesheet" href="css/admin.css?v=113">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="js/firebase.js?v=29"></script>
-    <script src="js/menu-data.js?v=2"></script>
-    <script src="js/app.js?v=95"></script>
-    <script src="js/local-api.js"></script>
+    <script src="js/firebase.js?v=113"></script>
+    <script src="js/menu-data.js?v=113"></script>
+    <script src="js/app.js?v=113"></script>
+    <script src="js/local-api.js?v=113"></script>
     <script src="js/admin.js?v=113"></script>
 </body>
 </html>
