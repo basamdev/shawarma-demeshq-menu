@@ -28,7 +28,7 @@
 
         // Use shorter timeout for faster loading
         var isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        var defaultTimeout = isMobile ? 5000 : 3000;
+        var defaultTimeout = isMobile ? 4000 : 2000;
 
         var timer = setTimeout(function () {
             window.db.collection('menuItems').get({ source: 'server' })
@@ -70,7 +70,7 @@
 
         // Use shorter timeout for faster loading
         var isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        var defaultTimeout = isMobile ? 5000 : 3000;
+        var defaultTimeout = isMobile ? 4000 : 2000;
 
         var timer = setTimeout(function () {
             window.db.collection('categories').orderBy('order', 'asc').get({ source: 'server' })

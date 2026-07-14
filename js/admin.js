@@ -1876,7 +1876,9 @@ function loadManageItems() {
         '<div id="itemModal" class="modal-overlay">' +
             '<div class="modal">' +
                 '<div class="modal-content">' +
-                    '<span class="modal-close" id="modalClose">&times;</span>' +
+                    '<button class="modal-close" id="modalClose" aria-label="Close">' +
+                        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
+                    '</button>' +
                     '<h2 id="modalTitle">' + S.addNewItem + '</h2>' +
                     '<form id="itemForm" novalidate>' +
                         '<div class="form-group"><label>' + S.kurdishName + '</label><input type="text" id="itemNameKu" autocomplete="off"></div>' +
@@ -1913,7 +1915,9 @@ function loadManageItems() {
         '<div id="quickCategoryModal" class="modal-overlay">' +
             '<div class="modal">' +
                 '<div class="modal-content">' +
-                    '<span class="modal-close" id="quickCategoryModalClose">&times;</span>' +
+                    '<button class="modal-close" id="quickCategoryModalClose" aria-label="Close">' +
+                        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
+                    '</button>' +
                     '<h2>' + S.createNewCategory + '</h2>' +
                     '<form id="quickCategoryForm">' +
                         '<div class="form-group"><label>' + S.categoryNameKu + '</label><input type="text" id="quickCategoryNameKu" required></div>' +
@@ -1945,8 +1949,8 @@ function loadManageItems() {
 
     // Detect mobile and use slightly longer timeout for slower mobile connections
     var isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    var itemsTimeout = isMobile ? 10000 : 5000;
-    var safetyTimeout = isMobile ? 12000 : 8000;
+    var itemsTimeout = isMobile ? 6000 : 3000;
+    var safetyTimeout = isMobile ? 8000 : 5000;
 
     var loadTimer = setTimeout(function () {
         if (MenuData.getItems().length === 0) {
@@ -2412,13 +2416,15 @@ function loadCategoryFilter() {
     var cf = document.getElementById('categoryFilter');
     if (!cf) return;
 
+    // Render category bar immediately from cache if available
+    renderItemsCategoryBar();
+
     if (!window.db) {
-        refreshCategoryFilterOptions();
         return;
     }
 
     if (!MenuData.getCategories().length) {
-        MenuData.loadCategories(12000, function (categories) {
+        MenuData.loadCategories(6000, function (categories) {
             safeSetItem('cachedCategories', JSON.stringify(categories));
             refreshCategoryFilterOptions();
         }, function (err) {
@@ -3060,7 +3066,9 @@ function loadManageCategories() {
         '<div id="categoryModal" class="modal-overlay">' +
             '<div class="modal">' +
                 '<div class="modal-content">' +
-                    '<span class="modal-close" id="categoryModalClose">&times;</span>' +
+                    '<button class="modal-close" id="categoryModalClose" aria-label="Close">' +
+                        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
+                    '</button>' +
                     '<h2 id="categoryModalTitle">' + S.addCategory + '</h2>' +
                     '<form id="categoryForm">' +
                         '<div class="form-group"><label>' + S.categoryNameKu + '</label><input type="text" id="categoryNameKu" required></div>' +
@@ -3242,8 +3250,8 @@ function loadCategoriesList() {
 
     // Detect mobile and use slightly longer timeout for slower mobile connections
     var isMobileCat = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    var catTimeout = isMobileCat ? 10000 : 5000;
-    var catSafetyTimeout = isMobileCat ? 12000 : 8000;
+    var catTimeout = isMobileCat ? 6000 : 3000;
+    var catSafetyTimeout = isMobileCat ? 8000 : 5000;
 
     // Safety timeout for slow mobile networks
     var catLoadTimer = setTimeout(function () {
@@ -5335,7 +5343,9 @@ storeSetting('cafeLocationLabel', cafeLocationLabel);
          '<div id="expenseModal" class="modal-overlay">' +
              '<div class="modal expense-modal">' +
                  '<div class="modal-content">' +
-                     '<span class="modal-close" id="expenseModalClose">&times;</span>' +
+                     '<button class="modal-close" id="expenseModalClose" aria-label="Close">' +
+                         '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
+                     '</button>' +
                      '<h2 id="expenseModalTitle">' + S.addExpense + '</h2>' +
                      '<form id="expenseForm" novalidate>' +
                          '<div class="form-group">' +
