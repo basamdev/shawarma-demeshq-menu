@@ -1,11 +1,11 @@
-const CACHE_NAME = 'ali-cafe-v113';
+﻿const CACHE_NAME = 'ali-cafe-v114';
 const APP_SHELL_PATHS = /\.(html|css|js)$/i;
 const FIREBASE_SDK_URLS = [
     'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js',
     'https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js',
     'https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js'
 ];
-// Relative paths — the app is served from a subfolder (e.g. /shawarma-demeshq-menu/),
+// Relative paths â€” the app is served from a subfolder (e.g. /shawarma-demeshq-menu/),
 // so root-absolute paths like '/index.html' would 404 and break install.
 const STATIC_ASSETS = [
     './manifest.json',
@@ -64,7 +64,7 @@ self.addEventListener('activate', function (event) {
 
     // Best-effort: take control of already-open pages. clients.claim() can
     // either throw synchronously or reject during the worker swap with
-    // "Only the active worker can claim clients" — both are harmless, so we
+    // "Only the active worker can claim clients" â€” both are harmless, so we
     // swallow them quietly instead of logging a scary warning.
     try {
         var claimed = self.clients.claim();
@@ -87,7 +87,7 @@ self.addEventListener('fetch', function (event) {
         return;
     }
 
-    // Images (item photos, category images, icons) — cache-first so they keep
+    // Images (item photos, category images, icons) â€” cache-first so they keep
     // working offline after being seen once, including cross-origin (opaque)
     // ones like flaticon icons or any image URL pasted in the admin.
     var isImage = request.destination === 'image' || /\.(png|jpe?g|gif|webp|svg|ico|bmp)$/i.test(url.pathname);
@@ -109,7 +109,7 @@ self.addEventListener('fetch', function (event) {
         return;
     }
 
-    // Firebase SDK — cache-first so admin works offline after one online visit.
+    // Firebase SDK â€” cache-first so admin works offline after one online visit.
     if (url.hostname === 'www.gstatic.com' && /firebasejs/.test(url.pathname)) {
         event.respondWith(
             caches.match(request).then(function (cached) {
@@ -179,3 +179,4 @@ self.addEventListener('fetch', function (event) {
         })
     );
 });
+

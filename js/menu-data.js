@@ -1,4 +1,4 @@
-// js/menu-data.js - Optimized shared data layer
+﻿// js/menu-data.js - Optimized shared data layer
 // Uses onSnapshot as the primary source with a get() timeout fallback.
 // Caches items and categories in memory so filtering is instant and
 // menu.html / admin.html only read Firestore once per page load.
@@ -27,13 +27,21 @@
         if (!window.db) { onError(new Error('No DB')); return; }
 
         var timer = setTimeout(function () {
-            window.db.collection('menuItems').get()
+            window.db.collection('menuItems').get({ source: 'server' })
                 .then(function (snap) {
                     _items.length = 0;
                     _items.push.apply(_items, collectItemDocs(snap));
                     onUpdate(_items.slice());
                 })
-                .catch(onError);
+                .catch(function () {
+                    window.db.collection('menuItems').get()
+                        .then(function (snap) {
+                            _items.length = 0;
+                            _items.push.apply(_items, collectItemDocs(snap));
+                            onUpdate(_items.slice());
+                        })
+                        .catch(onError);
+                });
         }, timeoutMs || 4000);
 
         _itemsUnsub = window.db.collection('menuItems').onSnapshot(
@@ -57,7 +65,7 @@
         if (!window.db) { onError(new Error('No DB')); return; }
 
         var timer = setTimeout(function () {
-            window.db.collection('categories').orderBy('order', 'asc').get()
+            window.db.collection('categories').orderBy('order', 'asc').get({ source: 'server' })
                 .then(function (snap) {
                     _categories.length = 0;
                     snap.forEach(function (doc) {
@@ -65,7 +73,17 @@
                     });
                     onUpdate(_categories.slice());
                 })
-                .catch(onError);
+                .catch(function () {
+                    window.db.collection('categories').orderBy('order', 'asc').get()
+                        .then(function (snap) {
+                            _categories.length = 0;
+                            snap.forEach(function (doc) {
+                                _categories.push({ id: doc.id, data: doc.data() });
+                            });
+                            onUpdate(_categories.slice());
+                        })
+                        .catch(onError);
+                });
         }, timeoutMs || 4000);
 
         _categoriesUnsub = window.db.collection('categories').orderBy('order', 'asc').onSnapshot(
@@ -122,3 +140,7 @@
         unsubscribeAll: unsubscribeAll
     };
 })();
+
+
+
+
