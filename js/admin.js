@@ -2336,7 +2336,7 @@ function refreshItemCategoryDropdown() {
     var prev = select.value;
     select.innerHTML = buildCategorySelectOptions(
         readCachedCategories(),
-        getAllItemCategoryIdsForFilter(),
+        [],
         lang,
         S,
         false
