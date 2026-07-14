@@ -1513,6 +1513,16 @@ function initAdminPanel() {
             startAdminLiveListeners();
             refreshAdminCurrentSection();
         });
+    } else {
+        var fallbackBtn = document.querySelector('.admin-nav-btn[data-section="items"]');
+        if (fallbackBtn) {
+            fallbackBtn.classList.add('active');
+            loadAdminSection('items');
+            whenAdminReady(function () {
+                startAdminLiveListeners();
+                refreshAdminCurrentSection();
+            });
+        }
     }
 }
 
