@@ -1506,10 +1506,10 @@ function renderCategories(items, options) {
 
        // Merge item categories into the menu category list so any category used by items
        // is shown even if there is no matching categories document or the IDs differ.
-        const existingIds = new Set(categories.map(function(c){ return c.id; }));
+        const existingIds = new Set(categories.map(function(c){ return c.id ? String(c.id).toLowerCase() : ''; }));
         items.forEach(item => {
             const cat = item.category;
-             if (!cat || cat === 'Water' || existingIds.has(cat)) return;
+             if (!cat || cat === 'Water' || existingIds.has(String(cat).toLowerCase())) return;
             existingIds.add(cat);
             categories.push({
                 id: cat,
@@ -1812,7 +1812,9 @@ function createMenuCard(item, lang, strings) {
     if (cachedCats && item.category) {
         try {
             const categories = JSON.parse(cachedCats);
-            const cat = categories.find(c => c.id === item.category);
+            const lower = String(item.category).toLowerCase();
+            const cat = categories.find(c => c.id === item.category) ||
+                categories.find(c => c.id && String(c.id).toLowerCase() === lower);
             if (cat) {
                 categoryName = cat.data['name_' + lang] || cat.data.name_en || '';
             }
@@ -2078,6 +2080,10 @@ function getCategoryDisplayName(categoryId, lang) {
         try {
             var categories = JSON.parse(cachedCats);
             var cat = categories.find(function (c) { return c.id === categoryId; });
+            if (!cat) {
+                var lower = String(categoryId).toLowerCase();
+                cat = categories.find(function (c) { return c.id && String(c.id).toLowerCase() === lower; });
+            }
             if (cat) return cat.data['name_' + lang] || cat.data.name_en || categoryId;
         } catch (e) {}
     }

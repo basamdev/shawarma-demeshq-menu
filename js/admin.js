@@ -1793,10 +1793,14 @@ function refreshCategoriesCache(callback) {
     });
 }
 
+function normalizeCategoryId(id) {
+    return id ? String(id).toLowerCase().trim() : id;
+}
+
 function buildCategoryMapFromCache() {
     var catMap = {};
     readCachedCategories().forEach(function (c) {
-        if (c && c.id) catMap[c.id] = c.data || {};
+        if (c && c.id) catMap[normalizeCategoryId(c.id)] = c.data || {};
     });
     return catMap;
 }
@@ -1806,8 +1810,9 @@ function getCategoryLabel(categoryId, lang, catMap) {
     lang = lang || localStorage.getItem('selectedLang') || 'ku';
     var data = (catMap && catMap[categoryId]) || null;
     if (!data) {
+        var lowerId = normalizeCategoryId(categoryId);
         readCachedCategories().some(function (c) {
-            if (c.id === categoryId) { data = c.data; return true; }
+            if (c.id && normalizeCategoryId(c.id) === lowerId) { data = c.data; return true; }
             return false;
         });
     }
@@ -2157,7 +2162,7 @@ function getUniqueItemCategoryIds(docs) {
 function getAllItemCategoryIdsForFilter() {
     var names = {};
     function addName(c) {
-        if (c && c.toLowerCase().trim() !== 'water') names[c] = true;
+        if (c && normalizeCategoryId(c) !== 'water') names[normalizeCategoryId(c)] = true;
     }
     getUniqueItemCategoryIds(_itemsSnapDocs).forEach(addName);
     readCachedCategories().forEach(function (c) {
@@ -2722,7 +2727,7 @@ function saveItem() {
     var nameAr = nameArEl.value.trim();
     var nameEn = nameEnEl.value.trim();
     var price = priceEl.value.trim().replace(',', '.');
-    var category = categoryEl.value;
+    var category = categoryEl.value.trim().toLowerCase();
 
     if (!nameKu || !nameAr || !nameEn || !price) {
         alert(S.fillAll);
@@ -2949,10 +2954,17 @@ function deleteItem(itemId) {
 /* ============ CATEGORIES ============ */
 
 function mergeCategoryLists(serverCats, cachedCats) {
-    if (serverCats && serverCats.length) {
-        return serverCats.filter(function (c) { return c && c.id; });
-    }
-    return (cachedCats || []).filter(function (c) { return c && c.id; });
+    var result = [];
+    var seen = {};
+    var all = (serverCats && serverCats.length ? serverCats : []).concat(cachedCats || []);
+    all.forEach(function (c) {
+        if (!c || !c.id) return;
+        var lower = normalizeCategoryId(c.id);
+        if (seen[lower]) return;
+        seen[lower] = true;
+        result.push(c);
+    });
+    return result;
 }
 
 function renderCategoriesListNow() {
@@ -3070,8 +3082,12 @@ function mergeMenuCategories(realCats, haveIds) {
     var merged = realCats.slice();
     var lang = localStorage.getItem('selectedLang') || 'ku';
     var menuNames = getMenuCategoryNames();
+    var normalizedRealIds = {};
+    realCats.forEach(function (c) {
+        if (c && c.id) normalizedRealIds[normalizeCategoryId(c.id)] = true;
+    });
     Object.keys(menuNames).forEach(function (name) {
-        if (haveIds[name]) return;
+        if (normalizedRealIds[normalizeCategoryId(name)]) return;
         var label = getCategoryLabel(name, lang, buildCategoryMapFromCache());
         merged.push({
             id: name,
@@ -3261,9 +3277,10 @@ function syncCategoriesFromItems() {
                 if (have[name]) return;
                 // Use the name as the document id so existing items (which
                 // reference the category by this value) keep matching.
-                var ref = db.collection('categories').doc(name);
+                var normalizedName = name.toLowerCase();
+                var ref = db.collection('categories').doc(normalizedName);
                 batch.set(ref, {
-                    name_ku: name, name_ar: name, name_en: name,
+                    name_ku: name, name_ar: name, name_en: normalizedName,
                     image: '',
                     created_at: firebase.firestore.FieldValue.serverTimestamp(),
                     updated_at: firebase.firestore.FieldValue.serverTimestamp()
@@ -3300,7 +3317,7 @@ function saveCategory() {
     var categoryId = document.getElementById('categoryId').value.trim();
     var isCreate = !categoryId;
     if (isCreate) {
-        categoryId = nameEn || nameKu || nameAr;
+        categoryId = normalizeCategoryId(nameEn || nameKu || nameAr);
     }
     var now = new Date().toISOString();
     var plainData = {
@@ -3405,10 +3422,14 @@ function deleteCategory(categoryId) {
         return;
     }
 
-    firestoreGetWithTimeout(db.collection('menuItems').where('category', '==', categoryId), 8000).then(function (snap) {
+    firestoreGetWithTimeout(db.collection('menuItems').get(), 8000).then(function (snap) {
+        var catLower = normalizeCategoryId(categoryId);
         var batch = db.batch();
         snap.forEach(function (doc) {
-            batch.delete(doc.ref);
+            var data = doc.data() || {};
+            if (data.category && normalizeCategoryId(data.category) === catLower) {
+                batch.delete(doc.ref);
+            }
         });
 
         batch.delete(db.collection('categories').doc(categoryId));
@@ -3425,12 +3446,13 @@ function deleteCategory(categoryId) {
 }
 
 function removeCategoryFromCacheAndUi(categoryId) {
-    var cats = readCachedCategories().filter(function (c) { return c.id !== categoryId; });
+    var idLower = normalizeCategoryId(categoryId);
+    var cats = readCachedCategories().filter(function (c) { return normalizeCategoryId(c.id) !== idLower; });
     safeSetItem('cachedCategories', JSON.stringify(cats));
 
     try {
         var names = JSON.parse(localStorage.getItem('cachedMenuCategoryNames') || '[]');
-        var filtered = names.filter(function (n) { return n !== categoryId; });
+        var filtered = names.filter(function (n) { return normalizeCategoryId(n) !== idLower; });
         localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(filtered));
     } catch (e) {}
 
