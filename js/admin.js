@@ -2096,16 +2096,25 @@ function loadItemsList() {
          return;
      }
       adminGetWithTimeout(db.collection('menuItems'), 8000).then(function (snap) {
-         var docs = [];
-          snap.forEach(function (d) { var data = d.data(); if (data.category && data.category.toLowerCase().trim() !== 'water') { docs.push(d); } });
-         _itemsSnapDocs = docs;
-         renderItemsList(docs);
-         loadCategoryFilter();
-    }).catch(function (e) {
-        if (hydrateItemsUiFromCache()) return;
-        var el = document.getElementById('itemsList');
-         if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + e.message + '</p>';
-    });
+          var docs = [];
+           snap.forEach(function (d) { var data = d.data(); if (data.category && data.category.toLowerCase().trim() !== 'water') { docs.push(d); } });
+          _itemsSnapDocs = docs;
+          renderItemsList(docs);
+          loadCategoryFilter();
+     }).catch(function (e) {
+         if (hydrateItemsUiFromCache()) return;
+         fetchMenuItemsForAdmin(12000).then(function (items) {
+             _itemsSnapDocs = items.map(function (it) {
+                 var obj = it;
+                 return { id: it.id, data: function () { return obj; } };
+             });
+             renderItemsList(_itemsSnapDocs);
+             loadCategoryFilter();
+         }).catch(function () {
+             var el = document.getElementById('itemsList');
+              if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + e.message + '</p>';
+         });
+     });
 }
 
 function loadCategoriesDropdown() {
@@ -2334,7 +2343,12 @@ function loadCategoryFilter() {
         refreshCategoryFilterOptions();
     }).catch(function (e) {
         console.error('Error loading category filter:', e);
-        refreshCategoryFilterOptions();
+        fetchCategoriesForAdmin(12000).then(function (cats) {
+            safeSetItem('cachedCategories', JSON.stringify(cats));
+            refreshCategoryFilterOptions();
+        }).catch(function () {
+            refreshCategoryFilterOptions();
+        });
     });
 }
 
