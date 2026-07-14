@@ -1076,30 +1076,43 @@ function fetchMenuViaRest(timeoutMs) {
         return Promise.reject(new Error('Firebase config missing'));
     }
     var baseUrl = getFirestoreRestBaseUrl();
-    var url = baseUrl + encodeURIComponent(cfg.projectId) +
-        '/databases/(default)/documents/menuItems?key=' + encodeURIComponent(cfg.apiKey);
     var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var timer = null;
-    var opts = { cache: 'no-store' };
-    if (controller) {
-        timer = setTimeout(function () { controller.abort(); }, timeoutMs);
-        opts.signal = controller.signal;
-    }
-    return fetch(url, opts).then(function (r) {
-        if (timer) clearTimeout(timer);
-        if (!r.ok) {
-            return r.text().then(function (body) {
-                var msg = 'REST HTTP ' + r.status;
-                if (body && body.indexOf('Cloud Firestore API has not been used') !== -1) {
-                    window._firestoreApiDisabled = true;
-                    msg = body;
-                }
-                throw new Error(msg);
-            });
+
+    function fetchPage(pageToken) {
+        var url = baseUrl + encodeURIComponent(cfg.projectId) +
+            '/databases/(default)/documents/menuItems?pageSize=300&key=' + encodeURIComponent(cfg.apiKey);
+        if (pageToken) url += '&pageToken=' + encodeURIComponent(pageToken);
+        var timer = null;
+        var opts = { cache: 'no-store' };
+        if (controller) {
+            timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+            opts.signal = controller.signal;
         }
-        return r.json();
-    }).then(parseMenuItemsFromRest).catch(function (err) {
-        if (timer) clearTimeout(timer);
+        return fetch(url, opts).then(function (r) {
+            if (timer) clearTimeout(timer);
+            if (!r.ok) {
+                return r.text().then(function (body) {
+                    var msg = 'REST HTTP ' + r.status;
+                    if (body && body.indexOf('Cloud Firestore API has not been used') !== -1) {
+                        window._firestoreApiDisabled = true;
+                        msg = body;
+                    }
+                    throw new Error(msg);
+                });
+            }
+            return r.json();
+        }).then(function (json) {
+            var docs = parseMenuItemsFromRest(json);
+            if (json.nextPageToken) {
+                return fetchPage(json.nextPageToken).then(function (more) {
+                    return docs.concat(more);
+                });
+            }
+            return docs;
+        });
+    }
+
+    return fetchPage(null).catch(function (err) {
         if (isFirestoreApiDisabledError(err)) showFirestoreApiDisabledAlert();
         throw err;
     });
