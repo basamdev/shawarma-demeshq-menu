@@ -601,15 +601,36 @@ function fetchPublicCollectionViaRest(collectionName, timeoutMs) {
 }
 
 function fetchMenuItemsForAdmin(timeoutMs) {
+    if (window._firestoreApiDisabled) return Promise.resolve([]);
+    if (typeof fetchAllAdminCollectionViaRest === 'function') {
+        return fetchAllAdminCollectionViaRest('menuItems', timeoutMs || 12000).then(function (docs) {
+            return docs.map(function (d) {
+                var data = d.data || {};
+                return {
+                    id: d.id,
+                    name_ku: data.name_ku || '',
+                    name_ar: data.name_ar || '',
+                    name_en: data.name_en || '',
+                    price: data.price || 0,
+                    category: data.category || '',
+                    image: data.image || '',
+                    available: data.available !== false,
+                    description_ku: data.description_ku || '',
+                    description_ar: data.description_ar || '',
+                    description_en: data.description_en || '',
+                    group_ku: data.group_ku || '',
+                    group_ar: data.group_ar || '',
+                    group_en: data.group_en || '',
+                    updated_at: data.updated_at || '',
+                    createdBy: data.createdBy || ''
+                };
+            });
+        });
+    }
     if (typeof fetchMenuViaRest === 'function') {
         return fetchMenuViaRest(timeoutMs || 12000);
     }
-    if (window._firestoreApiDisabled) return Promise.resolve([]);
-    return fetchPublicCollectionViaRest('menuItems', timeoutMs).then(function (docs) {
-        return docs.map(function (d) {
-            return Object.assign({ id: d.id }, d.data || {});
-        });
-    });
+    return Promise.resolve([]);
 }
 
 function fetchCategoriesForAdmin(timeoutMs) {
@@ -2110,10 +2131,11 @@ function loadItemsList() {
              });
              renderItemsList(_itemsSnapDocs);
              loadCategoryFilter();
-         }).catch(function () {
-             var el = document.getElementById('itemsList');
-              if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + e.message + '</p>';
-         });
+          }).catch(function () {
+              var el = document.getElementById('itemsList');
+               if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + e.message + '</p>';
+              loadCategoryFilter();
+          });
      });
 }
 
