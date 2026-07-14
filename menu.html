@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ku" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Shawarma | �������</title>
-    <link rel="manifest" href="manifest.json?v=116">
+    <title>Shawarma | القائمة</title>
+    <link rel="manifest" href="manifest.json?v=117">
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/shawarma demeshq-logo.jpg?v=1">
     <meta name="application-name" content="Shawarma">
@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css?v=116">
+    <link rel="stylesheet" href="css/style.css?v=117">
 </head>
 <body class="menu-page emenu-layout light-mode" data-menu-theme="light">
 <script>
@@ -109,9 +109,9 @@
                 </svg>
             </button>
             <div class="lang-dropdown-menu fab-lang-menu" id="langDropdownMenu">
-                <button class="lang-option" data-lang="ku"><span class="lang-flag"><img src="images/flag-kurdistan.svg" alt="" class="lang-flag-img" width="20" height="14"></span><span class="lang-name">�����</span></button>
-                <button class="lang-option" data-lang="ar"><span class="lang-flag">????</span><span class="lang-name">�������</span></button>
-                <button class="lang-option" data-lang="en"><span class="lang-flag">????</span><span class="lang-name">English</span></button>
+                <button class="lang-option" data-lang="ku"><span class="lang-flag"><img src="images/flag-kurdistan.svg" alt="" class="lang-flag-img" width="20" height="14"></span><span class="lang-name">کوردی</span></button>
+                <button class="lang-option" data-lang="ar"><span class="lang-flag">🇮🇶</span><span class="lang-name">العربية</span></button>
+                <button class="lang-option" data-lang="en"><span class="lang-flag">🇬🇧</span><span class="lang-name">English</span></button>
             </div>
         </div>
         <div class="fab-wrap theme-dropdown" id="themeDropdown">
@@ -173,7 +173,7 @@
         </div>
 
         <div class="menu-section-head">
-            <h2 class="active-category-title" id="activeCategoryTitle" data-i18n="menuTitle">�?���</h2>
+            <h2 class="active-category-title" id="activeCategoryTitle" data-i18n="menuTitle">مێنوو</h2>
             <span class="section-accent" aria-hidden="true"></span>
         </div>
 
@@ -187,7 +187,7 @@
     <div class="detail-overlay" id="detailOverlay">
         <div class="detail-backdrop" id="detailBackdrop"></div>
         <div class="detail-panel" id="detailPanel">
-            <button class="detail-close" id="detailClose" aria-label="Close">?</button>
+            <button class="detail-close" id="detailClose" aria-label="Close">✕</button>
             <div class="detail-media" id="detailMedia">
                 <img id="detailImage" src="" alt="">
                 <button class="video-play-btn" id="videoPlayBtn" aria-label="Play video">
@@ -210,7 +210,7 @@
 
     <div class="video-overlay" id="videoOverlay">
         <div class="video-container" id="videoContainer">
-            <button class="video-close" id="videoClose" aria-label="Close video">?</button>
+            <button class="video-close" id="videoClose" aria-label="Close video">✕</button>
             <video id="detailVideo" controls></video>
         </div>
     </div>
@@ -224,35 +224,35 @@
                         <circle cx="20" cy="21" r="1"></circle>
                         <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                     </svg>
-                    <span data-i18n="cart">�?�?�?</span>
+                    <span data-i18n="cart">سەبەتە</span>
                 </h2>
-                <button class="cart-close" id="cartClose">?</button>
+                <button class="cart-close" id="cartClose">✕</button>
             </div>
             <div class="cart-items" id="cartItems">
                 <div class="cart-empty" id="cartEmpty">
-                    <div class="cart-empty-icon">??</div>
-                    <p data-i18n="cartEmpty">�?�?�? �?��??</p>
+                    <div class="cart-empty-icon">🛒</div>
+                    <p data-i18n="cartEmpty">سەبەتە بەتاڵە</p>
                 </div>
             </div>
             <div class="cart-footer">
                 <div class="cart-customer">
-                    <input type="text" id="customerName" class="cart-input" placeholder="���� �???����" autocomplete="name">
-                    <input type="text" id="customerPlace" class="cart-input" placeholder="��?�� �???����" autocomplete="street-address">
+                    <input type="text" id="customerName" class="cart-input" placeholder="ناوی بەڕێزتان؟" autocomplete="name">
+                    <input type="text" id="customerPlace" class="cart-input" placeholder="شوێنی بەڕێزتان؟" autocomplete="street-address">
 <p class="cart-form-warning hidden" id="cartFormWarning" role="alert" aria-live="polite"></p>
-                <button type="button" class="cart-location-btn" id="cartLocationBtn" data-i18n="useCurrentLocation">?? Use Current Location</button>
+                <button type="button" class="cart-location-btn" id="cartLocationBtn" data-i18n="useCurrentLocation">📍 Use Current Location</button>
                 <p class="cart-location-status hidden" id="cartLocationStatus" aria-live="polite"></p>
             </div>
                 <div class="cart-total">
-                    <span data-i18n="cartTotal">�?� ����</span>
+                    <span data-i18n="cartTotal">کۆی گشتی</span>
                     <span class="cart-total-value" id="cartTotal">0 IQD</span>
                 </div>
                 <div class="cart-actions">
-                    <button class="cart-clear" id="cartClear" data-i18n="remove">������</button>
+                    <button class="cart-clear" id="cartClear" data-i18n="remove">لابردن</button>
                     <button class="cart-whatsapp" id="cartWhatsapp">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                         </svg>
-                        <span data-i18n="sendWhatsApp">����� �? ����ǁ</span>
+                        <span data-i18n="sendWhatsApp">ناردن بە واتساپ</span>
                     </button>
                 </div>
             </div>
@@ -262,7 +262,7 @@
     <div class="cafe-info-overlay" id="cafeInfoOverlay" aria-hidden="true">
         <div class="cafe-info-backdrop"></div>
         <div class="cafe-info-panel" role="dialog" aria-labelledby="cafeInfoTitle">
-            <button class="cafe-info-close" id="cafeInfoClose" type="button" aria-label="Close">?</button>
+            <button class="cafe-info-close" id="cafeInfoClose" type="button" aria-label="Close">✕</button>
 
             <div class="cafe-info-head">
                 <div class="cafe-info-logo-wrap">
@@ -271,55 +271,55 @@
                 <h2 class="cafe-info-title" id="cafeInfoTitle">Shawarma</h2>
                 <div class="cafe-status-badge is-open" id="cafeStatusBadge">
                     <span class="cafe-status-dot" aria-hidden="true"></span>
-                    <span data-cafe-status-text data-i18n="cafeOpen">�?��� ����?�?</span>
+                    <span data-cafe-status-text data-i18n="cafeOpen">ئێستا کراوەیە</span>
                 </div>
             </div>
 
             <section class="cafe-info-block">
-                <h3 class="cafe-info-block-title" data-i18n="cafeContact">�?��?���</h3>
+                <h3 class="cafe-info-block-title" data-i18n="cafeContact">پەیوەندی</h3>
                 <div class="cafe-info-actions">
                     <button type="button" class="cafe-info-action" id="cafeCallBtn">
                         <span class="cafe-info-action-icon"><i class="fa-solid fa-phone"></i></span>
-                        <span data-i18n="cafeCall">�?��?���</span>
+                        <span data-i18n="cafeCall">پەیوەندی</span>
                     </button>
                     <button type="button" class="cafe-info-action cafe-info-action--whatsapp" id="cafeWhatsappBtn">
                         <span class="cafe-info-action-icon"><i class="fa-brands fa-whatsapp"></i></span>
-                        <span data-i18n="cafeWhatsapp">����ǁ</span>
+                        <span data-i18n="cafeWhatsapp">واتساپ</span>
                     </button>
                     <button type="button" class="cafe-info-action" id="cafeShareBtn">
                         <span class="cafe-info-action-icon"><i class="fa-solid fa-share-nodes"></i></span>
-                        <span data-i18n="cafeShare">����?Ԙ���</span>
+                        <span data-i18n="cafeShare">هاوبەشکردن</span>
                     </button>
                     <button type="button" class="cafe-info-action" id="cafeLocationBtn">
                         <span class="cafe-info-action-icon"><i class="fa-solid fa-location-dot"></i></span>
-                        <span data-i18n="cafeLocation">��?�</span>
+                        <span data-i18n="cafeLocation">شوێن</span>
                     </button>
                 </div>
                 <a class="cafe-info-address" id="cafeAddressLink" href="#" target="_blank" rel="noopener">
                     <i class="fa-solid fa-map-pin"></i>
-                    <span id="cafeAddressText">�?�ј?-��?��</span>
+                    <span id="cafeAddressText">بەحرکە-مجەمع</span>
                 </a>
                 <p class="cafe-info-phone" id="cafePhoneDisplay" dir="ltr"></p>
             </section>
 
             <section class="cafe-info-block">
-                <h3 class="cafe-info-block-title" data-i18n="cafeHours">���� ����?�?</h3>
+                <h3 class="cafe-info-block-title" data-i18n="cafeHours">کاتی کردنەوە</h3>
                 <div class="cafe-hours-row">
                     <span class="cafe-hours-icon"><i class="fa-regular fa-clock"></i></span>
-                    <span id="cafeHoursText">??���?: 2:00 ���� ���??? � 2:00 �?����</span>
+                    <span id="cafeHoursText">ڕۆژانە: ٢:٠٠ دوای نیوەڕۆ — ٢:٠٠ بەیانی</span>
                 </div>
             </section>
 
             <section class="cafe-info-block cafe-info-block--install">
                 <button type="button" class="cafe-info-install-link" id="cafeInstallHelpBtn">
                     <span class="cafe-info-install-icon"><i class="fa-solid fa-mobile-screen-button"></i></span>
-                    <span data-i18n-install="installShowHelp">���Ϙ��� �? Ә���� �?�?��</span>
+                    <span data-i18n-install="installShowHelp">زیادکردن بۆ سکرینی سەرەکی</span>
                     <i class="fa-solid fa-chevron-left cafe-info-install-arrow" aria-hidden="true"></i>
                 </button>
             </section>
 
             <section class="cafe-info-block cafe-info-block--social">
-                <h3 class="cafe-info-block-title" data-i18n="cafeFollowUs">�???���� Ș?�</h3>
+                <h3 class="cafe-info-block-title" data-i18n="cafeFollowUs">فۆڵۆومان بکەن</h3>
                 <div class="cafe-social-row">
                     <a class="cafe-social-btn cafe-social-btn--instagram" id="cafeInstagramBtn" href="#" target="_blank" rel="noopener" aria-label="Instagram">
                         <i class="fa-brands fa-instagram"></i>
@@ -341,10 +341,10 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="js/firebase.js?v=116"></script>
-    <script src="js/menu-data.js?v=116"></script>
-    <script src="js/app.js?v=116"></script>
-    <script src="js/local-api.js?v=116"></script>
+    <script src="js/firebase.js?v=117"></script>
+    <script src="js/menu-data.js?v=117"></script>
+    <script src="js/app.js?v=117"></script>
+    <script src="js/local-api.js?v=117"></script>
     <script>
         (function () {
             var heroLogo = document.querySelector('.menu-hero-logo');
