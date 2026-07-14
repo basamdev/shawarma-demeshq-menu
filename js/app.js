@@ -1472,16 +1472,17 @@ function buildAllCategoryButton(label) {
 
 function filterItemsByCategory(items, category) {
     if (category === ALL_CATEGORY_ID) return items;
+    var catLower = String(category).toLowerCase();
     var cachedCats = localStorage.getItem('cachedCategories');
     if (cachedCats) {
         try {
             var categories = JSON.parse(cachedCats);
-            if (categories.some(function (c) { return c.id === category; })) {
-                return items.filter(function (i) { return i.category && i.category === category; });
+            if (categories.some(function (c) { return c.id && String(c.id).toLowerCase() === catLower; })) {
+                return items.filter(function (i) { return i.category && String(i.category).toLowerCase() === catLower; });
             }
         } catch (e) {}
     }
-    return items.filter(function (i) { return i.category && i.category === category; });
+    return items.filter(function (i) { return i.category && String(i.category).toLowerCase() === catLower; });
 }
 
 function renderCategories(items, options) {
