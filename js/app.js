@@ -3810,16 +3810,16 @@ window.checkForAppUpdate = checkForAppUpdate;
 
 var INSTALL_TUTORIAL_IMAGES = {
     ios: [
-        'images/install/ios-step-1.png',
-        'images/install/ios-step-2.png',
-        'images/install/ios-step-3.png',
-        'images/install/ios-step-4.png'
+        'images/install/ios-step-1.png?v=2',
+        'images/install/ios-step-2.png?v=2',
+        'images/install/ios-step-3.png?v=2',
+        'images/install/ios-step-4.png?v=2'
     ],
     android: [
-        'images/install/android-step-1.png',
-        'images/install/android-step-2.png',
-        'images/install/android-step-3.png',
-        'images/install/android-step-4.png'
+        'images/install/android-step-1.png?v=2',
+        'images/install/android-step-2.png?v=2',
+        'images/install/android-step-3.png?v=2',
+        'images/install/android-step-4.png?v=2'
     ]
 };
 
