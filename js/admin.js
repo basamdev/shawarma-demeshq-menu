@@ -1463,6 +1463,7 @@ function initSidebar() {
 }
 
 function initAdminPanel() {
+    maybeRunCategoryCleanup();
     var navButtons = document.querySelectorAll('.admin-nav-btn');
     navButtons.forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -3459,6 +3460,101 @@ function removeCategoryFromCacheAndUi(categoryId) {
     renderCategoriesListNow();
     refreshItemCategoryDropdown();
     refreshCategoryFilterOptions();
+}
+
+/* ============ ONE-TIME CATEGORY CLEANUP ============ */
+/* Run once from admin.html?fixCategories=1 while logged in as admin.
+   Merges mixed-case duplicate category documents into a single lowercase
+   ID and rewrites every menu item's category field to lowercase. */
+
+function maybeRunCategoryCleanup() {
+    if (!window.location.search || !/[?&]fixCategories(?:=1)?(&|$)/.test(window.location.search)) return;
+    whenAdminReady(function () {
+        runCategoryCleanup();
+    });
+}
+
+function chunkBatchOps(ops) {
+    var limit = 450;
+    var i = 0;
+    function next() {
+        if (i >= ops.length) return Promise.resolve();
+        var slice = ops.slice(i, i + limit);
+        i += limit;
+        var b = db.batch();
+        slice.forEach(function (op) {
+            if (op.type === 'delete') b.delete(op.ref);
+            else if (op.type === 'set') b.set(op.ref, op.data);
+            else if (op.type === 'update') b.update(op.ref, op.data);
+        });
+        return b.commit().then(next);
+    }
+    return next();
+}
+
+function runCategoryCleanup() {
+    if (!window.db) {
+        alert('Firebase not ready. Try again.');
+        return;
+    }
+    if (!isAdminAuthenticated()) {
+        alert('Please log in as admin first, then reopen admin.html?fixCategories=1');
+        return;
+    }
+    if (!confirm('Normalize all category IDs to lowercase, merge duplicates, and fix item categories in Firestore?\n\nThis modifies the database. Make a backup first. Continue?')) {
+        return;
+    }
+
+    db.collection('categories').get().then(function (catSnap) {
+        var groups = {};
+        catSnap.forEach(function (doc) {
+            var lower = doc.id.toLowerCase();
+            if (!groups[lower]) groups[lower] = [];
+            groups[lower].push({ id: doc.id, data: doc.data() || {}, ref: doc.ref });
+        });
+
+        var catOps = [];
+        Object.keys(groups).forEach(function (lower) {
+            var variants = groups[lower];
+            var canonical = variants.slice().sort(function (a, b) {
+                var ao = (a.data && a.data.order != null) ? 1 : 0;
+                var bo = (b.data && b.data.order != null) ? 1 : 0;
+                return bo - ao;
+            })[0];
+            var canonicalId = lower;
+            variants.forEach(function (v) {
+                if (v.id !== canonicalId) {
+                    catOps.push({ type: 'delete', ref: v.ref });
+                }
+            });
+            if (canonical.id !== canonicalId) {
+                catOps.push({ type: 'set', ref: db.collection('categories').doc(canonicalId), data: canonical.data });
+            }
+        });
+
+        return chunkBatchOps(catOps).then(function () {
+            return db.collection('menuItems').get();
+        }).then(function (itemSnap) {
+            var itemOps = [];
+            itemSnap.forEach(function (doc) {
+                var data = doc.data() || {};
+                var cat = data.category;
+                if (!cat) return;
+                var lowerCat = cat.toLowerCase();
+                if (lowerCat !== cat) {
+                    itemOps.push({ type: 'update', ref: doc.ref, data: { category: lowerCat } });
+                }
+            });
+            return chunkBatchOps(itemOps);
+        }).then(function () {
+            try { localStorage.removeItem('cachedCategories'); } catch (e) {}
+            try { localStorage.removeItem('cachedMenuCategoryNames'); } catch (e) {}
+            alert('Category cleanup complete. Reloading admin…');
+            window.location.href = 'admin.html';
+        });
+    }).catch(function (e) {
+        alert('Cleanup failed: ' + (e && e.message ? e.message : e));
+    });
 }
 
 /* ============ CASHIER ============ */
