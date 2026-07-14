@@ -1925,13 +1925,22 @@ function loadManageItems() {
     wireItemEvents();
     hydrateItemsUiFromCache();
 
+    var loadTimer = setTimeout(function () {
+        var el = document.getElementById('itemsList');
+        if (el && el.querySelector('.loading')) {
+            el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
+        }
+    }, 15000);
+
     MenuData.loadItems(8000, function (items) {
+        clearTimeout(loadTimer);
         _itemsSnapDocs = items.map(function (d) {
             return { id: d.id, data: function () { return d; } };
         });
         renderItemsList(_itemsSnapDocs);
         loadCategoryFilter();
     }, function (err) {
+        clearTimeout(loadTimer);
         console.error('Error loading items:', err);
         if (hydrateItemsUiFromCache()) return;
         var el = document.getElementById('itemsList');
@@ -2130,8 +2139,10 @@ function loadItemsList() {
          renderItemsList(_itemsSnapDocs);
          loadCategoryFilter();
      } else {
-         var el = document.getElementById('itemsList');
-         if (el) el.innerHTML = '<p>' + S.loading + '</p>';
+         var list = document.getElementById('itemsList');
+         if (list && !list.querySelector('.loading')) {
+             list.innerHTML = '<p>' + S.loading + '</p>';
+         }
      }
 }
 
