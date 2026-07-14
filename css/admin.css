@@ -2997,6 +2997,7 @@ body.light-mode .menu-card-badge {
 
     .admin-table {
         font-size: 0.85rem;
+        min-width: 100%;
     }
 
     .admin-table thead th,

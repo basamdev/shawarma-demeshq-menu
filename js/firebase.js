@@ -126,6 +126,7 @@ if (shouldEnablePersistence) {
                 return db;
             });
         var persistenceSettled = false;
+        var mobileTimeout = isMobileBrowser() ? 8000 : 4000;
         window.dbReady = Promise.race([
             persistencePromise.then(function (db) {
                 persistenceSettled = true;
@@ -137,7 +138,7 @@ if (shouldEnablePersistence) {
                         console.log('Firebase ready — offline cache still loading in background (normal on mobile).');
                     }
                     resolve(db);
-                }, 4000);
+                }, mobileTimeout);
             })
         ]);
     } catch (error) {

@@ -26,6 +26,10 @@
         if (_itemsUnsub) { _itemsUnsub(); _itemsUnsub = null; }
         if (!window.db) { onError(new Error('No DB')); return; }
 
+        // Use longer default timeout for mobile devices
+        var isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        var defaultTimeout = isMobile ? 8000 : 4000;
+
         var timer = setTimeout(function () {
             window.db.collection('menuItems').get({ source: 'server' })
                 .then(function (snap) {
@@ -42,7 +46,7 @@
                         })
                         .catch(onError);
                 });
-        }, timeoutMs || 4000);
+        }, timeoutMs || defaultTimeout);
 
         _itemsUnsub = window.db.collection('menuItems').onSnapshot(
             function (snap) {
@@ -64,6 +68,10 @@
         if (_categoriesUnsub) { _categoriesUnsub(); _categoriesUnsub = null; }
         if (!window.db) { onError(new Error('No DB')); return; }
 
+        // Use longer default timeout for mobile devices
+        var isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        var defaultTimeout = isMobile ? 8000 : 4000;
+
         var timer = setTimeout(function () {
             window.db.collection('categories').orderBy('order', 'asc').get({ source: 'server' })
                 .then(function (snap) {
@@ -84,7 +92,7 @@
                         })
                         .catch(onError);
                 });
-        }, timeoutMs || 4000);
+        }, timeoutMs || defaultTimeout);
 
         _categoriesUnsub = window.db.collection('categories').orderBy('order', 'asc').onSnapshot(
             function (snap) {

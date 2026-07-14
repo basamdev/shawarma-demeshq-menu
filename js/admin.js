@@ -1940,19 +1940,57 @@ function loadManageItems() {
     loadCategoryFilter();
     refreshCategoriesCache();
     wireItemEvents();
-    hydrateItemsUiFromCache();
+    
+    // Show loading state
+    var itemsListEl = document.getElementById('itemsList');
+    if (itemsListEl) {
+        itemsListEl.innerHTML = '<div class="loading" style="text-align:center;padding:20px;color:var(--text-muted);">Loading items...</div>';
+    }
+    
+    // Try to load from cache first for immediate display
+    var hasCachedData = hydrateItemsUiFromCache();
+    if (hasCachedData) {
+        console.log('[admin items] Loaded from cache');
+    }
+
+    // Detect mobile and use longer timeout for slower mobile connections
+    var isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    var itemsTimeout = isMobile ? 20000 : 8000;
+    var safetyTimeout = isMobile ? 30000 : 15000;
 
     var loadTimer = setTimeout(function () {
         if (MenuData.getItems().length === 0) {
             var el = document.getElementById('itemsList');
             if (el) {
-                el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
+                // Try cache one more time before showing error
+                if (!hydrateItemsUiFromCache()) {
+                    // On mobile, try REST API fallback before showing error
+                    if (isMobile && typeof fetchMenuItemsForAdmin === 'function') {
+                        console.log('[admin items] Trying REST API fallback');
+                        fetchMenuItemsForAdmin(12000).then(function(items) {
+                            if (items && items.length > 0) {
+                                _itemsSnapDocs = items.map(function (d) {
+                                    return { id: d.id, data: function () { return d; } };
+                                });
+                                renderItemsList(_itemsSnapDocs);
+                                loadCategoryFilter();
+                            } else {
+                                el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
+                            }
+                        }).catch(function() {
+                            el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
+                        });
+                    } else {
+                        el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
+                    }
+                }
             }
         }
-    }, 15000);
+    }, safetyTimeout);
 
-    MenuData.loadItems(8000, function (items) {
+    MenuData.loadItems(itemsTimeout, function (items) {
         clearTimeout(loadTimer);
+        console.log('[admin items] Loaded from Firebase:', items.length, 'items');
         _itemsSnapDocs = items.map(function (d) {
             return { id: d.id, data: function () { return d; } };
         });
@@ -1960,10 +1998,34 @@ function loadManageItems() {
         loadCategoryFilter();
     }, function (err) {
         clearTimeout(loadTimer);
-        console.error('Error loading items:', err);
-        if (hydrateItemsUiFromCache()) return;
-        var el = document.getElementById('itemsList');
-        if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + err.message + '</p>';
+        console.error('[admin items] Error loading items:', err);
+        // Always try to show cached data on error
+        if (hydrateItemsUiFromCache()) {
+            console.log('[admin items] Showing cached data after error');
+            return;
+        }
+        // On mobile, try REST API fallback
+        if (isMobile && typeof fetchMenuItemsForAdmin === 'function') {
+            console.log('[admin items] Trying REST API fallback after error');
+            fetchMenuItemsForAdmin(12000).then(function(items) {
+                if (items && items.length > 0) {
+                    _itemsSnapDocs = items.map(function (d) {
+                        return { id: d.id, data: function () { return d; } };
+                    });
+                    renderItemsList(_itemsSnapDocs);
+                    loadCategoryFilter();
+                } else {
+                    var el = document.getElementById('itemsList');
+                    if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + err.message + '</p>';
+                }
+            }).catch(function() {
+                var el = document.getElementById('itemsList');
+                if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + err.message + '</p>';
+            });
+        } else {
+            var el = document.getElementById('itemsList');
+            if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + err.message + '</p>';
+        }
     });
 }
 
@@ -3209,15 +3271,37 @@ function loadCategoriesList() {
         applyCategories(MenuData.getCategories());
     }
 
+    // Detect mobile and use longer timeout for slower mobile connections
+    var isMobileCat = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    var catTimeout = isMobileCat ? 20000 : 8000;
+    var catSafetyTimeout = isMobileCat ? 30000 : 15000;
+
     // Safety timeout for slow mobile networks
     var catLoadTimer = setTimeout(function () {
         var el = document.getElementById('categoriesList');
         if (el && el.querySelector('.loading')) {
-            el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
+            // Try to show cached categories before showing error
+            if (!renderCategoriesListNow()) {
+                // On mobile, try REST API fallback before showing error
+                if (isMobileCat && typeof fetchCategoriesForAdmin === 'function') {
+                    console.log('[admin categories] Trying REST API fallback');
+                    fetchCategoriesForAdmin(12000).then(function(categories) {
+                        if (categories && categories.length > 0) {
+                            applyCategories(categories);
+                        } else {
+                            el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
+                        }
+                    }).catch(function() {
+                        el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
+                    });
+                } else {
+                    el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
+                }
+            }
         }
-    }, 15000);
+    }, catSafetyTimeout);
 
-    MenuData.loadCategories(8000, function (categories) {
+    MenuData.loadCategories(catTimeout, function (categories) {
         clearTimeout(catLoadTimer);
         applyCategories(categories);
     }, function (err) {
@@ -3225,7 +3309,21 @@ function loadCategoriesList() {
         if (isFirestoreApiDisabledError(err)) {
             showFirestoreApiDisabledAlert();
         }
-        renderCategoriesListNow();
+        // On mobile, try REST API fallback
+        if (isMobileCat && typeof fetchCategoriesForAdmin === 'function') {
+            console.log('[admin categories] Trying REST API fallback after error');
+            fetchCategoriesForAdmin(12000).then(function(categories) {
+                if (categories && categories.length > 0) {
+                    applyCategories(categories);
+                } else {
+                    renderCategoriesListNow();
+                }
+            }).catch(function() {
+                renderCategoriesListNow();
+            });
+        } else {
+            renderCategoriesListNow();
+        }
     });
 
     // Derive menu-only category names from the shared items cache (no extra read
