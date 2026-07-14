@@ -1867,20 +1867,10 @@ function loadManageItems() {
             '<h2>' + S.manageItems + '</h2>' +
             '<button class="btn-primary" id="addItemBtn" style="margin-bottom:16px;">' + S.addNewItem + '</button>' +
             '<div class="form-group"><input type="text" id="itemSearch" placeholder="' + S.searchItems + '"></div>' +
-            '<div class="form-group admin-items-cat-filter">' +
-                '<div class="admin-cat-picker" id="itemsCatPicker">' +
-                    '<button type="button" class="admin-cat-picker-btn" id="itemsCatPickerBtn" aria-expanded="false">' +
-                        '<span class="admin-cat-picker-label" id="itemsCatPickerLabel">' + escapeHtmlText(S.allCategories) + '</span>' +
-                        '<span class="admin-cat-picker-chevron" aria-hidden="true">▾</span>' +
-                    '</button>' +
-                    '<div class="admin-cat-picker-panel" id="itemsCatPickerPanel" hidden>' +
-                        '<div class="admin-menu-category-bar">' +
-                            '<div class="admin-category-scroll" id="itemsCategoryScroll"></div>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>' +
-                '<input type="hidden" id="categoryFilter" value="all">' +
+            '<div class="admin-menu-category-bar">' +
+                '<div class="admin-category-scroll" id="itemsCategoryScroll"></div>' +
             '</div>' +
+            '<input type="hidden" id="categoryFilter" value="all">' +
             '<div id="itemsList"><div class="loading">Loading...</div></div>' +
         '</div>' +
         '<div id="itemModal" class="modal-overlay">' +
@@ -1953,10 +1943,10 @@ function loadManageItems() {
         console.log('[admin items] Loaded from cache');
     }
 
-    // Detect mobile and use longer timeout for slower mobile connections
+    // Detect mobile and use slightly longer timeout for slower mobile connections
     var isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    var itemsTimeout = isMobile ? 20000 : 8000;
-    var safetyTimeout = isMobile ? 30000 : 15000;
+    var itemsTimeout = isMobile ? 10000 : 5000;
+    var safetyTimeout = isMobile ? 12000 : 8000;
 
     var loadTimer = setTimeout(function () {
         if (MenuData.getItems().length === 0) {
@@ -2356,9 +2346,7 @@ function selectItemsCategory(catId) {
     itemsActiveCategory = catId || 'all';
     var cf = document.getElementById('categoryFilter');
     if (cf) cf.value = itemsActiveCategory;
-    updateItemsCatPickerLabel();
     renderItemsCategoryBar();
-    closeItemsCatPicker();
     var search = document.getElementById('itemSearch');
     applyItemFilter(search ? search.value : '', itemsActiveCategory);
 }
@@ -2393,7 +2381,6 @@ function renderItemsCategoryBar() {
             selectItemsCategory(this.getAttribute('data-cat') || 'all');
         });
     });
-    updateItemsCatPickerLabel();
 }
 
 function refreshCategoryFilterOptions() {
@@ -2590,24 +2577,6 @@ function wireItemEvents() {
     if (search) {
         search.addEventListener('input', function () {
             applyItemFilter(search.value, itemsActiveCategory);
-        });
-    }
-
-    var pickerBtn = document.getElementById('itemsCatPickerBtn');
-    if (pickerBtn) {
-        pickerBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            var panel = document.getElementById('itemsCatPickerPanel');
-            if (panel && panel.hidden) openItemsCatPicker();
-            else closeItemsCatPicker();
-        });
-    }
-    if (!window._itemsCatPickerDocClick) {
-        window._itemsCatPickerDocClick = true;
-        document.addEventListener('click', function (e) {
-            var root = document.getElementById('itemsCatPicker');
-            if (!root || root.contains(e.target)) return;
-            closeItemsCatPicker();
         });
     }
 
@@ -3271,10 +3240,10 @@ function loadCategoriesList() {
         applyCategories(MenuData.getCategories());
     }
 
-    // Detect mobile and use longer timeout for slower mobile connections
+    // Detect mobile and use slightly longer timeout for slower mobile connections
     var isMobileCat = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    var catTimeout = isMobileCat ? 20000 : 8000;
-    var catSafetyTimeout = isMobileCat ? 30000 : 15000;
+    var catTimeout = isMobileCat ? 10000 : 5000;
+    var catSafetyTimeout = isMobileCat ? 12000 : 8000;
 
     // Safety timeout for slow mobile networks
     var catLoadTimer = setTimeout(function () {
