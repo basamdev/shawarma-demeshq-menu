@@ -1504,29 +1504,42 @@ function renderCategories(items, options) {
      const strings = i18n[lang] || i18n.en;
      const allBtn = isEmenuPage() ? buildAllCategoryButton(strings.allItems) : '';
 
-     // Load categories from Firebase or cache
-     const cachedCats = localStorage.getItem('cachedCategories');
-     let categories = [];
-     if (cachedCats) {
-         try {
-             categories = JSON.parse(cachedCats);
-         } catch (e) {
-             console.error('Error parsing cached categories:', e);
-         }
-     }
+      // Load categories from Firebase or cache
+      const cachedCats = localStorage.getItem('cachedCategories');
+      let categories = [];
+      if (cachedCats) {
+          try {
+              categories = JSON.parse(cachedCats);
+          } catch (e) {
+              console.error('Error parsing cached categories:', e);
+          }
+      }
 
-       // Merge item categories into the menu category list so any category used by items
-       // is shown even if there is no matching categories document or the IDs differ.
-        const existingIds = new Set(categories.map(function(c){ return c.id ? String(c.id).toLowerCase() : ''; }));
-        items.forEach(item => {
-            const cat = item.category;
-             if (!cat || cat === 'Water' || existingIds.has(String(cat).toLowerCase())) return;
-            existingIds.add(cat);
-            categories.push({
-                id: cat,
-                data: { name_ku: cat, name_ar: cat, name_en: cat, image: '' }
-            });
-        });
+      // Deduplicate real category docs by lowercase ID before anything else.
+      var seenCat = {};
+      categories = categories.filter(function (c) {
+          if (!c || !c.id) return false;
+          var lower = String(c.id).toLowerCase();
+          if (seenCat[lower]) return false;
+          seenCat[lower] = true;
+          return true;
+      });
+
+      // Merge item categories into the menu category list so any category used by items
+      // is shown even if there is no matching categories document or the IDs differ.
+      var seenItem = {};
+      categories.forEach(function (c) {
+          if (c && c.id) seenItem[String(c.id).toLowerCase()] = true;
+      });
+      items.forEach(function (item) {
+          var cat = item.category;
+          if (!cat || cat === 'Water' || seenItem[String(cat).toLowerCase()]) return;
+          seenItem[String(cat).toLowerCase()] = true;
+          categories.push({
+              id: cat,
+              data: { name_ku: cat, name_ar: cat, name_en: cat, image: '' }
+          });
+      });
 
         categories.sort(function (a, b) {
             var ao = (a.data && a.data.order) != null ? a.data.order : null;
