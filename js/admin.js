@@ -1283,8 +1283,11 @@ function adminGetWithTimeout(queryOrRef, ms) {
     return queryOrRef.get({ source: 'cache' }).then(function (snap) {
         cacheSnap = snap;
         if (snap && !snap.empty) {
-            raceServer().catch(function () {});
-            return snap;
+            return raceServer().then(function (serverSnap) {
+                return serverSnap;
+            }).catch(function () {
+                return snap;
+            });
         }
         return raceServer();
     }).catch(function (err) {
