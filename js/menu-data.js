@@ -38,9 +38,12 @@
 
         _itemsUnsub = window.db.collection('menuItems').onSnapshot(
             function (snap) {
-                clearTimeout(timer);
+                var docs = collectItemDocs(snap);
+                if (docs.length > 0) {
+                    clearTimeout(timer);
+                }
                 _items.length = 0;
-                _items.push.apply(_items, collectItemDocs(snap));
+                _items.push.apply(_items, docs);
                 onUpdate(_items.slice());
             },
             function (err) {
@@ -68,7 +71,9 @@
 
         _categoriesUnsub = window.db.collection('categories').orderBy('order', 'asc').onSnapshot(
             function (snap) {
-                clearTimeout(timer);
+                if (snap.size > 0) {
+                    clearTimeout(timer);
+                }
                 _categories.length = 0;
                 snap.forEach(function (doc) {
                     _categories.push({ id: doc.id, data: doc.data() });
