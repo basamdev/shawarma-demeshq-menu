@@ -386,8 +386,6 @@ function warmAdminOfflineCache(done) {
     });
 }
 
-var ADMIN_VERSION = 'v102';
-
 function getDashboardMonth() {
     var sel = document.getElementById('dashboardMonthSelect');
     return sel ? parseInt(sel.value, 10) : new Date().getMonth();
@@ -1833,7 +1831,7 @@ function loadManageItems() {
     var adminContent = document.getElementById('adminContent');
     adminContent.innerHTML =
         '<div class="card">' +
-            '<h2>' + S.manageItems + ' <small style="opacity:0.45;font-size:0.75rem;font-weight:400">' + ADMIN_VERSION + '</small></h2>' +
+            '<h2>' + S.manageItems + '</h2>' +
             '<button class="btn-primary" id="addItemBtn" style="margin-bottom:16px;">' + S.addNewItem + '</button>' +
             '<div class="form-group"><input type="text" id="itemSearch" placeholder="' + S.searchItems + '"></div>' +
             '<div class="form-group admin-items-cat-filter">' +

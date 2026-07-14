@@ -964,8 +964,6 @@ function firestoreGetWithTimeout(ref, ms) {
     ]);
 }
 
-var APP_VERSION = 'v91';
-
 function isFirestoreApiDisabledError(err) {
     if (!err || !err.message) return false;
     var m = err.message;
@@ -1239,8 +1237,7 @@ async function loadMenuItems() {
 
     const hadCache = showCachedMenuIfAvailable();
     if (!hadCache) {
-        container.innerHTML = '<div class="loading-menu">' + strings.loadingMenu +
-            '<br><small style="opacity:0.45;font-size:0.75rem;margin-top:6px;display:block">' + APP_VERSION + '</small></div>';
+        container.innerHTML = '<div class="loading-menu">' + strings.loadingMenu + '</div>';
     }
 
     if (USE_LOCAL_API) {
