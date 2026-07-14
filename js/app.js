@@ -1272,29 +1272,15 @@ async function loadMenuItems() {
         return;
     }
 
-    if (loadMenuItems._loadTimer) clearTimeout(loadMenuItems._loadTimer);
-    loadMenuItems._loadTimer = setTimeout(function () {
-        if (menuStillLoading()) {
-            fetchMenuViaRest(12000).then(function (items) {
-                applyMenuItemsUpdate(items, { force: true });
-            }).catch(function () {
-                fetchMenuItemsFallback(strings, 'timeout');
-            });
-        }
-    }, 4000);
-
-    // REST fetch runs immediately — bypasses Firestore SDK when it hangs on mobile hosts.
-    fetchMenuViaRest(10000).then(function (items) {
+    // Optimized: MenuData handles onSnapshot + get() fallback in one place.
+    MenuData.loadItems(4000, function (items) {
         if (loadMenuItems._loadTimer) {
             clearTimeout(loadMenuItems._loadTimer);
             loadMenuItems._loadTimer = null;
         }
         applyMenuItemsUpdate(items, { force: true });
-    }).catch(function (err) {
-        console.warn('[menu] REST load failed:', err.message);
-        if (isFirestoreApiDisabledError(err)) {
-            showFirestoreApiDisabledAlert();
-        }
+    }, function (err) {
+        console.warn('[menu] MenuData load failed:', err.message);
         if (!hadCache && !_menuUiReady) {
             var container = document.getElementById('menuGrid');
             if (container) {
@@ -1315,55 +1301,18 @@ async function loadMenuItems() {
         }
     });
 
-    try {
-        await waitForFirebaseDb(8000);
+    MenuData.loadCategories(4000, function (categories) {
+        safeSetItem('cachedCategories', JSON.stringify(categories));
+        var sig = categories.map(function(c) { return c.id; }).join('|');
+        safeSetItem('cachedCategoriesSig', sig);
+        if (cachedMenuItems && cachedMenuItems.length > 0) {
+            renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
+        }
+    }, function (err) {
+        console.warn('[menu] MenuData categories error:', err.message);
+    });
 
-        // Do not block menu on categories — load in background.
-        loadCategoriesFromFirebase().then(function (categoriesChanged) {
-            if (categoriesChanged && cachedMenuItems.length > 0) {
-                renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
-            }
-        }).catch(function () {});
-
-        // Primary path: one-shot fetch (works when onSnapshot hangs on mobile hosts).
-        fetchMenuItemsFallback(strings, 'initial-get');
-
-        if (loadMenuItems._unsubscribe) loadMenuItems._unsubscribe();
-        loadMenuItems._unsubscribe = window.db.collection('menuItems').onSnapshot(
-            liveSnap => {
-                if (loadMenuItems._loadTimer) {
-                    clearTimeout(loadMenuItems._loadTimer);
-                    loadMenuItems._loadTimer = null;
-                }
-                applyMenuItemsUpdate(parseMenuItemsFromSnapshot(liveSnap));
-            },
-            err => {
-                console.warn('[realtime] error:', err.message);
-                handleMenuLoadFailure(err, strings);
-            }
-        );
-
-        if (window._categoriesUnsubscribe) window._categoriesUnsubscribe();
-        window._categoriesUnsubscribe = window.db.collection('categories').orderBy('order', 'asc').onSnapshot(
-            snap => {
-                const cats = [];
-                snap.forEach(doc => cats.push({ id: doc.id, data: doc.data() }));
-                safeSetItem('cachedCategories', JSON.stringify(cats));
-                const sig = cats.map(c => c.id).join('|');
-                const prev = localStorage.getItem('cachedCategoriesSig') || '';
-                safeSetItem('cachedCategoriesSig', sig);
-                if (cachedMenuItems && cachedMenuItems.length > 0) {
-                    renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
-                }
-            },
-            err => console.warn('[realtime categories] error:', err.message)
-        );
-    } catch (error) {
-        console.error('Error loading menu:', error);
-        handleMenuLoadFailure(error, strings, hadCache);
-    } finally {
-        loadMenuItems._inProgress = false;
-    }
+    loadMenuItems._inProgress = false;
 }
 
 function handleMenuLoadFailure(error, strings, hadCache) {
@@ -1373,7 +1322,6 @@ function handleMenuLoadFailure(error, strings, hadCache) {
         showFirestoreApiDisabledAlert();
     }
     showMenuLoadError(strings, error);
-    fetchMenuItemsFallback(strings, 'snapshot-failed');
 }
 
 function showMenuLoadError(strings, error) {
@@ -1481,18 +1429,10 @@ function buildAllCategoryButton(label) {
 }
 
 function filterItemsByCategory(items, category) {
-    if (category === ALL_CATEGORY_ID) return items;
+    if (category === ALL_CATEGORY_ID) return items || MenuData.getItems();
     var catLower = String(category).toLowerCase();
-    var cachedCats = localStorage.getItem('cachedCategories');
-    if (cachedCats) {
-        try {
-            var categories = JSON.parse(cachedCats);
-            if (categories.some(function (c) { return c.id && String(c.id).toLowerCase() === catLower; })) {
-                return items.filter(function (i) { return i.category && String(i.category).toLowerCase() === catLower; });
-            }
-        } catch (e) {}
-    }
-    return items.filter(function (i) { return i.category && String(i.category).toLowerCase() === catLower; });
+    var source = items && items.length ? items : MenuData.getItems();
+    return source.filter(function (i) { return i.category && String(i.category).toLowerCase() === catLower; });
 }
 
 function renderCategories(items, options) {
