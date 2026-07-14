@@ -3151,68 +3151,47 @@ function loadCategoriesList() {
         return;
     }
 
-    adminGetWithTimeout(db.collection('categories').orderBy('order', 'asc'), 8000).then(function (snap) {
-        var fromServer = [];
-        snap.forEach(function (doc) {
-            fromServer.push({ id: doc.id, data: doc.data() });
-        });
-        var merged = mergeCategoryLists(fromServer, readCachedCategories());
+    // Load categories via the shared MenuData layer (onSnapshot with a get()
+    // timeout fallback) — the same reliable path menu.html uses. This fixes the
+    // infinite "Loading..." on mobile and keeps the list live-updating.
+    function applyCategories(categories) {
+        var merged = mergeCategoryLists(categories, readCachedCategories());
         safeSetItem('cachedCategories', JSON.stringify(merged));
         var have = {};
         merged.forEach(function (c) { have[c.id] = true; });
         renderCategoriesTable(mergeMenuCategories(merged, have));
-    }).catch(function (err) {
+    }
+
+    if (MenuData.getCategories().length) {
+        applyCategories(MenuData.getCategories());
+    }
+    MenuData.loadCategories(8000, function (categories) {
+        applyCategories(categories);
+    }, function (err) {
         if (isFirestoreApiDisabledError(err)) {
             showFirestoreApiDisabledAlert();
         }
         renderCategoriesListNow();
     });
 
-    if (navigator.onLine) {
-        fetchCategoriesForAdmin(12000).then(function (cats) {
-            if (!cats || !cats.length) return;
-            var merged = mergeCategoryLists(cats, readCachedCategories());
-            safeSetItem('cachedCategories', JSON.stringify(merged));
-            renderCategoriesListNow();
-        }).catch(function (e) {
-            console.warn('[admin categories] REST fallback:', e.message || e);
-        });
-    }
-
-    adminGetWithTimeout(db.collection('menuItems'), 8000).then(function (snap) {
+    // Derive menu-only category names from the shared items cache (no extra read
+    // when items are already loaded, e.g. after visiting Manage Items).
+    function applyMenuNamesFromItems(items) {
         var names = {};
-        snap.forEach(function (d) { var c = (d.data() || {}).category; if (c) names[c] = true; });
+        items.forEach(function (it) {
+            var c = it && it.category;
+            if (c) names[c] = true;
+        });
         localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(names)));
         renderCategoriesListNow();
-    }).catch(function () {});
-
-    stopCategoriesListener();
-    categoriesUnsubscribe = db.collection('categories').orderBy('order', 'asc').onSnapshot(function (snap) {
-        if (snap.empty) {
-            if (isFirestoreCacheEmptySnap(snap)) {
-                renderCategoriesListNow();
-                return;
-            }
-            var merged = mergeCategoryLists([], readCachedCategories());
-            safeSetItem('cachedCategories', JSON.stringify(merged));
-            var haveEmpty = {};
-            merged.forEach(function (c) { haveEmpty[c.id] = true; });
-            renderCategoriesTable(mergeMenuCategories(merged, haveEmpty));
-            return;
-        }
-        var fromServer = [];
-        snap.forEach(function (doc) {
-            fromServer.push({ id: doc.id, data: doc.data() });
-        });
-        var merged = mergeCategoryLists(fromServer, readCachedCategories());
-        safeSetItem('cachedCategories', JSON.stringify(merged));
-        var have = {};
-        merged.forEach(function (c) { have[c.id] = true; });
-        renderCategoriesTable(mergeMenuCategories(merged, have));
-    }, function (e) {
-        console.error('Categories listener error, falling back to cache:', e);
-        renderCategoriesListNow();
-    });
+    }
+    if (MenuData.getItems().length) {
+        applyMenuNamesFromItems(MenuData.getItems());
+    } else {
+        MenuData.loadItems(8000, function (items) {
+            applyMenuNamesFromItems(items);
+        }, function () {});
+    }
 }
 
 function wireCategoryEvents() {
@@ -4944,7 +4923,8 @@ storeSetting('cafeLocationLabel', cafeLocationLabel);
                   cafeLocationLabel: 'cafeLocationLabel',
                   cafeInstagram: 'cafeInstagram',
                   cafeTiktok: 'cafeTiktok',
-                  cafeSnapchat: 'cafeSnapchat'
+                  cafeSnapchat: 'cafeSnapchat',
+                  cafeFacebook: 'cafeFacebook'
               };
               Object.keys(fields).forEach(function (storageKey) {
                   var input = document.getElementById(fields[storageKey]);

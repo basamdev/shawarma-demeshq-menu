@@ -2984,7 +2984,8 @@ var CAFE_SETTING_KEYS = [
     'cafeCloseTime',
     'cafeInstagram',
     'cafeTiktok',
-    'cafeSnapchat'
+    'cafeSnapchat',
+    'cafeFacebook'
 ];
 
 function toLocaleDigits(value, lang) {
