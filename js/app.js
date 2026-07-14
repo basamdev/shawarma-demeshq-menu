@@ -868,7 +868,7 @@ const i18n = {
 let cachedMenuItems = [];
 let _activeCategory = null;
 const ALL_CATEGORY_ID = '__all__';
-const PREFERRED_CATEGORY_ORDER = ['Chicken Shawarma', 'Pizza', 'Western', 'Bread', 'Appetizer', 'Salad', 'Drinks', 'Coffee', 'Tea', 'Cold Drinks', 'Dessert', 'Shisha', 'Special Drinks'];
+const PREFERRED_CATEGORY_ORDER = ['Chicken Shawarma', 'Western', 'Bread', 'Appetizer', 'Salad', 'Drinks', 'Coffee', 'Tea', 'Cold Drinks', 'Dessert', 'Shisha', 'Special Drinks'];
 
 // Resolve a category's preferred ordering index, matching by id OR by any of its
 // localized name fields (categories created with an auto-generated id, e.g.

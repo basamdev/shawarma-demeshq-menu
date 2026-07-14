@@ -1462,6 +1462,7 @@ function initSidebar() {
 
 function initAdminPanel() {
     maybeRunCategoryCleanup();
+    maybeRunCategoryRename();
     var navButtons = document.querySelectorAll('.admin-nav-btn');
     navButtons.forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -3560,6 +3561,62 @@ function runCategoryCleanup() {
         });
     }).catch(function (e) {
         alert('Cleanup failed: ' + (e && e.message ? e.message : e));
+    });
+}
+
+/* ============ ONE-TIME CATEGORY RENAME ============ */
+/* Run once from admin.html?renameCategory=old:new while logged in as admin.
+   Rewrites all menu items from the old category name to the new one,
+   deletes the old category doc(s), clears caches, and reloads. */
+
+function maybeRunCategoryRename() {
+    if (!window.location.search) return;
+    var m = window.location.search.match(/[?&]renameCategory=([^:]+):([^&]+)/);
+    if (!m) return;
+    var oldName = m[1];
+    var newName = m[2].toLowerCase().trim();
+    if (!oldName || !newName || oldName.toLowerCase() === newName) return;
+    whenAdminReady(function () {
+        runCategoryRename(oldName, newName);
+    });
+}
+
+function runCategoryRename(oldName, newName) {
+    if (!window.db) {
+        alert('Firebase not ready. Try again.');
+        return;
+    }
+    if (!isAdminAuthenticated()) {
+        alert('Please log in as admin first, then reopen:\nadmin.html?renameCategory=' + encodeURIComponent(oldName + ':' + newName));
+        return;
+    }
+    if (!confirm('Rename category "' + oldName + '" to "' + newName + '"?\n\nThis updates all menu items in Firestore and removes the old category doc. Make a backup first. Continue?')) {
+        return;
+    }
+
+    var oldLower = oldName.toLowerCase();
+    db.collection('menuItems').get().then(function (itemSnap) {
+        var itemOps = [];
+        itemSnap.forEach(function (doc) {
+            var data = doc.data() || {};
+            var cat = data.category;
+            if (!cat || cat.toLowerCase() !== oldLower) return;
+            itemOps.push({ type: 'update', ref: doc.ref, data: { category: newName } });
+        });
+        return chunkBatchOps(itemOps).then(function () {
+            return Promise.all([
+                db.collection('categories').doc(oldLower).delete(),
+                oldLower !== oldName ? db.collection('categories').doc(oldName).delete() : Promise.resolve()
+            ]);
+        });
+    }).then(function () {
+        try { localStorage.removeItem('cachedCategories'); } catch (e) {}
+        try { localStorage.removeItem('cachedMenuCategoryNames'); } catch (e) {}
+        try { localStorage.removeItem('cachedMenuItems'); } catch (e) {}
+        alert('Category renamed from "' + oldName + '" to "' + newName + '". Reloading…');
+        window.location.href = 'admin.html';
+    }).catch(function (e) {
+        alert('Rename failed: ' + (e && e.message ? e.message : e));
     });
 }
 
