@@ -1943,7 +1943,11 @@ function filterItemDocs(docs, searchTerm, cat) {
         });
     }
     if (cat && cat !== 'all') {
-        filtered = filtered.filter(function (d) { return d.data().category === cat; });
+        var catLower = cat.toLowerCase();
+        filtered = filtered.filter(function (d) {
+            var dc = d.data().category;
+            return dc && dc.toLowerCase() === catLower;
+        });
     }
     return filtered;
 }
@@ -2549,7 +2553,11 @@ function applyItemFilter(searchTerm, cat) {
             });
         }
         if (cat && cat !== 'all') {
-            docs = docs.filter(function (d) { return d.data().category === cat; });
+            var catLower = cat.toLowerCase();
+            docs = docs.filter(function (d) {
+                var dc = d.data().category;
+                return dc && dc.toLowerCase() === catLower;
+            });
         }
         renderItemsList(docs);
     });
