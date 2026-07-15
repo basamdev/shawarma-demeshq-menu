@@ -2053,10 +2053,12 @@ function filterItemDocs(docs, searchTerm, cat) {
         });
     }
     if (cat && cat !== 'all') {
-        var catLower = cat.toLowerCase();
+        var catLower = cat.toLowerCase().trim();
         filtered = filtered.filter(function (d) {
             var dc = d.data().category;
-            return dc && dc.toLowerCase() === catLower;
+            if (!dc) return false;
+            var dcLower = String(dc).toLowerCase().trim();
+            return dcLower === catLower || dcLower.indexOf(catLower) !== -1;
         });
     }
     return filtered;
@@ -2472,11 +2474,32 @@ function renderItemsList(items) {
         html += '</tbody></table></div>';
         list.innerHTML = html;
 
-        list.querySelectorAll('.edit-item').forEach(function (btn) {
-            btn.addEventListener('click', function () { editItem(this.getAttribute('data-id')); });
-        });
-        list.querySelectorAll('.delete-item').forEach(function (btn) {
-            btn.addEventListener('click', function () { deleteItem(this.getAttribute('data-id')); });
+        // Use event delegation for better reliability
+        list.addEventListener('click', function(e) {
+            var editBtn = e.target.closest('.edit-item');
+            if (editBtn) {
+                e.preventDefault();
+                var itemId = editBtn.getAttribute('data-id');
+                console.log('[admin items] Edit button clicked for:', itemId);
+                if (typeof editItem === 'function') {
+                    editItem(itemId);
+                } else {
+                    console.error('[admin items] editItem function not available');
+                }
+                return;
+            }
+            var deleteBtn = e.target.closest('.delete-item');
+            if (deleteBtn) {
+                e.preventDefault();
+                var itemId = deleteBtn.getAttribute('data-id');
+                console.log('[admin items] Delete button clicked for:', itemId);
+                if (typeof deleteItem === 'function') {
+                    deleteItem(itemId);
+                } else {
+                    console.error('[admin items] deleteItem function not available');
+                }
+                return;
+            }
         });
     }
 
