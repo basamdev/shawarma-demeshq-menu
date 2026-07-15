@@ -2382,10 +2382,27 @@ function renderItemsCategoryBar() {
     }
 
     scroll.innerHTML = html;
-    scroll.querySelectorAll('.category-btn').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            selectItemsCategory(this.getAttribute('data-cat') || 'all');
-        });
+    
+    // Use event delegation for category buttons with touch support
+    function handleCategoryClick(e) {
+        var catBtn = e.target.closest('.category-btn');
+        if (catBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            var catId = catBtn.getAttribute('data-cat') || 'all';
+            console.log('[admin items] Category button clicked:', catId);
+            selectItemsCategory(catId);
+        }
+    }
+    
+    scroll.addEventListener('click', handleCategoryClick);
+    scroll.addEventListener('touchend', function(e) {
+        var touch = e.changedTouches[0];
+        var target = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (target) {
+            var syntheticEvent = { target: target, preventDefault: function() {}, stopPropagation: function() {} };
+            handleCategoryClick(syntheticEvent);
+        }
     });
 }
 
@@ -2474,11 +2491,12 @@ function renderItemsList(items) {
         html += '</tbody></table></div>';
         list.innerHTML = html;
 
-        // Use event delegation for better reliability
-        list.addEventListener('click', function(e) {
+        // Use event delegation for better reliability (supports both click and touch)
+        function handleButtonClick(e) {
             var editBtn = e.target.closest('.edit-item');
             if (editBtn) {
                 e.preventDefault();
+                e.stopPropagation();
                 var itemId = editBtn.getAttribute('data-id');
                 console.log('[admin items] Edit button clicked for:', itemId);
                 if (typeof editItem === 'function') {
@@ -2491,6 +2509,7 @@ function renderItemsList(items) {
             var deleteBtn = e.target.closest('.delete-item');
             if (deleteBtn) {
                 e.preventDefault();
+                e.stopPropagation();
                 var itemId = deleteBtn.getAttribute('data-id');
                 console.log('[admin items] Delete button clicked for:', itemId);
                 if (typeof deleteItem === 'function') {
@@ -2499,6 +2518,17 @@ function renderItemsList(items) {
                     console.error('[admin items] deleteItem function not available');
                 }
                 return;
+            }
+        }
+
+        list.addEventListener('click', handleButtonClick);
+        list.addEventListener('touchend', function(e) {
+            // Handle touch events for mobile
+            var touch = e.changedTouches[0];
+            var target = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (target) {
+                var syntheticEvent = { target: target, preventDefault: function() {}, stopPropagation: function() {} };
+                handleButtonClick(syntheticEvent);
             }
         });
     }
