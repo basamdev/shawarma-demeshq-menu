@@ -2284,7 +2284,9 @@ function getAllItemCategoryIdsForFilter() {
     try {
         JSON.parse(localStorage.getItem('cachedMenuCategoryNames') || '[]').forEach(addName);
     } catch (e) {}
-    return Object.keys(names).sort();
+    var sorted = Object.keys(names).sort();
+    console.log('[admin items] Available categories for filter:', sorted);
+    return sorted;
 }
 
 function buildCategorySelectOptions(categories, itemCategoryIds, lang, S, allOption) {
@@ -2349,12 +2351,18 @@ function updateItemsCatPickerLabel() {
 }
 
 function selectItemsCategory(catId) {
+    console.log('[admin items] selectItemsCategory called with:', catId);
     itemsActiveCategory = catId || 'all';
     var cf = document.getElementById('categoryFilter');
-    if (cf) cf.value = itemsActiveCategory;
+    if (cf) {
+        cf.value = itemsActiveCategory;
+        console.log('[admin items] Category filter set to:', cf.value);
+    }
     renderItemsCategoryBar();
     var search = document.getElementById('itemSearch');
-    applyItemFilter(search ? search.value : '', itemsActiveCategory);
+    var searchTerm = search ? search.value : '';
+    console.log('[admin items] Applying filter with search:', searchTerm, 'category:', itemsActiveCategory);
+    applyItemFilter(searchTerm, itemsActiveCategory);
 }
 
 function renderItemsCategoryBar() {
@@ -2674,14 +2682,19 @@ function wireItemEvents() {
 
 function applyItemFilter(searchTerm, cat) {
     cat = cat || itemsActiveCategory || 'all';
+    console.log('[admin items] applyItemFilter - searchTerm:', searchTerm, 'cat:', cat, 'itemsActiveCategory:', itemsActiveCategory);
     var items = MenuData.getItems();
+    console.log('[admin items] Total items from MenuData:', items.length);
     if (items.length > 0) {
         _itemsSnapDocs = items.map(function (d) {
             return { id: d.id, data: function () { return d; } };
         });
-        renderItemsList(filterItemDocs(_itemsSnapDocs, searchTerm, cat));
+        var filtered = filterItemDocs(_itemsSnapDocs, searchTerm, cat);
+        console.log('[admin items] Filtered items count:', filtered.length);
+        renderItemsList(filtered);
         return;
     }
+    console.log('[admin items] No items available, showing empty list');
     renderItemsList([]);
 }
 

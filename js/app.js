@@ -868,7 +868,13 @@ const i18n = {
 let cachedMenuItems = [];
 let _activeCategory = null;
 const ALL_CATEGORY_ID = '__all__';
-const PREFERRED_CATEGORY_ORDER = ['Chicken Shawarma', 'Western', 'Bread', 'Appetizer', 'Salad', 'Drinks', 'Coffee', 'Tea', 'Cold Drinks', 'Dessert', 'Shisha', 'Special Drinks'];
+
+// Language-specific category orders
+const PREFERRED_CATEGORY_ORDER = {
+    en: ['Chicken Shawarma', 'Western', 'Bread', 'Appetizer', 'Salad', 'Drinks', 'Coffee', 'Tea', 'Cold Drinks', 'Dessert', 'Shisha', 'Special Drinks'],
+    ar: ['شاورما دجاج', 'غربي', 'خبز', 'مقبلات', 'سلطات', 'مشروبات', 'قهوة', 'شاي', 'مشروبات باردة', 'حلويات', 'شيشة', 'مشروبات خاصة'],
+    ku: ['Şawirma Mirîşk', 'Rojhilatî', 'Nan', 'Pêşxwar', 'Salata', 'Vexwarin', 'Qehwe', 'Çay', 'Vexwarinên Sar', 'Şîrînî', 'Nargîl', 'Vexwarinên Taybet']
+};
 
 // Resolve a category's preferred ordering index, matching by id OR by any of its
 // localized name fields (categories created with an auto-generated id, e.g.
@@ -883,8 +889,12 @@ function categoryPreferredIndex(cat) {
             if (n) names.push(String(n).trim());
         });
     }
-    for (var i = 0; i < PREFERRED_CATEGORY_ORDER.length; i++) {
-        var p = PREFERRED_CATEGORY_ORDER[i].trim();
+    
+    var lang = localStorage.getItem('selectedLang') || 'en';
+    var order = PREFERRED_CATEGORY_ORDER[lang] || PREFERRED_CATEGORY_ORDER.en;
+    
+    for (var i = 0; i < order.length; i++) {
+        var p = order[i].trim();
         if (id === p) return i;
         if (names.indexOf(p) !== -1) return i;
     }
@@ -1508,7 +1518,8 @@ function renderCategories(items, options) {
 
        // If no Firebase categories, use fallback
        if (categories.length === 0) {
-            const categoryOrder = PREFERRED_CATEGORY_ORDER.slice();
+            const lang = localStorage.getItem('selectedLang') || 'en';
+            const categoryOrder = (PREFERRED_CATEGORY_ORDER[lang] || PREFERRED_CATEGORY_ORDER.en).slice();
             const foundCategories = items.length > 0 ? new Set(items.map(i => i.category).filter(Boolean).filter(c => c !== 'Water')) : new Set(categoryOrder);
             const ordered = categoryOrder.filter(function(c){ 
                 return Array.from(foundCategories).indexOf(c) !== -1;
