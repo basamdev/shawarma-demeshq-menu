@@ -2391,7 +2391,7 @@ function renderItemsCategoryBar() {
 
     scroll.innerHTML = html;
     
-    // Use event delegation for category buttons with touch support
+    // Use pointer events for better Safari compatibility (unifies mouse, touch, pen)
     function handleCategoryClick(e) {
         var catBtn = e.target.closest('.category-btn');
         if (catBtn) {
@@ -2403,15 +2403,8 @@ function renderItemsCategoryBar() {
         }
     }
     
-    scroll.addEventListener('click', handleCategoryClick);
-    scroll.addEventListener('touchend', function(e) {
-        var touch = e.changedTouches[0];
-        var target = document.elementFromPoint(touch.clientX, touch.clientY);
-        if (target) {
-            var syntheticEvent = { target: target, preventDefault: function() {}, stopPropagation: function() {} };
-            handleCategoryClick(syntheticEvent);
-        }
-    });
+    // Use pointer events for better cross-browser compatibility (especially Safari)
+    scroll.addEventListener('pointerdown', handleCategoryClick);
 }
 
 function refreshCategoryFilterOptions() {
@@ -2499,7 +2492,7 @@ function renderItemsList(items) {
         html += '</tbody></table></div>';
         list.innerHTML = html;
 
-        // Use event delegation for better reliability (supports both click and touch)
+        // Use pointer events for better Safari compatibility (unifies mouse, touch, pen)
         function handleButtonClick(e) {
             var editBtn = e.target.closest('.edit-item');
             if (editBtn) {
@@ -2529,16 +2522,8 @@ function renderItemsList(items) {
             }
         }
 
-        list.addEventListener('click', handleButtonClick);
-        list.addEventListener('touchend', function(e) {
-            // Handle touch events for mobile
-            var touch = e.changedTouches[0];
-            var target = document.elementFromPoint(touch.clientX, touch.clientY);
-            if (target) {
-                var syntheticEvent = { target: target, preventDefault: function() {}, stopPropagation: function() {} };
-                handleButtonClick(syntheticEvent);
-            }
-        });
+        // Use pointer events for better cross-browser compatibility (especially Safari)
+        list.addEventListener('pointerdown', handleButtonClick);
     }
 
     // Paint immediately — do not wait for categories fetch (was causing infinite Loading...).
