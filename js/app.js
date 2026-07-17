@@ -1492,8 +1492,8 @@ function renderCategories(items, options) {
       });
 
         categories.sort(function (a, b) {
-            var ao = (a.data && a.data.order) != null ? a.data.order : null;
-            var bo = (b.data && b.data.order) != null ? b.data.order : null;
+            var ao = (a.data && a.data.order) != null ? Number(a.data.order) : null;
+            var bo = (b.data && b.data.order) != null ? Number(b.data.order) : null;
             if (ao != null && bo != null) return ao - bo;
             if (ao != null) return -1;
             if (bo != null) return 1;
@@ -1908,8 +1908,8 @@ function renderMenuItems(items) {
           try {
               const cachedCats = JSON.parse(localStorage.getItem('cachedCategories') || '[]');
               cachedCats.sort(function (a, b) {
-                  var ao = (a.data && a.data.order) != null ? a.data.order : null;
-                  var bo = (b.data && b.data.order) != null ? b.data.order : null;
+                  var ao = (a.data && a.data.order) != null ? Number(a.data.order) : null;
+                  var bo = (b.data && b.data.order) != null ? Number(b.data.order) : null;
                   if (ao != null && bo != null) return ao - bo;
                   if (ao != null) return -1;
                   if (bo != null) return 1;
@@ -2931,54 +2931,51 @@ function sendWhatsAppOrder() {
         }
     };
 
-    if (window._customerLocationUrl) {
+    var statusEl = document.getElementById('cartLocationStatus');
+    
+    // Always request location when sending via WhatsApp
+    if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser. Please enter your location manually.');
         sendOrder();
         return;
     }
 
-    var statusEl = document.getElementById('cartLocationStatus');
-    if (!navigator.geolocation) {
-        if (statusEl) {
-            statusEl.textContent = formT.locationNotShared || 'Location not shared';
-            statusEl.className = 'cart-location-status error';
-            statusEl.classList.remove('hidden');
-            setTimeout(function() {
-                statusEl.classList.add('hidden');
-            }, 3000);
-        }
-        sendOrder();
-        return;
-    }
+    statusEl.textContent = 'Getting your location...';
+    statusEl.className = 'cart-location-status';
+    statusEl.classList.remove('hidden');
 
     navigator.geolocation.getCurrentPosition(
         function (pos) {
             var lat = pos.coords.latitude;
             var lng = pos.coords.longitude;
             window._customerLocationUrl = 'https://maps.google.com/?q=' + lat + ',' + lng;
-            if (statusEl) {
-                statusEl.textContent = 'Location captured ✓';
-                statusEl.className = 'cart-location-status success';
-                setTimeout(function() {
-                    statusEl.classList.add('hidden');
-                }, 2000);
-            }
+            statusEl.textContent = 'Location captured ✓';
+            statusEl.className = 'cart-location-status success';
+            setTimeout(function() {
+                statusEl.classList.add('hidden');
+            }, 2000);
             sendOrder();
         },
         function (err) {
             window._customerLocationUrl = '';
-            var msg = formT.locationNotShared || 'Location not shared';
-            if (err && err.code === 1) msg = 'Location permission denied — you can continue without it';
-            if (statusEl) {
-                statusEl.textContent = msg;
-                statusEl.className = 'cart-location-status error';
-                statusEl.classList.remove('hidden');
-                setTimeout(function() {
-                    statusEl.classList.add('hidden');
-                }, 3000);
+            var errorMsg = 'Unable to get your location.';
+            if (err.code === 1) {
+                errorMsg = 'Location permission denied. Please enable location access or enter your location manually.';
+            } else if (err.code === 2) {
+                errorMsg = 'Unable to determine your location. Please enter your location manually.';
+            } else if (err.code === 3) {
+                errorMsg = 'Location request timed out. Please try again or enter your location manually.';
             }
+            alert(errorMsg);
+            statusEl.textContent = 'Location not captured';
+            statusEl.className = 'cart-location-status error';
+            setTimeout(function() {
+                statusEl.classList.add('hidden');
+            }, 3000);
+            // Allow user to proceed without location
             sendOrder();
         },
-        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
 }
 
