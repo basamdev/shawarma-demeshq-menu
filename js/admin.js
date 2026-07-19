@@ -2391,6 +2391,11 @@ function renderItemsCategoryBar() {
 
     scroll.innerHTML = html;
     
+    // Remove old event listener to prevent duplication
+    if (scroll._categoryClickHandler) {
+        scroll.removeEventListener('pointerdown', scroll._categoryClickHandler);
+    }
+    
     // Use pointer events for better Safari compatibility (unifies mouse, touch, pen)
     function handleCategoryClick(e) {
         var catBtn = e.target.closest('.category-btn');
@@ -2403,7 +2408,7 @@ function renderItemsCategoryBar() {
         }
     }
     
-    // Use pointer events for better cross-browser compatibility (especially Safari)
+    scroll._categoryClickHandler = handleCategoryClick;
     scroll.addEventListener('pointerdown', handleCategoryClick);
 }
 
@@ -2522,6 +2527,12 @@ function renderItemsList(items) {
             }
         }
 
+        // Remove old event listener to prevent duplication
+        if (list._buttonClickHandler) {
+            list.removeEventListener('pointerdown', list._buttonClickHandler);
+        }
+        
+        list._buttonClickHandler = handleButtonClick;
         // Use pointer events for better cross-browser compatibility (especially Safari)
         list.addEventListener('pointerdown', handleButtonClick);
     }
