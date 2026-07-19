@@ -110,9 +110,9 @@ body.light-mode .logo-splash {
     --shadow-gold: 0 0 40px rgba(212,175,55,0.12);
     --shadow-gold-hover: 0 8px 40px rgba(212,175,55,0.25);
 
-    --font-display: "Manrope", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-body: "Manrope", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-arabic: "IBM Plex Sans Arabic", "Cairo", sans-serif;
+    --font-display: "Playfair Display", "Cinzel", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, serif;
+    --font-body: "Inter", "Poppins", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-arabic: "Tajawal", "Cairo", "IBM Plex Sans Arabic", sans-serif;
 
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
@@ -701,9 +701,11 @@ body.light-mode .hero .logo {
     font-size: inherit;
     font-weight: 700;
     letter-spacing: 0.01em;
-    white-space: nowrap;
+    white-space: normal;
     color: inherit;
-    max-width: min(100vw, 32rem);
+    max-width: min(90vw, 28rem);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .cafe-name .menu-hero-typed {
