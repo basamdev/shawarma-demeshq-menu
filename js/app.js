@@ -1442,7 +1442,14 @@ function filterItemsByCategory(items, category) {
     if (category === ALL_CATEGORY_ID) return items || MenuData.getItems();
     var catLower = String(category).toLowerCase();
     var source = items && items.length ? items : MenuData.getItems();
-    return source.filter(function (i) { return i.category && String(i.category).toLowerCase() === catLower; });
+    return source.filter(function (i) { 
+        if (!i.category) return false;
+        // Try exact match first (for Firestore document IDs)
+        if (String(i.category) === String(category)) return true;
+        // Then try case-insensitive match
+        if (String(i.category).toLowerCase() === catLower) return true;
+        return false;
+    });
 }
 
 function renderCategories(items, options) {
@@ -1484,11 +1491,57 @@ function renderCategories(items, options) {
       items.forEach(function (item) {
           var cat = item.category;
           if (!cat || cat === 'Water' || seenItem[String(cat).toLowerCase()]) return;
-          seenItem[String(cat).toLowerCase()] = true;
-          categories.push({
-              id: cat,
-              data: { name_ku: cat, name_ar: cat, name_en: cat, image: '' }
+          
+          // First, try exact match (for Firestore document IDs)
+          var existingCat = categories.find(function (c) {
+              return c && c.id && String(c.id) === String(cat);
           });
+          
+          // If no exact match, try case-insensitive match
+          if (!existingCat) {
+              existingCat = categories.find(function (c) {
+                  return c && c.id && String(c.id).toLowerCase() === String(cat).toLowerCase();
+              });
+          }
+          
+          if (existingCat) {
+              // Already exists, skip
+              seenItem[String(cat).toLowerCase()] = true;
+              return;
+          }
+          
+          seenItem[String(cat).toLowerCase()] = true;
+          
+          // Try to find a matching category by name in the cached categories
+          var matchedCat = null;
+          var catLower = String(cat).toLowerCase();
+          categories.forEach(function (c) {
+              if (!c || !c.data) return;
+              ['name_ku', 'name_ar', 'name_en'].forEach(function (field) {
+                  if (c.data[field] && String(c.data[field]).toLowerCase() === catLower) {
+                      matchedCat = c;
+                  }
+              });
+          });
+          
+          if (matchedCat) {
+              // Use the matched category's data
+              categories.push({
+                  id: matchedCat.id,
+                  data: matchedCat.data
+              });
+          } else {
+              // No match found - this might be a document ID, try to get the name from i18n
+              var key = cat.replace(/\s+/g, '');
+              key = key.charAt(0).toLowerCase() + key.slice(1);
+              var fallbackName = strings[key] || cat;
+              
+              // If still no match, use fallback name
+              categories.push({
+                  id: cat,
+                  data: { name_ku: fallbackName, name_ar: fallbackName, name_en: fallbackName, image: '' }
+              });
+          }
       });
 
         categories.sort(function (a, b) {
