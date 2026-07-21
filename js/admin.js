@@ -1840,9 +1840,9 @@ function buildCategoryMapFromCache() {
 function getCategoryLabel(categoryId, lang, catMap) {
     if (!categoryId) return '-';
     lang = lang || localStorage.getItem('selectedLang') || 'ku';
-    var data = (catMap && catMap[categoryId]) || null;
+    var lowerId = normalizeCategoryId(categoryId);
+    var data = (catMap && (catMap[categoryId] || catMap[lowerId])) || null;
     if (!data) {
-        var lowerId = normalizeCategoryId(categoryId);
         readCachedCategories().some(function (c) {
             if (c.id && normalizeCategoryId(c.id) === lowerId) { data = c.data; return true; }
             return false;
@@ -2545,14 +2545,14 @@ function renderItemsList(items) {
     if (MenuData.getCategories().length > 0) {
         var catMap = {};
         MenuData.getCategories().forEach(function (c) {
-            catMap[c.id] = c.data;
+            catMap[normalizeCategoryId(c.id)] = c.data;
         });
         paintRows(catMap);
     } else {
         MenuData.loadCategories(5000, function (categories) {
             var catMap = {};
             categories.forEach(function (c) {
-                catMap[c.id] = c.data;
+                catMap[normalizeCategoryId(c.id)] = c.data;
             });
             safeSetItem('cachedCategories', JSON.stringify(categories));
             paintRows(catMap);
