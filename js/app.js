@@ -2720,8 +2720,8 @@ function setupMenuThemePicker() {
 }
 
 var HERO_TYPE_PHRASES = [
-    { text: 'شاورما الدەیمەشقی', dir: 'rtl' },
-    { text: 'Shawarma Aldemashqe', dir: 'ltr' }
+    { text: ' مطعم الدمشقي', dir: 'rtl' },
+    { text: 'Dimashqi Restauran', dir: 'ltr' }
 ];
 
 function heroTypeChars(str) {
