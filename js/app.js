@@ -1317,6 +1317,14 @@ async function loadMenuItems() {
         safeSetItem('cachedCategoriesSig', sig);
         if (cachedMenuItems && cachedMenuItems.length > 0) {
             renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
+            // Update active category title now that we have the category names
+            if (_activeCategory && _activeCategory !== ALL_CATEGORY_ID) {
+                var lang = localStorage.getItem('selectedLang') || 'ku';
+                var activeTitle = document.getElementById('activeCategoryTitle');
+                if (activeTitle) {
+                    activeTitle.textContent = getCategoryDisplayName(_activeCategory, lang);
+                }
+            }
         }
     }, function (err) {
         console.warn('[menu] MenuData categories error:', err.message);
@@ -2103,18 +2111,45 @@ function getCategoryDisplayName(categoryId, lang) {
     lang = lang || localStorage.getItem('selectedLang') || 'ku';
     var strings = i18n[lang] || i18n.en;
     if (categoryId === ALL_CATEGORY_ID) return strings.allItems;
+    
+    // Helper to find name from a categories array
+    function findName(categories, catId) {
+        if (!categories) return null;
+        var cat = categories.find(function (c) { return c.id === catId; });
+        if (!cat) {
+            var lower = String(catId).toLowerCase();
+            cat = categories.find(function (c) { return c.id && String(c.id).toLowerCase() === lower; });
+        }
+        if (cat && cat.data) {
+            return cat.data['name_' + lang] || cat.data.name_en || null;
+        }
+        return null;
+    }
+    
+    // First try in-memory categories from MenuData (most up-to-date)
+    if (window.MenuData && typeof window.MenuData.getCategories === 'function') {
+        var memName = findName(window.MenuData.getCategories(), categoryId);
+        if (memName) return memName;
+    }
+    
+    // Then try localStorage cached categories
     var cachedCats = localStorage.getItem('cachedCategories');
     if (cachedCats) {
         try {
             var categories = JSON.parse(cachedCats);
-            var cat = categories.find(function (c) { return c.id === categoryId; });
-            if (!cat) {
-                var lower = String(categoryId).toLowerCase();
-                cat = categories.find(function (c) { return c.id && String(c.id).toLowerCase() === lower; });
-            }
-            if (cat) return cat.data['name_' + lang] || cat.data.name_en || categoryId;
+            var name = findName(categories, categoryId);
+            if (name) return name;
         } catch (e) {}
     }
+    
+    // If categoryId looks like a descriptive name (not a Firestore doc ID), use it directly
+    // Firestore doc IDs are typically short (UUID-like or alphanumeric without spaces)
+    // Display names like "Chicken Shawarma" contain spaces
+    if (String(categoryId).indexOf(' ') !== -1) {
+        return categoryId;
+    }
+    
+    // Fallback: check i18n mapping or return the ID as last resort
     var key = categoryId.replace(/\s+/g, '');
     key = key.charAt(0).toLowerCase() + key.slice(1);
     return strings[key] || categoryId;
