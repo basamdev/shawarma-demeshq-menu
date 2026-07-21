@@ -3227,12 +3227,28 @@ function renderCategoriesTable(categories) {
     list.innerHTML = html;
 
     try {
-        list.querySelectorAll('.edit-category').forEach(function (btn) {
-            btn.addEventListener('click', function () { editCategory(this.getAttribute('data-id')); });
-        });
-        list.querySelectorAll('.delete-category').forEach(function (btn) {
-            btn.addEventListener('click', function () { deleteCategory(this.getAttribute('data-id')); });
-        });
+        function handleCategoryClick(e) {
+            var editBtn = e.target.closest('.edit-category');
+            if (editBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                editCategory(editBtn.getAttribute('data-id'));
+                return;
+            }
+            var deleteBtn = e.target.closest('.delete-category');
+            if (deleteBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                deleteCategory(deleteBtn.getAttribute('data-id'));
+                return;
+            }
+        }
+
+        if (list._categoryClickHandler) {
+            list.removeEventListener('pointerdown', list._categoryClickHandler);
+        }
+        list._categoryClickHandler = handleCategoryClick;
+        list.addEventListener('pointerdown', handleCategoryClick);
     } catch (evErr) {
         console.warn('[admin categories] event wiring failed:', evErr);
     }
