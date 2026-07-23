@@ -4881,235 +4881,257 @@ function setupCafeTimePickers(lang) {
 }
 
 function loadSettings() {
-     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-      var adminContent = document.getElementById('adminContent');
-      var themeLabels = {
-          ku: { title: 'ڕووکاری ڕەنگ', hint: 'ڕەنگێک هەڵبژێرە بۆ گۆڕینی ڕووکاری داشبۆرد', gold: 'زێڕین', emerald: 'زمروود', sapphire: 'یاقووتی شین', amethyst: 'بەنەوشەیی', ruby: 'یاقووت', sunset: 'خۆرئاوا', rose: 'گوڵی', graphite: 'خۆڵەمێشی', cyan: 'شینی ئاسمانی' },
-          ar: { title: 'سمة الألوان', hint: 'اختر لوناً لتغيير مظهر لوحة التحكم بالكامل', gold: 'ذهبي', emerald: 'زمردي', sapphire: 'أزرق ياقوتي', amethyst: 'بنفسجي', ruby: 'ياقوتي', sunset: 'برتقالي', rose: 'وردي', graphite: 'رمادي', cyan: 'سماوي' },
-          en: { title: 'Color Theme', hint: 'Pick a color to restyle the entire dashboard', gold: 'Gold', emerald: 'Emerald', sapphire: 'Sapphire', amethyst: 'Amethyst', ruby: 'Ruby', sunset: 'Sunset', rose: 'Rose', graphite: 'Graphite', cyan: 'Cyan' }
-      };
-      var TL = themeLabels[localStorage.getItem('selectedLang') || 'ku'] || themeLabels.en;
-      var themes = [
-          { id: 'sapphire', color: '#3B82F6', dark: '#1D4ED8' },
-          { id: 'gold', color: '#D4AF37', dark: '#B8910C' },
-          { id: 'emerald', color: '#10B981', dark: '#047857' },
-          { id: 'amethyst', color: '#8B5CF6', dark: '#6D28D9' },
-          { id: 'ruby', color: '#F43F5E', dark: '#BE123C' },
-          { id: 'sunset', color: '#F97316', dark: '#C2410C' },
-          { id: 'rose', color: '#EC4899', dark: '#BE185D' },
-          { id: 'cyan', color: '#06B6D4', dark: '#0E7490' },
-          { id: 'graphite', color: '#94A3B8', dark: '#475569' }
-      ];
-      var currentAccent = localStorage.getItem('adminAccent') || 'sapphire';
-      var swatchesHtml = themes.map(function (t) {
-          var glow = 'rgba(0,0,0,0.25)';
-          return '<button type="button" class="theme-swatch' + (t.id === currentAccent ? ' active' : '') + '" data-accent="' + t.id + '" ' +
-                 'style="--swatch:' + t.color + ';--swatch-dark:' + t.dark + ';--swatch-glow:' + glow + ';">' +
-                 '<span class="theme-swatch-check">✓</span>' +
-                 '<span class="theme-swatch-dot"></span>' +
-                 '<span class="theme-swatch-name">' + (TL[t.id] || t.id) + '</span>' +
-                 '</button>';
-      }).join('');
+    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+    var adminContent = document.getElementById('adminContent');
+    if (!adminContent) return;
 
-      var settingsLang = localStorage.getItem('selectedLang') || 'ku';
-      var openTimeStored = localStorage.getItem('cafeOpenTime') || '14:00';
-      var closeTimeStored = localStorage.getItem('cafeCloseTime') || '02:00';
+    var settingsLoadId = (window._settingsLoadId = (window._settingsLoadId || 0) + 1);
 
-      adminContent.innerHTML =
-          '<div class="card settings-contact-card">' +
-              '<h2>' + S.settings + '</h2>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--cafe" aria-hidden="true"><i class="fa-solid fa-mug-hot"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeName">' + S.cafeName + '</label>' +
-                      '<input type="text" id="cafeName" value="' + (localStorage.getItem('cafeName') || S.siteName) + '">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--contact" aria-hidden="true">' +
-                      '<i class="fa-solid fa-phone"></i>' +
-                      '<i class="fa-brands fa-whatsapp"></i>' +
-                  '</span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="whatsappPhone">' + S.callWhatsAppNumber + '</label>' +
-                      '<input type="tel" id="whatsappPhone" value="' + (localStorage.getItem('whatsappPhone') || '9647506454656') + '" placeholder="' + S.phonePlaceholder + '">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--maps" aria-hidden="true"><i class="fa-solid fa-map-location-dot"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeLocationUrl">' + S.locationMapsUrl + '</label>' +
-                      '<input type="url" id="cafeLocationUrl" value="' + (localStorage.getItem('cafeLocationUrl') || 'https://maps.app.goo.gl/mmi5iv7mnGKxKZoq9?g_st=ic') + '" placeholder="https://maps.google.com/...">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--pin" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeLocationLabel">' + S.locationLabelField + '</label>' +
-                      '<input type="text" id="cafeLocationLabel" value="' + (localStorage.getItem('cafeLocationLabel') || 'بەحرکە-مجەمع') + '">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--currency" aria-hidden="true">' +
-                      '<i class="fa-solid fa-coins"></i>' +
-                  '</span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeCurrency">' + S.currency + '</label>' +
-                      '<input type="text" id="cafeCurrency" value="IQD" readonly>' +
-                  '</div>' +
-              '</div>' +
-               '<div class="settings-social-field settings-hours-field">' +
-                   '<span class="settings-social-icon settings-social-icon--hours" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>' +
-                   '<div class="settings-social-input-wrap settings-hours-block">' +
-                       '<div class="settings-hours-row">' +
-                           '<div class="settings-hours-input">' +
-                               '<label>' + S.cafeOpenTimeLabel + '</label>' +
-                               '<input type="time" id="cafeOpenTime" class="cafe-time-input" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(openTimeStored, '14:00') : openTimeStored) + '">' +
-                           '</div>' +
-                           '<div class="settings-hours-input">' +
-                               '<label>' + S.cafeCloseTimeLabel + '</label>' +
-                               '<input type="time" id="cafeCloseTime" class="cafe-time-input" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(closeTimeStored, '02:00') : closeTimeStored) + '">' +
-                           '</div>' +
-                       '</div>' +
-                   '</div>' +
-               '</div>' +
-          '</div>' +
-          '<div class="card settings-social-card" style="margin-top:20px;">' +
-              '<div class="settings-section-label"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> ' + S.socialLinks + '</div>' +
-              '<div class="settings-section-hint">' + S.socialLinksHint + '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--instagram" aria-hidden="true"><i class="fa-brands fa-instagram"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeInstagram">' + S.instagramUrl + '</label>' +
-                      '<input type="url" id="cafeInstagram" value="' + (localStorage.getItem('cafeInstagram') || '') + '" placeholder="https://instagram.com/...">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--tiktok" aria-hidden="true"><i class="fa-brands fa-tiktok"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeTiktok">' + S.tiktokUrl + '</label>' +
-                      '<input type="url" id="cafeTiktok" value="' + (localStorage.getItem('cafeTiktok') || '') + '" placeholder="https://tiktok.com/@...">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--snapchat" aria-hidden="true"><i class="fa-brands fa-snapchat"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeSnapchat">' + S.snapchatUrl + '</label>' +
-                      '<input type="url" id="cafeSnapchat" value="' + (localStorage.getItem('cafeSnapchat') || '') + '" placeholder="https://snapchat.com/add/...">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--facebook" aria-hidden="true"><i class="fa-brands fa-facebook-f"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeFacebook">' + S.facebookUrl + '</label>' +
-                      '<input type="url" id="cafeFacebook" value="' + (localStorage.getItem('cafeFacebook') || '') + '" placeholder="https://facebook.com/...">' +
-                  '</div>' +
-              '</div>' +
-'<button class="btn-primary" id="saveSettingsBtn" style="margin-top:8px;">' + S.saveSettings + '</button>' +
+    var themeLabels = {
+        ku: { title: 'ڕووکاری ڕەنگ', hint: 'ڕەنگێک هەڵبژێرە بۆ گۆڕینی ڕووکاری داشبۆرد', gold: 'زێڕین', emerald: 'زمروود', sapphire: 'یاقووتی شین', amethyst: 'بەنەوشەیی', ruby: 'یاقووت', sunset: 'خۆرئاوا', rose: 'گوڵی', graphite: 'خۆڵەمێشی', cyan: 'شینی ئاسمانی' },
+        ar: { title: 'سمة الألوان', hint: 'اختر لوناً لتغيير مظهر لوحة التحكم بالكامل', gold: 'ذهبي', emerald: 'زمردي', sapphire: 'أزرق ياقوتي', amethyst: 'بنفسجي', ruby: 'ياقوتي', sunset: 'برتقالي', rose: 'وردي', graphite: 'رمادي', cyan: 'سماوي' },
+        en: { title: 'Color Theme', hint: 'Pick a color to restyle the entire dashboard', gold: 'Gold', emerald: 'Emerald', sapphire: 'Sapphire', amethyst: 'Amethyst', ruby: 'Ruby', sunset: 'Sunset', rose: 'Rose', graphite: 'Graphite', cyan: 'Cyan' }
+    };
+    var TL = themeLabels[localStorage.getItem('selectedLang') || 'ku'] || themeLabels.en;
+    var themes = [
+        { id: 'sapphire', color: '#3B82F6', dark: '#1D4ED8' },
+        { id: 'gold', color: '#D4AF37', dark: '#B8910C' },
+        { id: 'emerald', color: '#10B981', dark: '#047857' },
+        { id: 'amethyst', color: '#8B5CF6', dark: '#6D28D9' },
+        { id: 'ruby', color: '#F43F5E', dark: '#BE123C' },
+        { id: 'sunset', color: '#F97316', dark: '#C2410C' },
+        { id: 'rose', color: '#EC4899', dark: '#BE185D' },
+        { id: 'cyan', color: '#06B6D4', dark: '#0E7490' },
+        { id: 'graphite', color: '#94A3B8', dark: '#475569' }
+    ];
+    var currentAccent = localStorage.getItem('adminAccent') || 'sapphire';
+    var swatchesHtml = themes.map(function (t) {
+        var glow = 'rgba(0,0,0,0.25)';
+        return '<button type="button" class="theme-swatch' + (t.id === currentAccent ? ' active' : '') + '" data-accent="' + t.id + '" ' +
+               'style="--swatch:' + t.color + ';--swatch-dark:' + t.dark + ';--swatch-glow:' + glow + ';">' +
+               '<span class="theme-swatch-check">✓</span>' +
+               '<span class="theme-swatch-dot"></span>' +
+               '<span class="theme-swatch-name">' + escapeHtmlText(TL[t.id] || t.id) + '</span>' +
+               '</button>';
+    }).join('');
+
+    var openTimeStored = localStorage.getItem('cafeOpenTime') || '14:00';
+    var closeTimeStored = localStorage.getItem('cafeCloseTime') || '02:00';
+    var openTimeValue = typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(openTimeStored, '14:00') : openTimeStored;
+    var closeTimeValue = typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(closeTimeStored, '02:00') : closeTimeStored;
+
+    function settingsVal(key, fallback) {
+        var raw = localStorage.getItem(key);
+        if (raw == null || String(raw).trim() === '') raw = fallback == null ? '' : fallback;
+        return escapeHtmlAttr(raw);
+    }
+
+    adminContent.innerHTML =
+        '<div class="card settings-contact-card">' +
+            '<h2>' + escapeHtmlText(S.settings) + '</h2>' +
+            '<div class="settings-social-field">' +
+                '<span class="settings-social-icon settings-social-icon--cafe" aria-hidden="true"><i class="fa-solid fa-mug-hot"></i></span>' +
+                '<div class="settings-social-input-wrap">' +
+                    '<label for="cafeName">' + escapeHtmlText(S.cafeName) + '</label>' +
+                    '<input type="text" id="cafeName" value="' + settingsVal('cafeName', S.siteName) + '">' +
+                '</div>' +
             '</div>' +
-            '<div class="card" style="margin-top:20px;">' +
-                '<div class="settings-section-label">🎨 ' + TL.title + '</div>' +
-              '<div class="settings-section-hint">' + TL.hint + '</div>' +
-              '<div class="theme-picker" id="themePicker">' + swatchesHtml + '</div>' +
-           '</div>';
+            '<div class="settings-social-field">' +
+                '<span class="settings-social-icon settings-social-icon--contact" aria-hidden="true">' +
+                    '<i class="fa-solid fa-phone"></i>' +
+                    '<i class="fa-brands fa-whatsapp"></i>' +
+                '</span>' +
+                '<div class="settings-social-input-wrap">' +
+                    '<label for="whatsappPhone">' + escapeHtmlText(S.callWhatsAppNumber) + '</label>' +
+                    '<input type="tel" id="whatsappPhone" value="' + settingsVal('whatsappPhone', '9647506454656') + '" placeholder="' + escapeHtmlAttr(S.phonePlaceholder) + '">' +
+                '</div>' +
+            '</div>' +
+            '<div class="settings-social-field">' +
+                '<span class="settings-social-icon settings-social-icon--maps" aria-hidden="true"><i class="fa-solid fa-map-location-dot"></i></span>' +
+                '<div class="settings-social-input-wrap">' +
+                    '<label for="cafeLocationUrl">' + escapeHtmlText(S.locationMapsUrl) + '</label>' +
+                    '<input type="url" id="cafeLocationUrl" value="' + settingsVal('cafeLocationUrl', 'https://maps.app.goo.gl/mmi5iv7mnGKxKZoq9?g_st=ic') + '" placeholder="https://maps.google.com/...">' +
+                '</div>' +
+            '</div>' +
+            '<div class="settings-social-field">' +
+                '<span class="settings-social-icon settings-social-icon--pin" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></span>' +
+                '<div class="settings-social-input-wrap">' +
+                    '<label for="cafeLocationLabel">' + escapeHtmlText(S.locationLabelField) + '</label>' +
+                    '<input type="text" id="cafeLocationLabel" value="' + settingsVal('cafeLocationLabel', 'بەحرکە-مجەمع') + '">' +
+                '</div>' +
+            '</div>' +
+            '<div class="settings-social-field">' +
+                '<span class="settings-social-icon settings-social-icon--currency" aria-hidden="true">' +
+                    '<i class="fa-solid fa-coins"></i>' +
+                '</span>' +
+                '<div class="settings-social-input-wrap">' +
+                    '<label for="cafeCurrency">' + escapeHtmlText(S.currency) + '</label>' +
+                    '<input type="text" id="cafeCurrency" value="IQD" readonly>' +
+                '</div>' +
+            '</div>' +
+            '<div class="settings-social-field settings-hours-field">' +
+                '<span class="settings-social-icon settings-social-icon--hours" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>' +
+                '<div class="settings-social-input-wrap settings-hours-block">' +
+                    '<div class="settings-hours-row">' +
+                        '<div class="settings-hours-input">' +
+                            '<label for="cafeOpenTime">' + escapeHtmlText(S.cafeOpenTimeLabel) + '</label>' +
+                            '<input type="time" id="cafeOpenTime" class="cafe-time-input" value="' + escapeHtmlAttr(openTimeValue) + '">' +
+                        '</div>' +
+                        '<div class="settings-hours-input">' +
+                            '<label for="cafeCloseTime">' + escapeHtmlText(S.cafeCloseTimeLabel) + '</label>' +
+                            '<input type="time" id="cafeCloseTime" class="cafe-time-input" value="' + escapeHtmlAttr(closeTimeValue) + '">' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+        '<div class="card settings-social-card" style="margin-top:20px;">' +
+            '<div class="settings-section-label"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> ' + escapeHtmlText(S.socialLinks) + '</div>' +
+            '<div class="settings-section-hint">' + escapeHtmlText(S.socialLinksHint) + '</div>' +
+            '<div class="settings-social-field">' +
+                '<span class="settings-social-icon settings-social-icon--instagram" aria-hidden="true"><i class="fa-brands fa-instagram"></i></span>' +
+                '<div class="settings-social-input-wrap">' +
+                    '<label for="cafeInstagram">' + escapeHtmlText(S.instagramUrl) + '</label>' +
+                    '<input type="url" id="cafeInstagram" value="' + settingsVal('cafeInstagram', '') + '" placeholder="https://instagram.com/...">' +
+                '</div>' +
+            '</div>' +
+            '<div class="settings-social-field">' +
+                '<span class="settings-social-icon settings-social-icon--tiktok" aria-hidden="true"><i class="fa-brands fa-tiktok"></i></span>' +
+                '<div class="settings-social-input-wrap">' +
+                    '<label for="cafeTiktok">' + escapeHtmlText(S.tiktokUrl) + '</label>' +
+                    '<input type="url" id="cafeTiktok" value="' + settingsVal('cafeTiktok', '') + '" placeholder="https://tiktok.com/@...">' +
+                '</div>' +
+            '</div>' +
+            '<div class="settings-social-field">' +
+                '<span class="settings-social-icon settings-social-icon--snapchat" aria-hidden="true"><i class="fa-brands fa-snapchat"></i></span>' +
+                '<div class="settings-social-input-wrap">' +
+                    '<label for="cafeSnapchat">' + escapeHtmlText(S.snapchatUrl) + '</label>' +
+                    '<input type="url" id="cafeSnapchat" value="' + settingsVal('cafeSnapchat', '') + '" placeholder="https://snapchat.com/add/...">' +
+                '</div>' +
+            '</div>' +
+            '<div class="settings-social-field">' +
+                '<span class="settings-social-icon settings-social-icon--facebook" aria-hidden="true"><i class="fa-brands fa-facebook-f"></i></span>' +
+                '<div class="settings-social-input-wrap">' +
+                    '<label for="cafeFacebook">' + escapeHtmlText(S.facebookUrl) + '</label>' +
+                    '<input type="url" id="cafeFacebook" value="' + settingsVal('cafeFacebook', '') + '" placeholder="https://facebook.com/...">' +
+                '</div>' +
+            '</div>' +
+            '<button type="button" class="btn-primary" id="saveSettingsBtn" style="margin-top:8px;">' + escapeHtmlText(S.saveSettings) + '</button>' +
+        '</div>' +
+        '<div class="card" style="margin-top:20px;">' +
+            '<div class="settings-section-label">🎨 ' + escapeHtmlText(TL.title) + '</div>' +
+            '<div class="settings-section-hint">' + escapeHtmlText(TL.hint) + '</div>' +
+            '<div class="theme-picker" id="themePicker">' + swatchesHtml + '</div>' +
+        '</div>';
 
-       var themePicker = document.getElementById('themePicker');
-      if (themePicker) {
-          themePicker.addEventListener('click', function (e) {
-              var btn = e.target.closest('.theme-swatch');
-              if (!btn) return;
-              var accent = btn.getAttribute('data-accent');
-              applyAdminAccent(accent);
-              themePicker.querySelectorAll('.theme-swatch').forEach(function (s) {
-                  s.classList.toggle('active', s === btn);
-              });
-          });
-      }
+    function markSettingsDirty(e) {
+        var el = e && e.target;
+        if (el && el.tagName === 'INPUT') el.setAttribute('data-dirty', '1');
+    }
+    adminContent.addEventListener('input', markSettingsDirty);
+    adminContent.addEventListener('change', markSettingsDirty);
 
-      var saveBtn = document.getElementById('saveSettingsBtn');
-      if (saveBtn) {
-          saveBtn.addEventListener('click', function () {
-              var cafeName = document.getElementById('cafeName').value.trim();
-              var whatsappPhone = typeof normalizeWhatsAppPhone === 'function'
-                  ? normalizeWhatsAppPhone(document.getElementById('whatsappPhone').value.trim())
-                  : document.getElementById('whatsappPhone').value.trim();
-              var cafeLocationUrl = document.getElementById('cafeLocationUrl').value.trim();
-              var cafeLocationLabel = document.getElementById('cafeLocationLabel').value.trim();
-              var cafeInstagram = typeof normalizeSocialUrl === 'function'
-                  ? normalizeSocialUrl(document.getElementById('cafeInstagram').value.trim(), 'instagram')
-                  : document.getElementById('cafeInstagram').value.trim();
-              var cafeTiktok = typeof normalizeSocialUrl === 'function'
-                  ? normalizeSocialUrl(document.getElementById('cafeTiktok').value.trim(), 'tiktok')
-                  : document.getElementById('cafeTiktok').value.trim();
-              var cafeSnapchat = typeof normalizeSocialUrl === 'function'
-                  ? normalizeSocialUrl(document.getElementById('cafeSnapchat').value.trim(), 'snapchat')
-                  : document.getElementById('cafeSnapchat').value.trim();
-              var cafeFacebook = typeof normalizeSocialUrl === 'function'
-                  ? normalizeSocialUrl(document.getElementById('cafeFacebook').value.trim(), 'facebook')
-                  : document.getElementById('cafeFacebook').value.trim();
-              var openInput = document.getElementById('cafeOpenTime');
-              var closeInput = document.getElementById('cafeCloseTime');
-              var cafeOpenTime = openInput ? openInput.value.trim() : '';
-              var cafeCloseTime = closeInput ? closeInput.value.trim() : '';
-              if (!cafeOpenTime) cafeOpenTime = '14:00';
-              if (!cafeCloseTime) cafeCloseTime = '02:00';
-              if (typeof normalizeCafeTimeValue === 'function') {
-                  cafeOpenTime = normalizeCafeTimeValue(cafeOpenTime, '14:00');
-                  cafeCloseTime = normalizeCafeTimeValue(cafeCloseTime, '02:00');
-              }
+    var themePicker = document.getElementById('themePicker');
+    if (themePicker) {
+        themePicker.addEventListener('click', function (e) {
+            var btn = e.target.closest('.theme-swatch');
+            if (!btn) return;
+            var accent = btn.getAttribute('data-accent');
+            applyAdminAccent(accent);
+            themePicker.querySelectorAll('.theme-swatch').forEach(function (s) {
+                s.classList.toggle('active', s === btn);
+            });
+        });
+    }
 
-              function storeSetting(key, value) {
-                  if (value == null || String(value).trim() === '') {
-                      localStorage.removeItem(key);
-                  } else {
-                      localStorage.setItem(key, String(value).trim());
-                  }
-              }
+    function readInputValue(id) {
+        var el = document.getElementById(id);
+        return el ? String(el.value || '').trim() : '';
+    }
 
-               storeSetting('cafeName', cafeName);
-               storeSetting('whatsappPhone', whatsappPhone);
-               storeSetting('cafeLocationUrl', cafeLocationUrl);
-storeSetting('cafeLocationLabel', cafeLocationLabel);
-            storeSetting('cafeInstagram', cafeInstagram);
-            storeSetting('cafeTiktok', cafeTiktok);
-            storeSetting('cafeSnapchat', cafeSnapchat);
-            storeSetting('cafeFacebook', cafeFacebook);
-            storeSetting('cafeOpenTime', cafeOpenTime);
-            storeSetting('cafeCloseTime', cafeCloseTime);
+    function setInputValue(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.value = value == null ? '' : String(value);
+    }
+
+    var saveBtn = document.getElementById('saveSettingsBtn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function () {
             try {
-                   localStorage.setItem('cafeSettingsUpdatedAt', String(Date.now()));
-               } catch (e) {}
+                var cafeName = readInputValue('cafeName');
+                var whatsappPhone = typeof normalizeWhatsAppPhone === 'function'
+                    ? normalizeWhatsAppPhone(readInputValue('whatsappPhone'))
+                    : readInputValue('whatsappPhone');
+                var cafeLocationUrl = readInputValue('cafeLocationUrl');
+                var cafeLocationLabel = readInputValue('cafeLocationLabel');
+                var cafeInstagram = typeof normalizeSocialUrl === 'function'
+                    ? normalizeSocialUrl(readInputValue('cafeInstagram'), 'instagram')
+                    : readInputValue('cafeInstagram');
+                var cafeTiktok = typeof normalizeSocialUrl === 'function'
+                    ? normalizeSocialUrl(readInputValue('cafeTiktok'), 'tiktok')
+                    : readInputValue('cafeTiktok');
+                var cafeSnapchat = typeof normalizeSocialUrl === 'function'
+                    ? normalizeSocialUrl(readInputValue('cafeSnapchat'), 'snapchat')
+                    : readInputValue('cafeSnapchat');
+                var cafeFacebook = typeof normalizeSocialUrl === 'function'
+                    ? normalizeSocialUrl(readInputValue('cafeFacebook'), 'facebook')
+                    : readInputValue('cafeFacebook');
+                var cafeOpenTime = readInputValue('cafeOpenTime') || '14:00';
+                var cafeCloseTime = readInputValue('cafeCloseTime') || '02:00';
+                if (typeof normalizeCafeTimeValue === 'function') {
+                    cafeOpenTime = normalizeCafeTimeValue(cafeOpenTime, '14:00');
+                    cafeCloseTime = normalizeCafeTimeValue(cafeCloseTime, '02:00');
+                }
 
-              document.getElementById('whatsappPhone').value = whatsappPhone;
-              document.getElementById('cafeInstagram').value = cafeInstagram;
-              document.getElementById('cafeTiktok').value = cafeTiktok;
-              document.getElementById('cafeSnapchat').value = cafeSnapchat;
-              document.getElementById('cafeFacebook').value = cafeFacebook;
-              var selectedLang = localStorage.getItem('selectedLang') || 'ku';
-               var openHiddenSave = document.getElementById('cafeOpenTime');
-               var closeHiddenSave = document.getElementById('cafeCloseTime');
-               if (openHiddenSave) openHiddenSave.value = cafeOpenTime;
-               if (closeHiddenSave) closeHiddenSave.value = cafeCloseTime;
+                function storeSetting(key, value) {
+                    if (value == null || String(value).trim() === '') {
+                        localStorage.removeItem(key);
+                    } else {
+                        localStorage.setItem(key, String(value).trim());
+                    }
+                }
 
-              var settingsPayload = {
-                  cafeName: cafeName,
-                  whatsappPhone: whatsappPhone,
-                  cafeLocationUrl: cafeLocationUrl,
-                  cafeLocationLabel: cafeLocationLabel,
-                  cafeInstagram: cafeInstagram,
-                  cafeTiktok: cafeTiktok,
-                  cafeSnapchat: cafeSnapchat,
-                  cafeFacebook: cafeFacebook,
-                  cafeOpenTime: cafeOpenTime,
-                  cafeCloseTime: cafeCloseTime
-              };
+                storeSetting('cafeName', cafeName);
+                storeSetting('whatsappPhone', whatsappPhone);
+                storeSetting('cafeLocationUrl', cafeLocationUrl);
+                storeSetting('cafeLocationLabel', cafeLocationLabel);
+                storeSetting('cafeInstagram', cafeInstagram);
+                storeSetting('cafeTiktok', cafeTiktok);
+                storeSetting('cafeSnapchat', cafeSnapchat);
+                storeSetting('cafeFacebook', cafeFacebook);
+                storeSetting('cafeOpenTime', cafeOpenTime);
+                storeSetting('cafeCloseTime', cafeCloseTime);
+                try {
+                    localStorage.setItem('cafeSettingsUpdatedAt', String(Date.now()));
+                } catch (e) {}
 
-               if (typeof saveCafeSettingsToFirestore === 'function') {
+                setInputValue('whatsappPhone', whatsappPhone);
+                setInputValue('cafeInstagram', cafeInstagram);
+                setInputValue('cafeTiktok', cafeTiktok);
+                setInputValue('cafeSnapchat', cafeSnapchat);
+                setInputValue('cafeFacebook', cafeFacebook);
+                setInputValue('cafeOpenTime', cafeOpenTime);
+                setInputValue('cafeCloseTime', cafeCloseTime);
+
+                var settingsPayload = {
+                    cafeName: cafeName,
+                    whatsappPhone: whatsappPhone,
+                    cafeLocationUrl: cafeLocationUrl,
+                    cafeLocationLabel: cafeLocationLabel,
+                    cafeInstagram: cafeInstagram,
+                    cafeTiktok: cafeTiktok,
+                    cafeSnapchat: cafeSnapchat,
+                    cafeFacebook: cafeFacebook,
+                    cafeOpenTime: cafeOpenTime,
+                    cafeCloseTime: cafeCloseTime
+                };
+
+                if (typeof saveCafeSettingsToFirestore === 'function') {
                     saveCafeSettingsToFirestore(settingsPayload, function (err) {
                         if (err) {
                             var msg = (err && err.message ? String(err.message) : String(err)).toLowerCase();
                             if (msg.indexOf('permission') !== -1 || msg.indexOf('insufficient') !== -1 || msg.indexOf('denied') !== -1) {
-                                 alert('⚠️ Settings saved locally only.\n\nFirestore WRITE was DENIED. Fix:\n1) In Firebase Console → project shawarma-demashq-menu → Firestore → Rules tab, paste the rules and click PUBLISH.\n2) Make sure you are logged in as admin.\n\n(' + (err && err.message ? err.message : err) + ')');
+                                alert('⚠️ Settings saved locally only.\n\nFirestore WRITE was DENIED. Fix:\n1) In Firebase Console → project shawarma-demashq-menu → Firestore → Rules tab, paste the rules and click PUBLISH.\n2) Make sure you are logged in as admin.\n\n(' + (err && err.message ? err.message : err) + ')');
                             } else {
                                 alert('⚠️ ' + S.settingsSaved + '\n\nCloud sync failed: ' + (err && err.message ? err.message : err) + '\n\nChanges saved locally only.');
                             }
@@ -5120,38 +5142,54 @@ storeSetting('cafeLocationLabel', cafeLocationLabel);
                 } else {
                     alert(S.settingsSaved);
                 }
-          });
-      }
+            } catch (err) {
+                console.error('saveSettings error:', err);
+                alert((S.errorPrefix || 'Error:') + ' ' + (err && err.message ? err.message : err));
+            }
+        });
+    }
 
-      if (typeof loadCafeSettingsFromFirestore === 'function') {
-          loadCafeSettingsFromFirestore(function () {
-              var fields = {
-                  cafeName: 'cafeName',
-                  whatsappPhone: 'whatsappPhone',
-                  cafeLocationUrl: 'cafeLocationUrl',
-                  cafeLocationLabel: 'cafeLocationLabel',
-                  cafeInstagram: 'cafeInstagram',
-                  cafeTiktok: 'cafeTiktok',
-                  cafeSnapchat: 'cafeSnapchat',
-                  cafeFacebook: 'cafeFacebook'
-              };
-              Object.keys(fields).forEach(function (storageKey) {
-                  var input = document.getElementById(fields[storageKey]);
-                  if (!input) return;
-                  var value = localStorage.getItem(storageKey) || input.value || '';
-                  if (storageKey === 'whatsappPhone' && typeof normalizeWhatsAppPhone === 'function') {
-                      value = normalizeWhatsAppPhone(value);
-                  }
-                  input.value = value;
-              });
-              var openLoaded = document.getElementById('cafeOpenTime');
-              var closeLoaded = document.getElementById('cafeCloseTime');
-              if (openLoaded) openLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeOpenTime') || '14:00', '14:00') : (localStorage.getItem('cafeOpenTime') || '14:00'));
-              if (closeLoaded) closeLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeCloseTime') || '02:00', '02:00') : (localStorage.getItem('cafeCloseTime') || '02:00'));
-          });
-      }
+    if (typeof loadCafeSettingsFromFirestore === 'function') {
+        loadCafeSettingsFromFirestore(function () {
+            if (settingsLoadId !== window._settingsLoadId) return;
+            if (!document.getElementById('saveSettingsBtn')) return;
 
- }
+            var fields = {
+                cafeName: 'cafeName',
+                whatsappPhone: 'whatsappPhone',
+                cafeLocationUrl: 'cafeLocationUrl',
+                cafeLocationLabel: 'cafeLocationLabel',
+                cafeInstagram: 'cafeInstagram',
+                cafeTiktok: 'cafeTiktok',
+                cafeSnapchat: 'cafeSnapchat',
+                cafeFacebook: 'cafeFacebook'
+            };
+            Object.keys(fields).forEach(function (storageKey) {
+                var input = document.getElementById(fields[storageKey]);
+                if (!input) return;
+                if (input.getAttribute('data-dirty') === '1') return;
+                if (document.activeElement === input) return;
+                var value = localStorage.getItem(storageKey) || '';
+                if (storageKey === 'whatsappPhone' && typeof normalizeWhatsAppPhone === 'function') {
+                    value = normalizeWhatsAppPhone(value || input.value || '');
+                }
+                if (value !== '') input.value = value;
+            });
+            var openLoaded = document.getElementById('cafeOpenTime');
+            var closeLoaded = document.getElementById('cafeCloseTime');
+            if (openLoaded && openLoaded.getAttribute('data-dirty') !== '1' && document.activeElement !== openLoaded) {
+                openLoaded.value = (typeof normalizeCafeTimeValue === 'function'
+                    ? normalizeCafeTimeValue(localStorage.getItem('cafeOpenTime') || '14:00', '14:00')
+                    : (localStorage.getItem('cafeOpenTime') || '14:00'));
+            }
+            if (closeLoaded && closeLoaded.getAttribute('data-dirty') !== '1' && document.activeElement !== closeLoaded) {
+                closeLoaded.value = (typeof normalizeCafeTimeValue === 'function'
+                    ? normalizeCafeTimeValue(localStorage.getItem('cafeCloseTime') || '02:00', '02:00')
+                    : (localStorage.getItem('cafeCloseTime') || '02:00'));
+            }
+        });
+    }
+}
 
 
  /* ============ EXPENSES ============ */
