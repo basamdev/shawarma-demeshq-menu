@@ -16,7 +16,42 @@ var CACHE_KEY_CATEGORIES = (window.BRANCH_ID !== '1' ? `cachedCategories${window
 var CACHE_KEY_CASHIER_ITEMS = (window.BRANCH_ID !== '1' ? `cachedCashierItems${window.BRANCH_SUFFIX}` : 'cachedCashierItems');
 var CACHE_KEY_MENU_CAT_NAMES = (window.BRANCH_ID !== '1' ? `cachedMenuCategoryNames${window.BRANCH_SUFFIX}` : 'cachedMenuCategoryNames');
 
+function getBranchBadgeInfo() {
+    var isBranch2 = String(window.BRANCH_ID) === '2';
+    var lang = (typeof localStorage !== 'undefined' ? localStorage.getItem('selectedLang') : null) || 'ku';
+    var text = '';
+    if (isBranch2) {
+        if (lang === 'ku') {
+            text = '📍 لقی ٢ (Branch 2)';
+        } else if (lang === 'ar') {
+            text = '📍 الفرع ٢ (Branch 2)';
+        } else {
+            text = '📍 Branch 2 (لقی ٢)';
+        }
+    } else {
+        if (lang === 'ku') {
+            text = '📍 لقی ١ (Branch 1)';
+        } else if (lang === 'ar') {
+            text = '📍 الفرع ١ (Branch 1)';
+        } else {
+            text = '📍 Branch 1 (لقی ١)';
+        }
+    }
+    return {
+        isBranch2: isBranch2,
+        className: isBranch2 ? 'admin-branch-badge admin-branch-badge--branch2' : 'admin-branch-badge admin-branch-badge--branch1',
+        text: text,
+        shortText: isBranch2 ? 'Branch 2' : 'Branch 1',
+        kurdishText: isBranch2 ? 'لقی ٢' : 'لقی ١',
+        tooltip: isBranch2 ? 'Active: Branch 2 (' + window.MENU_COLLECTION + ')' : 'Active: Branch 1 (' + window.MENU_COLLECTION + ')'
+    };
+}
+window.getBranchBadgeInfo = getBranchBadgeInfo;
+
 function renderBranchBadge() {
+    var info = getBranchBadgeInfo();
+
+    // 1. Top navigation header badge
     var badge = document.getElementById('adminBranchBadge');
     if (!badge) {
         var headerLeft = document.querySelector('.admin-header-left');
@@ -26,18 +61,35 @@ function renderBranchBadge() {
             headerLeft.appendChild(badge);
         }
     }
-    if (!badge) return;
-
-    var isBranch2 = String(window.BRANCH_ID) === '2';
-    if (isBranch2) {
-        badge.className = 'admin-branch-badge admin-branch-badge--branch2';
-        badge.textContent = '📍 لقی دووەم (Branch 2)';
-        badge.setAttribute('title', 'Branch 2 - ' + window.MENU_COLLECTION);
-    } else {
-        badge.className = 'admin-branch-badge admin-branch-badge--branch1';
-        badge.textContent = '📍 لقی سەرەکی (Branch 1)';
-        badge.setAttribute('title', 'Branch 1 - ' + window.MENU_COLLECTION);
+    if (badge) {
+        badge.className = info.className;
+        badge.textContent = info.text;
+        badge.setAttribute('title', info.tooltip);
     }
+
+    // 2. Sidebar brand badge (next to restaurant logo & name)
+    var sidebarBadge = document.getElementById('sidebarBranchBadge');
+    if (!sidebarBadge) {
+        var sidebarBrand = document.querySelector('.sidebar-brand');
+        if (sidebarBrand) {
+            sidebarBadge = document.createElement('span');
+            sidebarBadge.id = 'sidebarBranchBadge';
+            sidebarBrand.appendChild(sidebarBadge);
+        }
+    }
+    if (sidebarBadge) {
+        sidebarBadge.className = info.className;
+        sidebarBadge.textContent = info.text;
+        sidebarBadge.setAttribute('title', info.tooltip);
+    }
+
+    // 3. Dashboard heading badge (if present)
+    var dashBadges = document.querySelectorAll('.dashboard-branch-badge');
+    dashBadges.forEach(function (el) {
+        el.className = 'dashboard-branch-badge ' + info.className;
+        el.textContent = info.text;
+        el.setAttribute('title', info.tooltip);
+    });
 }
 window.renderBranchBadge = renderBranchBadge;
 
@@ -1459,6 +1511,7 @@ function wireAdminLangButtons() {
             document.documentElement.dir = (l === 'ar' || l === 'ku') ? 'rtl' : 'ltr';
             document.documentElement.lang = l;
             if (window.applyLanguageUI) applyLanguageUI(l);
+            renderBranchBadge();
         });
     });
 }
@@ -1600,6 +1653,7 @@ function getMonthName(monthIndex, strings) {
 function loadDashboard() {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     var adminContent = document.getElementById('adminContent');
+    var badgeInfo = getBranchBadgeInfo();
     var now = new Date();
     var currentMonth = now.getMonth();
     var monthsHtml = '';
@@ -1608,6 +1662,12 @@ function loadDashboard() {
         monthsHtml += '<option value="' + m + '"' + (m === currentMonth ? ' selected' : '') + '>' + (m + 1) + ' — ' + S[mNames[m]] + ' ' + now.getFullYear() + '</option>';
     }
     adminContent.innerHTML =
+        '<div class="dashboard-header-bar">' +
+            '<div class="dashboard-heading-group">' +
+                '<h2 class="dashboard-heading-title">' + escapeHtmlText(S.dashboard || 'Dashboard') + '</h2>' +
+                '<span class="dashboard-branch-badge ' + badgeInfo.className + '" title="' + escapeHtmlText(badgeInfo.tooltip) + '">' + badgeInfo.text + '</span>' +
+            '</div>' +
+        '</div>' +
         '<div class="month-selector">' +
             '<label>' + S.selectMonth + '</label>' +
             '<select id="dashboardMonthSelect">' + monthsHtml + '</select>' +
