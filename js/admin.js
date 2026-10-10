@@ -22,28 +22,28 @@ function getBranchBadgeInfo() {
     var text = '';
     if (isBranch2) {
         if (lang === 'ku') {
-            text = '📍 لقی ٢ (Branch 2)';
+            text = '📍 لقی ٢ هەڤاڵان (Branch 2 Havalan)';
         } else if (lang === 'ar') {
-            text = '📍 الفرع ٢ (Branch 2)';
+            text = '📍 الفرع ٢ هافالان (Branch 2 Havalan)';
         } else {
-            text = '📍 Branch 2 (لقی ٢)';
+            text = '📍 Branch 2 Havalan (لقی ٢ هەڤاڵان)';
         }
     } else {
         if (lang === 'ku') {
-            text = '📍 بەحرکە (Bahirka)';
+            text = '📍 لقی ١ بەحرکە (Branch 1 Bahirka)';
         } else if (lang === 'ar') {
-            text = '📍 بحركة (Bahirka)';
+            text = '📍 الفرع ١ بحركة (Branch 1 Bahirka)';
         } else {
-            text = '📍 Bahirka (بەحرکە)';
+            text = '📍 Branch 1 Bahirka (لقی ١ بەحرکە)';
         }
     }
     return {
         isBranch2: isBranch2,
         className: isBranch2 ? 'admin-branch-badge admin-branch-badge--branch2' : 'admin-branch-badge admin-branch-badge--branch1',
         text: text,
-        shortText: isBranch2 ? 'Branch 2' : 'Bahirka',
-        kurdishText: isBranch2 ? 'لقی ٢' : 'بەحرکە',
-        tooltip: isBranch2 ? 'Active: Branch 2 (' + window.MENU_COLLECTION + ')' : 'Active: Bahirka (' + window.MENU_COLLECTION + ')'
+        shortText: isBranch2 ? 'Branch 2 Havalan' : 'Branch 1 Bahirka',
+        kurdishText: isBranch2 ? 'لقی ٢ هەڤاڵان' : 'لقی ١ بەحرکە',
+        tooltip: isBranch2 ? 'Active: Branch 2 Havalan (' + window.MENU_COLLECTION + ')' : 'Active: Branch 1 Bahirka (' + window.MENU_COLLECTION + ')'
     };
 }
 window.getBranchBadgeInfo = getBranchBadgeInfo;
