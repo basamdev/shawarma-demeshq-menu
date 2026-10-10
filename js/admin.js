@@ -1,7 +1,7 @@
 // Admin.js — Shawarma Admin Panel
 
-const urlParams = new URLSearchParams(window.location.search);
-window.BRANCH_ID = urlParams.get('branch') || '1';
+window.urlParams = window.urlParams || new URLSearchParams(window.location.search);
+window.BRANCH_ID = window.urlParams.get('branch') || '1';
 window.BRANCH_SUFFIX = (window.BRANCH_ID !== '1') ? `_branch${window.BRANCH_ID}` : '';
 
 window.MENU_COLLECTION = `menuItems${window.BRANCH_SUFFIX}`;
