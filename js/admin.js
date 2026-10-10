@@ -1,4 +1,34 @@
-﻿// Admin.js — Shawarma Admin Panel
+// Admin.js — Shawarma Admin Panel
+
+var urlParams = new URLSearchParams(window.location.search || '');
+var CURRENT_BRANCH = urlParams.get('branch') || window.CURRENT_BRANCH || '1';
+window.CURRENT_BRANCH = CURRENT_BRANCH;
+var MENU_COLLECTION = (CURRENT_BRANCH === '2') ? 'menuItems_branch2' : 'menuItems';
+window.MENU_COLLECTION = MENU_COLLECTION;
+var CAT_COLLECTION = (CURRENT_BRANCH === '2') ? 'categories_branch2' : 'categories';
+window.CAT_COLLECTION = CAT_COLLECTION;
+
+function getActiveBranch() {
+    var p = new URLSearchParams(window.location.search || '');
+    return p.get('branch') || window.CURRENT_BRANCH || '1';
+}
+
+function getActiveMenuCollection() {
+    return (getActiveBranch() === '2') ? 'menuItems_branch2' : 'menuItems';
+}
+
+function getActiveCatCollection() {
+    return (getActiveBranch() === '2') ? 'categories_branch2' : 'categories';
+}
+
+function getBranchKey(key) {
+    var b = getActiveBranch();
+    return (b === '1') ? key : (key + '_branch' + b);
+}
+window.getBranchKey = getBranchKey;
+window.getActiveBranch = getActiveBranch;
+window.getActiveMenuCollection = getActiveMenuCollection;
+window.getActiveCatCollection = getActiveCatCollection;
 
 var USE_LOCAL_API = false;
 var API_BASE = 'api';
@@ -72,7 +102,7 @@ let itemsActiveCategory = 'all';
 
 function readCachedMenuItemsFlat() {
     try {
-        return JSON.parse(localStorage.getItem('cachedMenuItems') || '[]');
+        return JSON.parse(localStorage.getItem(getBranchKey('cachedMenuItems')) || '[]');
     } catch (e) {
         return [];
     }
@@ -80,7 +110,7 @@ function readCachedMenuItemsFlat() {
 
 function writeCachedMenuItemsFlat(items) {
     try {
-        localStorage.setItem('cachedMenuItems', JSON.stringify(items));
+        localStorage.setItem(getBranchKey('cachedMenuItems'), JSON.stringify(items));
         syncCashierCacheFromMenuFlat(items);
     } catch (e) {
         console.warn('Could not write menu cache:', e);
@@ -96,7 +126,7 @@ function syncCashierCacheFromMenuFlat(items) {
         cashier.push({ id: it.id, v: v });
     });
     try {
-        localStorage.setItem('cachedCashierItems', JSON.stringify(cashier));
+        localStorage.setItem(getBranchKey('cachedCashierItems'), JSON.stringify(cashier));
     } catch (e) {}
 }
 
@@ -131,6 +161,7 @@ var NON_ESSENTIAL_CACHE_KEYS = [
 function evictNonEssentialCacheKeys() {
     NON_ESSENTIAL_CACHE_KEYS.forEach(function (k) {
         try { localStorage.removeItem(k); } catch (e) {}
+        try { localStorage.removeItem(getBranchKey(k)); } catch (e) {}
     });
 }
 
@@ -168,8 +199,9 @@ function withOwnerFilter(query) {
 function backfillCreatedByForCurrentAdmin() {
     var email = getCurrentAdminEmail();
     if (!email || !window.db) return;
-    if (localStorage.getItem('createdByBackfilled_' + email)) return;
-    db.collection('menuItems').get().then(function (snap) {
+    var backfillKey = getBranchKey('createdByBackfilled_' + email);
+    if (localStorage.getItem(backfillKey)) return;
+    db.collection(MENU_COLLECTION).get().then(function (snap) {
         var batch = db.batch();
         var updated = 0;
         snap.forEach(function (doc) {
@@ -181,11 +213,11 @@ function backfillCreatedByForCurrentAdmin() {
         });
         if (updated > 0) {
             batch.commit().then(function () {
-                localStorage.setItem('createdByBackfilled_' + email, '1');
+                localStorage.setItem(backfillKey, '1');
                 console.log('[backfill] Tagged ' + updated + ' items with createdBy');
             }).catch(function () {});
         } else {
-            localStorage.setItem('createdByBackfilled_' + email, '1');
+            localStorage.setItem(backfillKey, '1');
         }
     }).catch(function () {});
 }
@@ -360,19 +392,19 @@ function warmAdminOfflineCache(done) {
         return;
     }
     var tasks = [];
-    tasks.push(db.collection('menuItems').get().then(function (snap) {
+    tasks.push(db.collection(MENU_COLLECTION).get().then(function (snap) {
         var menu = [];
         snap.forEach(function (d) {
             menu.push(Object.assign({ id: d.id }, d.data()));
         });
         writeCachedMenuItemsFlat(menu);
     }).catch(function () {}));
-    tasks.push(db.collection('categories').orderBy('order', 'asc').get().then(function (snap) {
+    tasks.push(db.collection(CAT_COLLECTION).orderBy('order', 'asc').get().then(function (snap) {
         var categories = [];
         snap.forEach(function (d) {
             categories.push({ id: d.id, data: d.data() });
         });
-        safeSetItem('cachedCategories', JSON.stringify(categories));
+        safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(categories));
     }).catch(function () {}));
     tasks.push(warmExpensesCacheFromServer());
     tasks.push(warmSalesCacheFromServer());
@@ -603,7 +635,7 @@ function fetchPublicCollectionViaRest(collectionName, timeoutMs) {
 function fetchMenuItemsForAdmin(timeoutMs) {
     if (window._firestoreApiDisabled) return Promise.resolve([]);
     if (typeof fetchAllAdminCollectionViaRest === 'function') {
-        return fetchAllAdminCollectionViaRest('menuItems', timeoutMs || 12000).then(function (docs) {
+        return fetchAllAdminCollectionViaRest(MENU_COLLECTION, timeoutMs || 12000).then(function (docs) {
             return docs.map(function (d) {
                 var data = d.data || {};
                 return {
@@ -635,7 +667,7 @@ function fetchMenuItemsForAdmin(timeoutMs) {
 
 function fetchCategoriesForAdmin(timeoutMs) {
     if (window._firestoreApiDisabled) return Promise.resolve([]);
-    return fetchPublicCollectionViaRest('categories', timeoutMs).then(function (docs) {
+    return fetchPublicCollectionViaRest(CAT_COLLECTION, timeoutMs).then(function (docs) {
         return docs.map(function (d) { return { id: d.id, data: d.data || {} }; }).sort(function (a, b) {
             var ao = (a.data && a.data.order) != null ? a.data.order : null;
             var bo = (b.data && b.data.order) != null ? b.data.order : null;
@@ -859,6 +891,7 @@ function deleteDocumentViaRest(collectionName, docId) {
 /** Menu writes: SDK first (8s), then Firestore REST — mobile SDK often hangs. */
 function applyMenuCloudWrite(config) {
     if (!config || !config.onDone) return;
+    var targetColl = config.collection || getActiveMenuCollection();
 
     if (!navigator.onLine) {
         applyWrite(config.sdkPromise, config.onDone, config.onError, {});
@@ -869,10 +902,10 @@ function applyMenuCloudWrite(config) {
         console.warn('[menu cloud write] SDK failed, REST fallback:', err && (err.message || err));
         var restPromise;
         if (config.isDelete) {
-            restPromise = deleteDocumentViaRest(config.collection, config.docId);
+            restPromise = deleteDocumentViaRest(targetColl, config.docId);
         } else {
             restPromise = writeDocumentViaRest(
-                config.collection,
+                targetColl,
                 config.docId,
                 config.plainData,
                 !!config.isCreate
@@ -1409,6 +1442,18 @@ document.addEventListener('DOMContentLoaded', function () {
     wireAdminLangButtons();
     initSidebar();
 
+    if (CURRENT_BRANCH === '2') {
+        document.title = 'Shawarma (Branch 2) - لوحة التحكم';
+        var adminTitleEl = document.querySelector('.admin-title');
+        if (adminTitleEl && !adminTitleEl.querySelector('.branch-indicator')) {
+            var branchBadge = document.createElement('span');
+            branchBadge.className = 'branch-indicator';
+            branchBadge.textContent = 'Branch 2';
+            branchBadge.style.cssText = 'display:inline-block;margin-left:8px;padding:2px 8px;font-size:0.75rem;background:var(--primary,#9B6135);color:#fff;border-radius:12px;vertical-align:middle;font-weight:600;';
+            adminTitleEl.appendChild(branchBadge);
+        }
+    }
+
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState !== 'visible') return;
         if (!isAdminAuthenticated() || !navigator.onLine) return;
@@ -1785,7 +1830,7 @@ function renderRecentSalesTable(sales, S, container) {
 
 function readCachedCategories() {
     try {
-        return JSON.parse(localStorage.getItem('cachedCategories') || '[]');
+        return JSON.parse(localStorage.getItem(getBranchKey('cachedCategories')) || '[]');
     } catch (e) {
         return [];
     }
@@ -1801,20 +1846,20 @@ function upsertCachedCategory(id, data) {
     var entry = { id: id, data: data };
     if (idx >= 0) cats[idx] = entry;
     else cats.push(entry);
-    safeSetItem('cachedCategories', JSON.stringify(cats));
+    safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(cats));
 }
 
 function refreshCategoriesCache(callback) {
     if (!MenuData.getCategories().length) {
         MenuData.loadCategories(5000, function (categories) {
-            safeSetItem('cachedCategories', JSON.stringify(categories));
+            safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(categories));
             if (callback) callback(categories);
         }, function () {
             if (callback) callback(readCachedCategories());
         });
         return;
     }
-    safeSetItem('cachedCategories', JSON.stringify(MenuData.getCategories()));
+    safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(MenuData.getCategories()));
     if (callback) callback(MenuData.getCategories());
 }
 
@@ -2100,7 +2145,7 @@ function startItemsListener() {
                 cashierCache.push({ id: d.id, v: data });
                 menuCache.push(Object.assign({ id: d.id }, data));
             });
-            safeSetItem('cachedCashierItems', JSON.stringify(cashierCache));
+            safeSetItem(getBranchKey('cachedCashierItems'), JSON.stringify(cashierCache));
             writeCachedMenuItemsFlat(menuCache);
 
             var catNames = {};
@@ -2108,7 +2153,7 @@ function startItemsListener() {
                 var c = d.data().category;
                 if (c && c.toLowerCase().trim() !== 'water') catNames[c] = true;
             });
-            localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(catNames)));
+            localStorage.setItem(getBranchKey('cachedMenuCategoryNames'), JSON.stringify(Object.keys(catNames)));
         }).catch(function(err) {
             console.warn('[admin items] Local API failed:', err.message);
             if (!hydrateItemsUiFromCache()) {
@@ -2148,7 +2193,7 @@ function startItemsListener() {
             cashierCache.push({ id: d.id, v: data });
             menuCache.push(Object.assign({ id: d.id }, data));
         });
-        safeSetItem('cachedCashierItems', JSON.stringify(cashierCache));
+        safeSetItem(getBranchKey('cachedCashierItems'), JSON.stringify(cashierCache));
         writeCachedMenuItemsFlat(menuCache);
 
         var catNames = {};
@@ -2156,10 +2201,10 @@ function startItemsListener() {
             var c = d.data().category;
             if (c && c !== 'Water') catNames[c] = true;
         });
-        localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(catNames)));
+        localStorage.setItem(getBranchKey('cachedMenuCategoryNames'), JSON.stringify(Object.keys(catNames)));
     }
 
-    adminGetWithTimeout(db.collection('menuItems'), 8000).then(applyItemsSnap).catch(function (e) {
+    adminGetWithTimeout(db.collection(MENU_COLLECTION), 8000).then(applyItemsSnap).catch(function (e) {
         console.warn('[admin items] get failed:', e.message);
         if (isFirestoreApiDisabledError(e)) {
             showFirestoreApiDisabledAlert();
@@ -2186,7 +2231,7 @@ function startItemsListener() {
         clearAdminLoadingEl('itemsList', '<p>' + S.noItemsFound + '</p>');
     }, 10000);
 
-     itemsUnsubscribe = db.collection('menuItems').onSnapshot(function (snap) {
+     itemsUnsubscribe = db.collection(MENU_COLLECTION).onSnapshot(function (snap) {
         applyItemsSnap(snap);
     }, function (e) {
         console.error('Items listener error:', e);
@@ -2229,7 +2274,7 @@ function loadCategoriesDropdown() {
     if (!MenuData.getCategories().length) {
         return new Promise(function (resolve) {
             MenuData.loadCategories(12000, function (categories) {
-                safeSetItem('cachedCategories', JSON.stringify(categories));
+                safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(categories));
                 refreshItemCategoryDropdown();
                 resolve();
             }, function () {
@@ -2272,17 +2317,17 @@ function getAllItemCategoryIdsForFilter() {
         if (c && c.id) addName(c.id);
     });
     try {
-        JSON.parse(localStorage.getItem('cachedMenuItems') || '[]').forEach(function (it) {
+        JSON.parse(localStorage.getItem(getBranchKey('cachedMenuItems')) || '[]').forEach(function (it) {
             addName(it.category);
         });
     } catch (e) {}
     try {
-        JSON.parse(localStorage.getItem('cachedCashierItems') || '[]').forEach(function (it) {
+        JSON.parse(localStorage.getItem(getBranchKey('cachedCashierItems')) || '[]').forEach(function (it) {
             addName(it.v && it.v.category);
         });
     } catch (e) {}
     try {
-        JSON.parse(localStorage.getItem('cachedMenuCategoryNames') || '[]').forEach(addName);
+        JSON.parse(localStorage.getItem(getBranchKey('cachedMenuCategoryNames')) || '[]').forEach(addName);
     } catch (e) {}
     var sorted = Object.keys(names).sort();
     console.log('[admin items] Available categories for filter:', sorted);
@@ -2450,7 +2495,7 @@ function loadCategoryFilter() {
 
     if (!MenuData.getCategories().length) {
         MenuData.loadCategories(6000, function (categories) {
-            safeSetItem('cachedCategories', JSON.stringify(categories));
+            safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(categories));
             refreshCategoryFilterOptions();
         }, function (err) {
             console.error('Error loading category filter:', err);
@@ -2459,7 +2504,7 @@ function loadCategoryFilter() {
         return;
     }
 
-    safeSetItem('cachedCategories', JSON.stringify(MenuData.getCategories()));
+    safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(MenuData.getCategories()));
     refreshCategoryFilterOptions();
 }
 
@@ -2554,7 +2599,7 @@ function renderItemsList(items) {
             categories.forEach(function (c) {
                 catMap[normalizeCategoryId(c.id)] = c.data;
             });
-            safeSetItem('cachedCategories', JSON.stringify(categories));
+            safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(categories));
             paintRows(catMap);
         }, function () {
             paintRows(buildCategoryMapFromCache());
@@ -2820,9 +2865,12 @@ function saveQuickCategory() {
         updated_at: now
     };
 
-    var newCatRef = db.collection('categories').doc();
+    var targetCat = getActiveCatCollection();
+    window.CAT_COLLECTION = targetCat;
+    CAT_COLLECTION = targetCat;
+    var newCatRef = db.collection(targetCat).doc();
     applyMenuCloudWrite({
-        collection: 'categories',
+        collection: targetCat,
         docId: newCatRef.id,
         isCreate: true,
         sdkPromise: newCatRef.set(Object.assign({}, plainData, {
@@ -2847,6 +2895,9 @@ function saveQuickCategory() {
 
 function saveItem() {
      var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+     var targetMenuCollection = getActiveMenuCollection();
+     window.MENU_COLLECTION = targetMenuCollection;
+     MENU_COLLECTION = targetMenuCollection;
 
      if (!window.db) {
          alert(S.itemSyncFailed + '\nFirebase not ready.');
@@ -2913,6 +2964,10 @@ function saveItem() {
          return;
      }
 
+    var currentCollection = getActiveMenuCollection();
+    window.MENU_COLLECTION = currentCollection;
+    MENU_COLLECTION = currentCollection;
+
     var imgUrl = document.getElementById('itemImageURL').value.trim();
     var placeholderImg = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect fill=%23e0e0e0 width=%27400%27 height=%27300%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 font-size=%2724%27 text-anchor=%27middle%27 dy=%27.3em%27 fill=%23999%27%3ENo+Image%3C/text%3E%3C/svg%3E';
     var finalImg = imgUrl || placeholderImg;
@@ -2951,12 +3006,12 @@ function saveItem() {
     var isCreate = !itemId;
     if (itemId) {
         docId = itemId;
-        ref = db.collection('menuItems').doc(itemId);
+        ref = db.collection(currentCollection).doc(itemId);
         promise = ref.update(Object.assign({}, plainData, {
             updated_at: firebase.firestore.FieldValue.serverTimestamp()
         }));
     } else {
-        ref = db.collection('menuItems').doc();
+        ref = db.collection(currentCollection).doc();
         docId = ref.id;
         plainData.created_at = now;
         promise = ref.set(Object.assign({}, plainData, {
@@ -2988,7 +3043,7 @@ function saveItem() {
     }
 
     applyMenuCloudWrite({
-        collection: 'menuItems',
+        collection: currentCollection,
         docId: docId,
         isCreate: isCreate,
         sdkPromise: promise,
@@ -3058,7 +3113,8 @@ function editItem(itemId) {
         return;
     }
 
-    db.collection('menuItems').doc(itemId).get().then(function (doc) {
+    var targetColl = getActiveMenuCollection();
+    db.collection(targetColl).doc(itemId).get().then(function (doc) {
         if (!doc.exists) {
             if (!cached) alert(S.noItemsFound);
             return;
@@ -3076,11 +3132,12 @@ function deleteItem(itemId) {
         alert(S.itemSyncFailed + '\nPlease log in again.');
         return;
     }
+    var targetColl = getActiveMenuCollection();
     applyMenuCloudWrite({
-        collection: 'menuItems',
+        collection: targetColl,
         docId: itemId,
         isDelete: true,
-        sdkPromise: db.collection('menuItems').doc(itemId).delete(),
+        sdkPromise: db.collection(targetColl).doc(itemId).delete(),
         onDone: function () {
             removeCachedMenuItem(itemId);
             hydrateItemsUiFromCache();
@@ -3156,13 +3213,13 @@ function loadManageCategories() {
 function getMenuCategoryNames() {
     var names = {};
     try {
-        JSON.parse(localStorage.getItem('cachedCashierItems') || '[]').forEach(function (it) {
+        JSON.parse(localStorage.getItem(getBranchKey('cachedCashierItems')) || '[]').forEach(function (it) {
             var c = it && it.v && it.v.category;
             if (c) names[c] = true;
         });
     } catch (e) {}
     try {
-        JSON.parse(localStorage.getItem('cachedMenuCategoryNames') || '[]').forEach(function (n) {
+        JSON.parse(localStorage.getItem(getBranchKey('cachedMenuCategoryNames')) || '[]').forEach(function (n) {
             if (n) names[n] = true;
         });
     } catch (e) {}
@@ -3285,7 +3342,7 @@ function loadCategoriesList() {
     if (USE_LOCAL_API) {
         localApiRequest('categories.php').then(function(cats) {
             var merged = mergeCategoryLists(cats.map(function(c) { return { id: c.id, data: c }; }), readCachedCategories());
-            safeSetItem('cachedCategories', JSON.stringify(merged));
+            safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(merged));
             var have = {};
             merged.forEach(function(c) { have[c.id] = true; });
             renderCategoriesTable(mergeMenuCategories(merged, have));
@@ -3294,7 +3351,7 @@ function loadCategoriesList() {
             localApiRequest('menu_items.php').then(function(items) {
                 var names = {};
                 items.forEach(function(it) { if (it.category) names[it.category] = true; });
-                localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(names)));
+                localStorage.setItem(getBranchKey('cachedMenuCategoryNames'), JSON.stringify(Object.keys(names)));
                 renderCategoriesListNow();
             }).catch(function() {});
         }).catch(function(err) {
@@ -3316,7 +3373,7 @@ function loadCategoriesList() {
     // infinite "Loading..." on mobile and keeps the list live-updating.
     function applyCategories(categories) {
         var merged = mergeCategoryLists(categories, readCachedCategories());
-        safeSetItem('cachedCategories', JSON.stringify(merged));
+        safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(merged));
         var have = {};
         merged.forEach(function (c) { have[c.id] = true; });
         renderCategoriesTable(mergeMenuCategories(merged, have));
@@ -3465,13 +3522,13 @@ function syncCategoriesFromItems() {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     if (!confirm(S.syncCategoriesConfirm || 'Create editable category entries from the categories used by your menu items?')) return;
 
-    db.collection('menuItems').get().then(function (itemSnap) {
+    db.collection(MENU_COLLECTION).get().then(function (itemSnap) {
         var names = {};
         itemSnap.forEach(function (d) {
             var c = (d.data() || {}).category;
             if (c && c.toLowerCase().trim() !== 'water') names[c] = true;
         });
-        return db.collection('categories').orderBy('order', 'asc').get().then(function (catSnap) {
+        return db.collection(CAT_COLLECTION).orderBy('order', 'asc').get().then(function (catSnap) {
             var have = {};
             catSnap.forEach(function (d) { have[d.id] = true; });
 
@@ -3481,7 +3538,7 @@ function syncCategoriesFromItems() {
                 if (have[name]) return;
                 // Use the name as the document id so existing items (which
                 // reference the category by this value) keep matching.
-                var ref = db.collection('categories').doc(name);
+                var ref = db.collection(CAT_COLLECTION).doc(name);
                 batch.set(ref, {
                     name_ku: name, name_ar: name, name_en: name,
                     image: '',
@@ -3531,10 +3588,14 @@ function saveCategory() {
         updated_at: now
     };
 
+    var targetCat = getActiveCatCollection();
+    window.CAT_COLLECTION = targetCat;
+    CAT_COLLECTION = targetCat;
+
     var promise;
     var savedId = categoryId;
     if (categoryId) {
-        var catRef = db.collection('categories').doc(categoryId);
+        var catRef = db.collection(targetCat).doc(categoryId);
         if (isCreate) {
             plainData.created_at = now;
         }
@@ -3544,7 +3605,7 @@ function saveCategory() {
         });
         promise = catRef.set(writeData, { merge: true });
     } else {
-        var newRef = db.collection('categories').doc();
+        var newRef = db.collection(targetCat).doc();
         savedId = newRef.id;
         plainData.created_at = now;
         promise = newRef.set(Object.assign({}, plainData, {
@@ -3554,7 +3615,7 @@ function saveCategory() {
     }
 
     applyMenuCloudWrite({
-        collection: 'categories',
+        collection: targetCat,
         docId: savedId,
         isCreate: isCreate,
         sdkPromise: promise,
@@ -3594,7 +3655,7 @@ function openCategoryModalWith(categoryId, cat, isNew) {
 
 function editCategory(categoryId) {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-    db.collection('categories').doc(categoryId).get().then(function (doc) {
+    db.collection(CAT_COLLECTION).doc(categoryId).get().then(function (doc) {
         if (!doc.exists) {
             // A menu-derived (virtual) category: prefill from its name so saving
             // creates a real, editable category document with this id.
@@ -3625,7 +3686,7 @@ function deleteCategory(categoryId) {
         return;
     }
 
-    firestoreGetWithTimeout(db.collection('menuItems').get(), 8000).then(function (snap) {
+    firestoreGetWithTimeout(db.collection(MENU_COLLECTION).get(), 8000).then(function (snap) {
         var catLower = normalizeCategoryId(categoryId);
         var batch = db.batch();
         snap.forEach(function (doc) {
@@ -3635,7 +3696,7 @@ function deleteCategory(categoryId) {
             }
         });
 
-        batch.delete(db.collection('categories').doc(categoryId));
+        batch.delete(db.collection(CAT_COLLECTION).doc(categoryId));
 
         applyWrite(batch.commit(), function () {
             removeCategoryFromCacheAndUi(categoryId);
@@ -3651,12 +3712,12 @@ function deleteCategory(categoryId) {
 function removeCategoryFromCacheAndUi(categoryId) {
     var idLower = normalizeCategoryId(categoryId);
     var cats = readCachedCategories().filter(function (c) { return normalizeCategoryId(c.id) !== idLower; });
-    safeSetItem('cachedCategories', JSON.stringify(cats));
+    safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(cats));
 
     try {
-        var names = JSON.parse(localStorage.getItem('cachedMenuCategoryNames') || '[]');
+        var names = JSON.parse(localStorage.getItem(getBranchKey('cachedMenuCategoryNames')) || '[]');
         var filtered = names.filter(function (n) { return normalizeCategoryId(n) !== idLower; });
-        localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(filtered));
+        localStorage.setItem(getBranchKey('cachedMenuCategoryNames'), JSON.stringify(filtered));
     } catch (e) {}
 
     renderCategoriesListNow();
@@ -3707,7 +3768,7 @@ function runCategoryCleanup() {
         return;
     }
 
-    db.collection('categories').get().then(function (catSnap) {
+    db.collection(CAT_COLLECTION).get().then(function (catSnap) {
         var groups = {};
         catSnap.forEach(function (doc) {
             var lower = doc.id.toLowerCase();
@@ -3730,15 +3791,15 @@ function runCategoryCleanup() {
                 }
             });
             if (canonical.id !== canonicalId) {
-                catOps.push({ type: 'set', ref: db.collection('categories').doc(canonicalId), data: canonical.data });
+                catOps.push({ type: 'set', ref: db.collection(CAT_COLLECTION).doc(canonicalId), data: canonical.data });
             }
         });
 
         return chunkBatchOps(catOps).then(function () {
-            try { localStorage.removeItem('cachedCategories'); } catch (e) {}
-            try { localStorage.removeItem('cachedMenuCategoryNames'); } catch (e) {}
+            try { localStorage.removeItem(getBranchKey('cachedCategories')); } catch (e) {}
+            try { localStorage.removeItem(getBranchKey('cachedMenuCategoryNames')); } catch (e) {}
             alert('Category cleanup complete. Reloading admin…');
-            window.location.href = 'admin.html';
+            window.location.href = (CURRENT_BRANCH === '2' ? 'admin.html?branch=2' : 'admin.html');
         });
     }).catch(function (e) {
         alert('Cleanup failed: ' + (e && e.message ? e.message : e));
@@ -3776,7 +3837,7 @@ function runCategoryRename(oldName, newName) {
     }
 
     var oldLower = oldName.toLowerCase();
-    db.collection('menuItems').get().then(function (itemSnap) {
+    db.collection(MENU_COLLECTION).get().then(function (itemSnap) {
         var itemOps = [];
         itemSnap.forEach(function (doc) {
             var data = doc.data() || {};
@@ -3786,16 +3847,16 @@ function runCategoryRename(oldName, newName) {
         });
         return chunkBatchOps(itemOps).then(function () {
             return Promise.all([
-                db.collection('categories').doc(oldLower).delete(),
-                oldLower !== oldName ? db.collection('categories').doc(oldName).delete() : Promise.resolve()
+                db.collection(CAT_COLLECTION).doc(oldLower).delete(),
+                oldLower !== oldName ? db.collection(CAT_COLLECTION).doc(oldName).delete() : Promise.resolve()
             ]);
         });
     }).then(function () {
-        try { localStorage.removeItem('cachedCategories'); } catch (e) {}
-        try { localStorage.removeItem('cachedMenuCategoryNames'); } catch (e) {}
-        try { localStorage.removeItem('cachedMenuItems'); } catch (e) {}
+        try { localStorage.removeItem(getBranchKey('cachedCategories')); } catch (e) {}
+        try { localStorage.removeItem(getBranchKey('cachedMenuCategoryNames')); } catch (e) {}
+        try { localStorage.removeItem(getBranchKey('cachedMenuItems')); } catch (e) {}
         alert('Category renamed from "' + oldName + '" to "' + newName + '". Reloading…');
-        window.location.href = 'admin.html';
+        window.location.href = (CURRENT_BRANCH === '2' ? 'admin.html?branch=2' : 'admin.html');
     }).catch(function (e) {
         alert('Rename failed: ' + (e && e.message ? e.message : e));
     });
@@ -3811,7 +3872,7 @@ function stopCashierListener() {
 }
 
 function invalidateCashierCache() {
-    localStorage.removeItem('cachedCashierItems');
+    localStorage.removeItem(getBranchKey('cachedCashierItems'));
 }
 
 function normalizeCashierItemEntry(it) {
@@ -3831,7 +3892,7 @@ function normalizeCashierItemEntry(it) {
 function getCashierItemsFromLocalStorage() {
     var keys = ['cachedCashierItems', 'cachedMenuItems'];
     for (var i = 0; i < keys.length; i++) {
-        var raw = localStorage.getItem(keys[i]);
+        var raw = localStorage.getItem(getBranchKey(keys[i]));
         if (!raw) continue;
         try {
             var parsed = JSON.parse(raw);
@@ -4023,7 +4084,7 @@ function applyCashierItemsSnap(snap) {
         return;
     }
 var items = normalizeCashierItems(snap);
-safeSetItem('cachedCashierItems', JSON.stringify(items));
+safeSetItem(getBranchKey('cachedCashierItems'), JSON.stringify(items));
     var menuCache = [];
     snap.forEach(function (d) {
         menuCache.push(Object.assign({ id: d.id }, d.data()));
@@ -4055,7 +4116,7 @@ function loadCashierItems() {
 
     stopCashierListener();
 
-    adminGetWithTimeout(db.collection('menuItems'), 8000).then(applyCashierItemsSnap).catch(function (e) {
+    adminGetWithTimeout(db.collection(MENU_COLLECTION), 8000).then(applyCashierItemsSnap).catch(function (e) {
         console.warn('[cashier] get failed:', e.message);
         loadCashierItemsFromCache();
     });
@@ -4072,14 +4133,14 @@ function loadCashierItems() {
                 delete v.id;
                 return { id: id, v: v };
             });
-            safeSetItem('cachedCashierItems', JSON.stringify(items));
+            safeSetItem(getBranchKey('cachedCashierItems'), JSON.stringify(items));
             if (items.length > 0) renderCashierProducts(items);
         }).catch(function (e) {
             console.warn('[cashier] REST fallback:', e.message || e);
         });
     }
 
-    cashierUnsubscribe = db.collection('menuItems').onSnapshot(applyCashierItemsSnap, function (e) {
+    cashierUnsubscribe = db.collection(MENU_COLLECTION).onSnapshot(applyCashierItemsSnap, function (e) {
         console.error('Error loading cashier items:', e);
         loadCashierItemsFromCache();
     });
@@ -4514,7 +4575,7 @@ function populateTestData() {
     
     if (!confirm('This will add sample menu items for each category. Continue?')) return;
     
-    db.collection('categories').orderBy('order', 'asc').get().then(function (snap) {
+    db.collection(CAT_COLLECTION).orderBy('order', 'asc').get().then(function (snap) {
         if (snap.empty) {
             alert('No categories found. Please create categories first.');
             return;
@@ -4587,7 +4648,7 @@ function populateTestData() {
                 createdBy: getCurrentAdminEmail() || ''
             };
             
-            var promise = db.collection('menuItems').add(item).then(function () {
+            var promise = db.collection(MENU_COLLECTION).add(item).then(function () {
                 addedCount++;
                 console.log('Added item for category:', cat.data.name_en);
             }).catch(function (e) {

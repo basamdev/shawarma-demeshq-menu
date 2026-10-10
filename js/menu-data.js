@@ -1,14 +1,30 @@
-﻿// js/menu-data.js - Optimized shared data layer
+// js/menu-data.js - Optimized shared data layer
 // Uses onSnapshot as the primary source with a get() timeout fallback.
 // Caches items and categories in memory so filtering is instant and
 // menu.html / admin.html only read Firestore once per page load.
 (function () {
     'use strict';
 
+    var urlParams = new URLSearchParams(window.location.search || '');
+    var currentBranch = urlParams.get('branch') || window.CURRENT_BRANCH || '1';
+    window.CURRENT_BRANCH = currentBranch;
+    var menuCollection = (currentBranch === '2' ? 'menuItems_branch2' : 'menuItems');
+    window.MENU_COLLECTION = menuCollection;
+    var catCollection = (currentBranch === '2' ? 'categories_branch2' : 'categories');
+    window.CAT_COLLECTION = catCollection;
+
     var _items = [];
     var _categories = [];
     var _itemsUnsub = null;
     var _categoriesUnsub = null;
+
+    function getMenuCollectionName() {
+        return window.MENU_COLLECTION || (window.CURRENT_BRANCH === '2' ? 'menuItems_branch2' : 'menuItems');
+    }
+
+    function getCatCollectionName() {
+        return window.CAT_COLLECTION || (window.CURRENT_BRANCH === '2' ? 'categories_branch2' : 'categories');
+    }
 
     function collectItemDocs(snap) {
         var docs = [];
@@ -26,19 +42,21 @@
         if (_itemsUnsub) { _itemsUnsub(); _itemsUnsub = null; }
         if (!window.db) { onError(new Error('No DB')); return; }
 
+        var targetCollection = getMenuCollectionName();
+
         // Use shorter timeout for faster loading
         var isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         var defaultTimeout = isMobile ? 4000 : 2000;
 
         var timer = setTimeout(function () {
-            window.db.collection('menuItems').get({ source: 'server' })
+            window.db.collection(targetCollection).get({ source: 'server' })
                 .then(function (snap) {
                     _items.length = 0;
                     _items.push.apply(_items, collectItemDocs(snap));
                     onUpdate(_items.slice());
                 })
                 .catch(function () {
-                    window.db.collection('menuItems').get()
+                    window.db.collection(targetCollection).get()
                         .then(function (snap) {
                             _items.length = 0;
                             _items.push.apply(_items, collectItemDocs(snap));
@@ -48,7 +66,7 @@
                 });
         }, timeoutMs || defaultTimeout);
 
-        _itemsUnsub = window.db.collection('menuItems').onSnapshot(
+        _itemsUnsub = window.db.collection(targetCollection).onSnapshot(
             function (snap) {
                 if (!snap.metadata.fromCache && snap.size > 0) {
                     clearTimeout(timer);
@@ -68,12 +86,14 @@
         if (_categoriesUnsub) { _categoriesUnsub(); _categoriesUnsub = null; }
         if (!window.db) { onError(new Error('No DB')); return; }
 
+        var targetCollection = getCatCollectionName();
+
         // Use shorter timeout for faster loading
         var isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         var defaultTimeout = isMobile ? 4000 : 2000;
 
         var timer = setTimeout(function () {
-            window.db.collection('categories').orderBy('order', 'asc').get({ source: 'server' })
+            window.db.collection(targetCollection).orderBy('order', 'asc').get({ source: 'server' })
                 .then(function (snap) {
                     _categories.length = 0;
                     snap.forEach(function (doc) {
@@ -82,7 +102,7 @@
                     onUpdate(_categories.slice());
                 })
                 .catch(function () {
-                    window.db.collection('categories').orderBy('order', 'asc').get()
+                    window.db.collection(targetCollection).orderBy('order', 'asc').get()
                         .then(function (snap) {
                             _categories.length = 0;
                             snap.forEach(function (doc) {
@@ -94,7 +114,7 @@
                 });
         }, timeoutMs || defaultTimeout);
 
-        _categoriesUnsub = window.db.collection('categories').orderBy('order', 'asc').onSnapshot(
+        _categoriesUnsub = window.db.collection(targetCollection).orderBy('order', 'asc').onSnapshot(
             function (snap) {
                 if (!snap.metadata.fromCache && snap.size > 0) {
                     clearTimeout(timer);
@@ -137,6 +157,8 @@
     function unsubscribeAll() {
         if (_itemsUnsub) { _itemsUnsub(); _itemsUnsub = null; }
         if (_categoriesUnsub) { _categoriesUnsub(); _categoriesUnsub = null; }
+        _items.length = 0;
+        _categories.length = 0;
     }
 
     window.MenuData = {

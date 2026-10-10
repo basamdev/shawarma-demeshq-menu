@@ -10,7 +10,17 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
+    match /menuItems_branch2/{itemId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
     match /categories/{catId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /categories_branch2/{catId} {
       allow read: if true;
       allow write: if isSignedIn();
     }

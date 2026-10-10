@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ku" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -341,15 +341,16 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="js/firebase.js?v=117"></script>
-    <script src="js/menu-data.js?v=117"></script>
-    <script src="js/app.js?v=117"></script>
-    <script src="js/local-api.js?v=117"></script>
+    <script src="js/firebase.js?v=119"></script>
+    <script src="js/menu-data.js?v=119"></script>
+    <script src="js/app.js?v=119"></script>
+    <script src="js/local-api.js?v=119"></script>
     <script>
         (function () {
             var heroLogo = document.querySelector('.menu-hero-logo');
+            var branchQuery = (new URLSearchParams(window.location.search).get('branch') === '2') ? '?branch=2' : '';
             setupLogoClickActions(heroLogo, function () {
-                window.location.href = 'index.html';
+                window.location.href = 'index.html' + branchQuery;
             });
         })();
     </script>

@@ -170,6 +170,18 @@ window.auth = auth;
 window.db = db;
 window.storage = storage;
 
+// Branch Configuration
+var branchUrlParams = new URLSearchParams(window.location.search || '');
+window.CURRENT_BRANCH = branchUrlParams.get('branch') || window.CURRENT_BRANCH || '1';
+window.MENU_COLLECTION = (window.CURRENT_BRANCH === '2') ? 'menuItems_branch2' : 'menuItems';
+window.CAT_COLLECTION = (window.CURRENT_BRANCH === '2') ? 'categories_branch2' : 'categories';
+
+function getBranchKey(key) {
+    var b = window.CURRENT_BRANCH || '1';
+    return (b === '1') ? key : (key + '_branch' + b);
+}
+window.getBranchKey = getBranchKey;
+
 console.log('Firebase Storage disabled; using direct image URLs only');
 console.log('Using Firebase environment:', window.firebaseEnvironment, 'project:', firebaseConfig.projectId);
 

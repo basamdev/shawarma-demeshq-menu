@@ -13,6 +13,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function getAdminRedirectUrl() {
+        var branch = new URLSearchParams(window.location.search || '').get('branch');
+        return branch === '2' ? 'admin.html?branch=2' : 'admin.html';
+    }
+
     if (loginForm) {
         loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -39,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         localStorage.setItem('adminUser', JSON.stringify(response.user));
                     }
                     showMessage(loginError, '', false);
-                    window.location.href = 'admin.html';
+                    window.location.href = getAdminRedirectUrl();
                 }).catch(function(error) {
                     showMessage(loginError, error.message || 'Authentication failed', true);
                 });
@@ -49,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
             auth.signInWithEmailAndPassword(email, password)
                 .then(function() {
                     showMessage(loginError, '', false);
-                    window.location.href = 'admin.html';
+                    window.location.href = getAdminRedirectUrl();
                 })
                 .catch(function(error) {
                     const errorCode = error.code;
@@ -75,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof USE_LOCAL_API === 'undefined' || !USE_LOCAL_API) {
         auth.onAuthStateChanged(function(user) {
             if (user) {
-                window.location.href = 'admin.html';
+                window.location.href = getAdminRedirectUrl();
             }
         });
     }
