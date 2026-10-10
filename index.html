@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=62">
+    <link rel="stylesheet" href="css/style.css?v=63">
     <style>
         :lang(en) {
             font-family: var(--font-body);
@@ -87,10 +87,17 @@
                     <span>English</span>
                 </button>
             </div>
+
+            <div class="view-menu-wrap" style="margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                <a href="menu.html" class="view-menu-btn" id="viewMenuBtn">
+                    <span>View Menu • بینینی مێنۆ • عرض القائمة</span>
+                </a>
+                <div id="indexBranchBadge" class="menu-branch-badge" style="display:none;"></div>
+            </div>
         </div>
     </section>
 
-    <script src="js/app.js?v=89"></script>
+    <script src="js/app.js?v=94"></script>
     <script>
         (function () {
             var splash = document.getElementById('logoSplash');

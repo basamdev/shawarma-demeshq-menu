@@ -5628,3 +5628,47 @@ body.emenu-layout .menu-hero-brand.hero-theme-pulse .menu-hero-logo-ring {
         border-radius: 24px;
     }
 }
+
+/* Branch Indicators & Landing View Menu Button */
+.menu-branch-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: 9999px;
+    white-space: nowrap;
+    background: rgba(16, 185, 129, 0.22);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.45);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    animation: fadeIn 0.4s ease;
+}
+
+.view-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 24px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.22), rgba(212, 175, 55, 0.08));
+    color: #F7D87D;
+    border: 1px solid rgba(247, 216, 125, 0.4);
+    border-radius: 9999px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.view-menu-btn:hover {
+    background: rgba(247, 216, 125, 0.28);
+    border-color: #F7D87D;
+    color: #FFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(247, 216, 125, 0.25);
+}
+

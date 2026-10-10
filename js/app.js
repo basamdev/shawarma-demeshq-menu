@@ -1,10 +1,98 @@
 // App.js — Shawarma Premium Menu
 // Handles: i18n, theme, category filtering, product detail modal, video player
 
+const urlParams = new URLSearchParams(window.location.search || '');
+window.BRANCH_ID = urlParams.get('branch') || window.CURRENT_BRANCH || '1';
+window.BRANCH_SUFFIX = (window.BRANCH_ID !== '1') ? ('_branch' + window.BRANCH_ID) : '';
+
+window.MENU_COLLECTION = 'menuItems' + window.BRANCH_SUFFIX;
+window.CAT_COLLECTION = 'categories' + window.BRANCH_SUFFIX;
+window.CURRENT_BRANCH = window.BRANCH_ID;
+
+var MENU_COLLECTION = window.MENU_COLLECTION;
+var CAT_COLLECTION = window.CAT_COLLECTION;
+
+var CACHE_KEY_MENU_ITEMS = (window.BRANCH_ID !== '1' ? ('cachedMenuItems' + window.BRANCH_SUFFIX) : 'cachedMenuItems');
+var CACHE_KEY_CATEGORIES = (window.BRANCH_ID !== '1' ? ('cachedCategories' + window.BRANCH_SUFFIX) : 'cachedCategories');
+var CACHE_KEY_MENU_ITEMS_SIG = (window.BRANCH_ID !== '1' ? ('cachedMenuItemsSig' + window.BRANCH_SUFFIX) : 'cachedMenuItemsSig');
+var CACHE_KEY_CATEGORIES_SIG = (window.BRANCH_ID !== '1' ? ('cachedCategoriesSig' + window.BRANCH_SUFFIX) : 'cachedCategoriesSig');
+
 window.openMenu = function (lang) {
     localStorage.setItem('selectedLang', lang);
-    window.location.href = 'menu.html?lang=' + lang;
+    var p = new URLSearchParams(window.location.search || '');
+    p.set('lang', lang);
+    var branch = p.get('branch') || window.BRANCH_ID || window.CURRENT_BRANCH;
+    if (branch && branch !== '1') {
+        p.set('branch', branch);
+    }
+    window.location.href = 'menu.html?' + p.toString();
 };
+
+function preserveBranchInNavigation() {
+    var p = new URLSearchParams(window.location.search || '');
+    var branch = p.get('branch') || window.BRANCH_ID || window.CURRENT_BRANCH;
+    if (!branch) return;
+
+    var isBranch2 = String(branch) === '2';
+
+    // 1. Landing page "View Menu" button
+    var viewMenuBtn = document.getElementById('viewMenuBtn');
+    if (viewMenuBtn) {
+        var baseHref = 'menu.html';
+        if (branch !== '1') {
+            viewMenuBtn.setAttribute('href', baseHref + '?branch=' + encodeURIComponent(branch));
+        } else if (p.has('branch')) {
+            viewMenuBtn.setAttribute('href', baseHref + '?branch=1');
+        } else {
+            viewMenuBtn.setAttribute('href', baseHref);
+        }
+    }
+
+    // 2. Landing page branch badge indicator
+    var indexBadge = document.getElementById('indexBranchBadge');
+    if (indexBadge) {
+        if (isBranch2) {
+            indexBadge.style.display = 'inline-flex';
+            indexBadge.textContent = '📍 لقی دووەم (Branch 2)';
+        } else {
+            indexBadge.style.display = 'none';
+        }
+    }
+
+    // 3. Menu page branch badge indicator
+    var menuBadge = document.getElementById('menuBranchBadge');
+    if (menuBadge) {
+        if (isBranch2) {
+            var lang = localStorage.getItem('selectedLang') || 'ku';
+            menuBadge.style.display = 'inline-flex';
+            menuBadge.textContent = (lang === 'ku') ? '📍 لقی ٢ (Branch 2)' : ((lang === 'ar') ? '📍 الفرع ٢ (Branch 2)' : '📍 Branch 2 (لقی ٢)');
+        } else {
+            menuBadge.style.display = 'none';
+        }
+    }
+
+    // 4. Preserve branch in relative links
+    if (branch !== '1') {
+        document.querySelectorAll('a[href]').forEach(function (link) {
+            var href = link.getAttribute('href');
+            if (!href || href.startsWith('#') || href.startsWith('tel:') || href.startsWith('mailto:') || href.startsWith('javascript:') || href.startsWith('http://') || href.startsWith('https://')) return;
+            try {
+                var url = new URL(href, window.location.href);
+                if (url.origin === window.location.origin && !url.searchParams.has('branch')) {
+                    url.searchParams.set('branch', branch);
+                    link.setAttribute('href', url.pathname.replace(/^\//, '') + url.search + url.hash);
+                }
+            } catch (e) {}
+        });
+    }
+}
+window.preserveBranchInNavigation = preserveBranchInNavigation;
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', preserveBranchInNavigation);
+} else {
+    preserveBranchInNavigation();
+}
 
 function safeSetItem(key, value) {
     try {
@@ -1077,7 +1165,7 @@ function fetchMenuViaRest(timeoutMs) {
     }
     var baseUrl = getFirestoreRestBaseUrl();
     var url = baseUrl + encodeURIComponent(cfg.projectId) +
-        '/databases/(default)/documents/menuItems?key=' + encodeURIComponent(cfg.apiKey);
+        '/databases/(default)/documents/' + encodeURIComponent(window.MENU_COLLECTION) + '?key=' + encodeURIComponent(cfg.apiKey);
     var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
     var timer = null;
     var opts = { cache: 'no-store' };
@@ -1130,15 +1218,15 @@ async function loadCategoriesFromFirebase() {
     if (!window.db) return false;
     if (window._firestoreApiDisabled) return false;
     try {
-        const catSnap = await firestoreGetWithTimeout(window.db.collection('categories').orderBy('order', 'asc'), 8000);
+        const catSnap = await firestoreGetWithTimeout(window.db.collection(window.CAT_COLLECTION).orderBy('order', 'asc'), 8000);
         const categories = [];
         catSnap.forEach(doc => {
             categories.push({ id: doc.id, data: doc.data() });
         });
         const sig = categories.map(function (c) { return c.id; }).join('|');
-        const prev = localStorage.getItem('cachedCategoriesSig') || '';
-        safeSetItem('cachedCategories', JSON.stringify(categories));
-        safeSetItem('cachedCategoriesSig', sig);
+        const prev = localStorage.getItem(CACHE_KEY_CATEGORIES_SIG) || '';
+        safeSetItem(CACHE_KEY_CATEGORIES, JSON.stringify(categories));
+        safeSetItem(CACHE_KEY_CATEGORIES_SIG, sig);
         if (cachedMenuItems.length > 0) {
             renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
         }
@@ -1159,7 +1247,7 @@ function applyMenuItemsUpdate(items, options) {
     _lastMenuItemsSignature = sig;
 
     cachedMenuItems = items;
-    safeSetItem('cachedMenuItems', JSON.stringify(items));
+    safeSetItem(CACHE_KEY_MENU_ITEMS, JSON.stringify(items));
 
     const container = document.getElementById('menuGrid');
     if (!container) return;
@@ -1189,7 +1277,7 @@ function applyMenuItemsUpdate(items, options) {
 }
 
 function showCachedMenuIfAvailable() {
-    const cached = localStorage.getItem('cachedMenuItems');
+    const cached = localStorage.getItem(CACHE_KEY_MENU_ITEMS);
     if (!cached) return false;
 
     try {
@@ -1217,6 +1305,10 @@ async function loadMenuItems() {
 
     if (window.location && window.location.search && /[?&]refreshCache(?:=1)?(&|$)/.test(window.location.search)) {
         [
+            CACHE_KEY_MENU_ITEMS,
+            CACHE_KEY_MENU_ITEMS_SIG,
+            CACHE_KEY_CATEGORIES,
+            CACHE_KEY_CATEGORIES_SIG,
             'cachedMenuItems',
             'cachedMenuItemsSig',
             'cachedCategories',
@@ -1319,7 +1411,7 @@ async function loadMenuItems() {
         fetchMenuItemsFallback(strings, 'initial-get');
 
         if (loadMenuItems._unsubscribe) loadMenuItems._unsubscribe();
-        loadMenuItems._unsubscribe = window.db.collection('menuItems').onSnapshot(
+        loadMenuItems._unsubscribe = window.db.collection(window.MENU_COLLECTION).onSnapshot(
             liveSnap => {
                 if (loadMenuItems._loadTimer) {
                     clearTimeout(loadMenuItems._loadTimer);
@@ -1334,14 +1426,14 @@ async function loadMenuItems() {
         );
 
         if (window._categoriesUnsubscribe) window._categoriesUnsubscribe();
-        window._categoriesUnsubscribe = window.db.collection('categories').orderBy('order', 'asc').onSnapshot(
+        window._categoriesUnsubscribe = window.db.collection(window.CAT_COLLECTION).orderBy('order', 'asc').onSnapshot(
             snap => {
                 const cats = [];
                 snap.forEach(doc => cats.push({ id: doc.id, data: doc.data() }));
-                safeSetItem('cachedCategories', JSON.stringify(cats));
+                safeSetItem(CACHE_KEY_CATEGORIES, JSON.stringify(cats));
                 const sig = cats.map(c => c.id).join('|');
-                const prev = localStorage.getItem('cachedCategoriesSig') || '';
-                safeSetItem('cachedCategoriesSig', sig);
+                const prev = localStorage.getItem(CACHE_KEY_CATEGORIES_SIG) || '';
+                safeSetItem(CACHE_KEY_CATEGORIES_SIG, sig);
                 if (cachedMenuItems && cachedMenuItems.length > 0) {
                     renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
                 }
@@ -1410,7 +1502,7 @@ function fetchMenuItemsFallback(strings, reason) {
             if (!_menuUiReady) showMenuLoadError(strings, restErr);
             return;
         }
-        firestoreGetWithTimeout(window.db.collection('menuItems'), 8000).then(function (snap) {
+        firestoreGetWithTimeout(window.db.collection(window.MENU_COLLECTION), 8000).then(function (snap) {
             if (loadMenuItems._loadTimer) {
                 clearTimeout(loadMenuItems._loadTimer);
                 loadMenuItems._loadTimer = null;
@@ -1428,7 +1520,7 @@ function loadFromCache() {
     var container = document.getElementById('menuGrid');
     if (!container) return;
 
-    var cached = localStorage.getItem('cachedMenuItems');
+    var cached = localStorage.getItem(CACHE_KEY_MENU_ITEMS);
     if (cached) {
         try {
             var items = normalizeMenuItemsList(JSON.parse(cached));
@@ -1472,7 +1564,7 @@ function buildAllCategoryButton(label) {
 
 function filterItemsByCategory(items, category) {
     if (category === ALL_CATEGORY_ID) return items;
-    var cachedCats = localStorage.getItem('cachedCategories');
+    var cachedCats = localStorage.getItem(CACHE_KEY_CATEGORIES);
     if (cachedCats) {
         try {
             var categories = JSON.parse(cachedCats);
@@ -1494,7 +1586,7 @@ function renderCategories(items, options) {
      const allBtn = isEmenuPage() ? buildAllCategoryButton(strings.allItems) : '';
 
      // Load categories from Firebase or cache
-     const cachedCats = localStorage.getItem('cachedCategories');
+     const cachedCats = localStorage.getItem(CACHE_KEY_CATEGORIES);
      let categories = [];
      if (cachedCats) {
          try {
@@ -1808,7 +1900,7 @@ function createMenuCard(item, lang, strings) {
     const imageUrl = normalizeImageUrl(item.image) || fallbackImage;
 
     let categoryName = '';
-    const cachedCats = localStorage.getItem('cachedCategories');
+    const cachedCats = localStorage.getItem(CACHE_KEY_CATEGORIES);
     if (cachedCats && item.category) {
         try {
             const categories = JSON.parse(cachedCats);
@@ -1929,7 +2021,7 @@ function renderMenuItems(items) {
           let categoryOrder = [];
           const categoryExactMap = {};
           try {
-              const cachedCats = JSON.parse(localStorage.getItem('cachedCategories') || '[]');
+              const cachedCats = JSON.parse(localStorage.getItem(CACHE_KEY_CATEGORIES) || '[]');
               cachedCats.sort(function (a, b) {
                   var ao = (a.data && a.data.order) != null ? a.data.order : null;
                   var bo = (b.data && b.data.order) != null ? b.data.order : null;
@@ -2073,7 +2165,7 @@ function getCategoryDisplayName(categoryId, lang) {
     lang = lang || localStorage.getItem('selectedLang') || 'ku';
     var strings = i18n[lang] || i18n.en;
     if (categoryId === ALL_CATEGORY_ID) return strings.allItems;
-    var cachedCats = localStorage.getItem('cachedCategories');
+    var cachedCats = localStorage.getItem(CACHE_KEY_CATEGORIES);
     if (cachedCats) {
         try {
             var categories = JSON.parse(cachedCats);
@@ -2269,7 +2361,14 @@ function setActiveLanguage(lang) {
     if (window.location.pathname.includes('menu.html')) {
         const url = new URL(window.location);
         url.searchParams.set('lang', lang);
+        var branch = url.searchParams.get('branch') || window.BRANCH_ID || window.CURRENT_BRANCH;
+        if (branch && branch !== '1' && !url.searchParams.has('branch')) {
+            url.searchParams.set('branch', branch);
+        }
         window.history.pushState({ path: url.href }, '', url.href);
+    }
+    if (typeof preserveBranchInNavigation === 'function') {
+        preserveBranchInNavigation();
     }
 
     // Update old buttons

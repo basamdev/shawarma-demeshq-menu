@@ -3645,7 +3645,7 @@ body.light-mode .admin-branch-badge--branch1 {
 
 /* Admin Header Brand (Logo + Name next to badge) */
 .admin-header-brand {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 8px;
     cursor: pointer;
@@ -3657,11 +3657,14 @@ body.light-mode .admin-branch-badge--branch1 {
     opacity: 0.9;
 }
 
-.admin-header-logo {
-    width: 34px;
-    height: 34px;
+.admin-header-logo,
+#adminHeaderBrand img {
+    width: 36px !important;
+    height: 36px !important;
+    max-width: 36px !important;
+    max-height: 36px !important;
+    object-fit: contain;
     border-radius: 50%;
-    object-fit: cover;
     border: 2px solid rgba(var(--gold-rgb), 0.35);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     flex-shrink: 0;

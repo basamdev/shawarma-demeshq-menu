@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css?v=66">
+    <link rel="stylesheet" href="css/style.css?v=67">
 </head>
 <body class="menu-page emenu-layout light-mode" data-menu-theme="light">
 <script>
@@ -88,6 +88,7 @@
                     <span class="menu-hero-typed" id="heroTitleTyped" dir="rtl">Shawarma</span><span class="menu-hero-cursor" id="heroTitleCursor" aria-hidden="true"></span>
                 </span>
             </h1>
+            <div id="menuBranchBadge" class="menu-branch-badge" style="display:none;margin-top:8px;"></div>
         </div>
         <div class="menu-hero-curve" aria-hidden="true">
             <svg viewBox="0 0 400 32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
@@ -342,13 +343,14 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="js/firebase.js?v=30"></script>
-    <script src="js/app.js?v=93"></script>
+    <script src="js/app.js?v=94"></script>
     <script src="js/local-api.js"></script>
     <script>
         (function () {
             var heroLogo = document.querySelector('.menu-hero-logo');
             setupLogoClickActions(heroLogo, function () {
-                window.location.href = 'index.html';
+                var branch = (window.BRANCH_ID && window.BRANCH_ID !== '1') ? window.BRANCH_ID : (new URLSearchParams(window.location.search).get('branch'));
+                window.location.href = 'index.html' + (branch && branch !== '1' ? '?branch=' + encodeURIComponent(branch) : '');
             });
         })();
     </script>
