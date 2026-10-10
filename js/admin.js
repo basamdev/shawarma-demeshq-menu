@@ -177,12 +177,58 @@ function readCachedMenuItemsFlat() {
     }
 }
 
-function writeCachedMenuItemsFlat(items) {
+function writeCachedMenuItemsFlat(key, items) {
+    // Support both writeCachedMenuItemsFlat(items) and writeCachedMenuItemsFlat(key, items)
+    if (typeof key !== 'string') {
+        items = key;
+        key = (typeof CACHE_KEY_MENU_ITEMS !== 'undefined' ? CACHE_KEY_MENU_ITEMS : 'cachedMenuItems');
+    }
+    if (!Array.isArray(items)) {
+        items = items ? [items] : [];
+    }
+
+    let lightweightItems = [];
     try {
-        localStorage.setItem(CACHE_KEY_MENU_ITEMS, JSON.stringify(items));
-        syncCashierCacheFromMenuFlat(items);
+        // Strip heavy base64 image strings before caching
+        lightweightItems = items.map(item => {
+            const copy = { ...item };
+            if (copy.image && typeof copy.image === 'string' && (copy.image.startsWith('data:image') || copy.image.length > 500)) {
+                delete copy.image;
+            }
+            return copy;
+        });
+        localStorage.setItem(key, JSON.stringify(lightweightItems));
+        syncCashierCacheFromMenuFlat(lightweightItems);
     } catch (e) {
-        console.warn('Could not write menu cache:', e);
+        if (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(e.message || '')) {
+            console.warn(`[Cache] Storage quota exceeded for ${key}. Clearing stale caches...`);
+            // Clear other branch caches to free space
+            try {
+                const keysToInspect = [];
+                if (typeof localStorage.length === 'number') {
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i);
+                        if (k) keysToInspect.push(k);
+                    }
+                }
+                Object.keys(localStorage).forEach(k => {
+                    if (!keysToInspect.includes(k)) keysToInspect.push(k);
+                });
+                keysToInspect.forEach(k => {
+                    if (k.startsWith('cachedMenu') && k !== key) {
+                        localStorage.removeItem(k);
+                    }
+                });
+            } catch (clearErr) { }
+            try {
+                localStorage.setItem(key, JSON.stringify(lightweightItems));
+                syncCashierCacheFromMenuFlat(lightweightItems);
+            } catch (retryErr) {
+                console.warn(`[Cache] Unable to cache ${key}; continuing in-memory only.`);
+            }
+        } else {
+            console.warn(`[Cache] Could not write menu cache for ${key}:`, e);
+        }
     }
 }
 
@@ -192,6 +238,9 @@ function syncCashierCacheFromMenuFlat(items) {
         if (!it || !it.id || (it.category && it.category.toLowerCase().trim() === 'water') || it.available === false) return;
         var v = Object.assign({}, it);
         delete v.id;
+        if (v.image && typeof v.image === 'string' && (v.image.startsWith('data:image') || v.image.length > 500)) {
+            delete v.image;
+        }
         cashier.push({ id: it.id, v: v });
     });
     try {
