@@ -1,8 +1,8 @@
 // App.js — Shawarma Premium Menu
 // Handles: i18n, theme, category filtering, product detail modal, video player
 
-const urlParams = new URLSearchParams(window.location.search || '');
-window.BRANCH_ID = urlParams.get('branch') || window.CURRENT_BRANCH || '1';
+window.urlParams = window.urlParams || new URLSearchParams(window.location.search || '');
+window.BRANCH_ID = window.urlParams.get('branch') || window.CURRENT_BRANCH || '1';
 window.BRANCH_SUFFIX = (window.BRANCH_ID !== '1') ? ('_branch' + window.BRANCH_ID) : '';
 
 window.MENU_COLLECTION = 'menuItems' + window.BRANCH_SUFFIX;

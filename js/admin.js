@@ -104,10 +104,10 @@ var API_BASE = 'api';
 
 if (USE_LOCAL_API && typeof console !== 'undefined' && console.error) {
     var originalConsoleError = console.error;
-    console.error = function() {
+    console.error = function () {
         var args = Array.prototype.slice.call(arguments);
         var msg = args.join(' ');
-        if (msg.indexOf('Cloud Firestore API') !== -1 || 
+        if (msg.indexOf('Cloud Firestore API') !== -1 ||
             msg.indexOf('Could not reach Cloud Firestore backend') !== -1 ||
             msg.indexOf('firestore.googleapis.com') !== -1) {
             return;
@@ -128,23 +128,23 @@ function localApiRequest(endpoint, options) {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     };
-    
+
     var config = {
         method: method,
         headers: headers,
         mode: 'cors',
         credentials: 'include'
     };
-    
+
     if (body) {
         config.body = JSON.stringify(body);
     }
-    
-    return fetch(url, config).then(function(response) {
+
+    return fetch(url, config).then(function (response) {
         if (!response.ok) {
-            return response.json().then(function(err) {
+            return response.json().then(function (err) {
                 throw new Error(err.error || 'HTTP ' + response.status);
-            }).catch(function() {
+            }).catch(function () {
                 throw new Error('HTTP ' + response.status);
             });
         }
@@ -196,7 +196,7 @@ function syncCashierCacheFromMenuFlat(items) {
     });
     try {
         localStorage.setItem(CACHE_KEY_CASHIER_ITEMS, JSON.stringify(cashier));
-    } catch (e) {}
+    } catch (e) { }
 }
 
 function safeSetItem(key, value) {
@@ -232,7 +232,7 @@ var NON_ESSENTIAL_CACHE_KEYS = [
 
 function evictNonEssentialCacheKeys() {
     NON_ESSENTIAL_CACHE_KEYS.forEach(function (k) {
-        try { localStorage.removeItem(k); } catch (e) {}
+        try { localStorage.removeItem(k); } catch (e) { }
     });
 }
 
@@ -285,11 +285,11 @@ function backfillCreatedByForCurrentAdmin() {
             batch.commit().then(function () {
                 localStorage.setItem('createdByBackfilled_' + email, '1');
                 console.log('[backfill] Tagged ' + updated + ' items with createdBy');
-            }).catch(function () {});
+            }).catch(function () { });
         } else {
             localStorage.setItem('createdByBackfilled_' + email, '1');
         }
-    }).catch(function () {});
+    }).catch(function () { });
 }
 
 function getItemDocsFromLocalCache() {
@@ -349,7 +349,7 @@ function writeCachedSales(items) {
     try {
         localStorage.setItem('cachedSales', JSON.stringify(items));
         syncSalesLiveFromCache();
-    } catch (e) {}
+    } catch (e) { }
 }
 
 function syncSalesLiveFromCache() {
@@ -468,18 +468,18 @@ function warmAdminOfflineCache(done) {
             menu.push(Object.assign({ id: d.id }, d.data()));
         });
         writeCachedMenuItemsFlat(menu);
-    }).catch(function () {}));
+    }).catch(function () { }));
     tasks.push(db.collection(window.CAT_COLLECTION).orderBy('order', 'asc').get().then(function (snap) {
         var categories = [];
         snap.forEach(function (d) {
             categories.push({ id: d.id, data: d.data() });
         });
         safeSetItem(CACHE_KEY_CATEGORIES, JSON.stringify(categories));
-    }).catch(function () {}));
+    }).catch(function () { }));
     tasks.push(warmExpensesCacheFromServer());
     tasks.push(warmSalesCacheFromServer());
     Promise.all(tasks).then(function () {
-        try { localStorage.setItem('adminCacheWarmedAt', String(Date.now())); } catch (e) {}
+        try { localStorage.setItem('adminCacheWarmedAt', String(Date.now())); } catch (e) { }
         hydrateAdminFromLocalCache();
         if (typeof done === 'function') done();
     }).catch(function () {
@@ -1023,9 +1023,9 @@ function warmSalesCacheFromServer() {
     }
     if (window._firestoreApiDisabled) return Promise.resolve();
     if (USE_LOCAL_API) {
-        return localApiRequest('sales.php').then(function(docs) {
+        return localApiRequest('sales.php').then(function (docs) {
             mergeRestSalesDocs(docs || []);
-        }).catch(function(err) {
+        }).catch(function (err) {
             console.warn('[sales] Local API failed:', err.message);
         });
     }
@@ -1068,9 +1068,9 @@ function warmExpensesCacheFromServer() {
     }
     if (window._firestoreApiDisabled) return Promise.resolve();
     if (USE_LOCAL_API) {
-        return localApiRequest('expenses.php').then(function(docs) {
+        return localApiRequest('expenses.php').then(function (docs) {
             mergeRestExpensesDocs(docs || []);
-        }).catch(function(err) {
+        }).catch(function (err) {
             console.warn('[expenses] Local API failed:', err.message);
         });
     }
@@ -1330,7 +1330,7 @@ window.adminAuthReady = new Promise(function (resolve) {
         }
         return;
     }
-    
+
     if (!window.auth) {
         resolve(null);
         return;
@@ -1385,7 +1385,7 @@ function adminGetWithTimeout(queryOrRef, ms) {
     return queryOrRef.get({ source: 'cache' }).then(function (snap) {
         cacheSnap = snap;
         if (snap && !snap.empty) {
-            raceServer().catch(function () {});
+            raceServer().catch(function () { });
             return snap;
         }
         return raceServer();
@@ -1432,7 +1432,7 @@ function adminSectionStillLoading(elementId) {
 
 function stopCategoriesListener() {
     if (categoriesUnsubscribe) {
-        try { categoriesUnsubscribe(); } catch (e) {}
+        try { categoriesUnsubscribe(); } catch (e) { }
         categoriesUnsubscribe = null;
     }
 }
@@ -1646,7 +1646,7 @@ function toDisplayTime(ts) {
 /* ============ DASHBOARD ============ */
 
 function getMonthName(monthIndex, strings) {
-    var keys = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+    var keys = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
     return (monthIndex + 1) + ' — ' + (strings[keys[monthIndex]] || (monthIndex + 1));
 }
 
@@ -1657,40 +1657,40 @@ function loadDashboard() {
     var now = new Date();
     var currentMonth = now.getMonth();
     var monthsHtml = '';
-    var mNames = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+    var mNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
     for (var m = 0; m < 12; m++) {
         monthsHtml += '<option value="' + m + '"' + (m === currentMonth ? ' selected' : '') + '>' + (m + 1) + ' — ' + S[mNames[m]] + ' ' + now.getFullYear() + '</option>';
     }
     adminContent.innerHTML =
         '<div class="dashboard-header-bar">' +
-            '<div class="dashboard-heading-group">' +
-                '<h2 class="dashboard-heading-title">' + escapeHtmlText(S.dashboard || 'Dashboard') + '</h2>' +
-                '<span class="dashboard-branch-badge ' + badgeInfo.className + '" title="' + escapeHtmlText(badgeInfo.tooltip) + '">' + badgeInfo.text + '</span>' +
-            '</div>' +
+        '<div class="dashboard-heading-group">' +
+        '<h2 class="dashboard-heading-title">' + escapeHtmlText(S.dashboard || 'Dashboard') + '</h2>' +
+        '<span class="dashboard-branch-badge ' + badgeInfo.className + '" title="' + escapeHtmlText(badgeInfo.tooltip) + '">' + badgeInfo.text + '</span>' +
+        '</div>' +
         '</div>' +
         '<div class="month-selector">' +
-            '<label>' + S.selectMonth + '</label>' +
-            '<select id="dashboardMonthSelect">' + monthsHtml + '</select>' +
+        '<label>' + S.selectMonth + '</label>' +
+        '<select id="dashboardMonthSelect">' + monthsHtml + '</select>' +
         '</div>' +
         '<div class="admin-stats">' +
-            '<div class="stat-card stat-card--income"><h3>' + S.todaySales + '</h3><div class="stat-value" id="todaySales">0 IQD</div></div>' +
-            '<div class="stat-card stat-card--expense"><h3>' + S.todayExpenses + '</h3><div class="stat-value" id="todayExpenses">0 IQD</div></div>' +
-            '<div class="stat-card stat-card--net"><h3>' + S.netIncome + '</h3><div class="stat-value" id="todayNet">0 IQD</div></div>' +
-            '<div class="stat-card"><h3>' + S.todayOrders + '</h3><div class="stat-value" id="todayOrders">0</div></div>' +
+        '<div class="stat-card stat-card--income"><h3>' + S.todaySales + '</h3><div class="stat-value" id="todaySales">0 IQD</div></div>' +
+        '<div class="stat-card stat-card--expense"><h3>' + S.todayExpenses + '</h3><div class="stat-value" id="todayExpenses">0 IQD</div></div>' +
+        '<div class="stat-card stat-card--net"><h3>' + S.netIncome + '</h3><div class="stat-value" id="todayNet">0 IQD</div></div>' +
+        '<div class="stat-card"><h3>' + S.todayOrders + '</h3><div class="stat-value" id="todayOrders">0</div></div>' +
         '</div>' +
         '<div class="admin-stats" style="margin-top:16px;">' +
-            '<div class="stat-card stat-card--income"><h3>' + S.monthlySales + '</h3><div class="stat-value" id="monthlySales">0 IQD</div></div>' +
-            '<div class="stat-card stat-card--expense"><h3>' + S.monthlyExpenses + '</h3><div class="stat-value" id="monthlyExpenses">0 IQD</div></div>' +
-            '<div class="stat-card stat-card--net"><h3>' + S.netIncome + '</h3><div class="stat-value" id="monthlyNet">0 IQD</div></div>' +
-            '<div class="stat-card"><h3>' + S.bestSelling + '</h3><div class="stat-value" id="bestSelling">-</div></div>' +
+        '<div class="stat-card stat-card--income"><h3>' + S.monthlySales + '</h3><div class="stat-value" id="monthlySales">0 IQD</div></div>' +
+        '<div class="stat-card stat-card--expense"><h3>' + S.monthlyExpenses + '</h3><div class="stat-value" id="monthlyExpenses">0 IQD</div></div>' +
+        '<div class="stat-card stat-card--net"><h3>' + S.netIncome + '</h3><div class="stat-value" id="monthlyNet">0 IQD</div></div>' +
+        '<div class="stat-card"><h3>' + S.bestSelling + '</h3><div class="stat-value" id="bestSelling">-</div></div>' +
         '</div>' +
         '<div class="card">' +
-            '<h2>' + S.dailySales + ' — <span id="dailySalesMonthLabel"></span></h2>' +
-            '<div id="dailySalesContainer"></div>' +
+        '<h2>' + S.dailySales + ' — <span id="dailySalesMonthLabel"></span></h2>' +
+        '<div id="dailySalesContainer"></div>' +
         '</div>' +
         '<div class="card" style="margin-top:20px;">' +
-            '<h2>' + S.recentSales + '</h2>' +
-            '<div id="recentSalesContainer"></div>' +
+        '<h2>' + S.recentSales + '</h2>' +
+        '<div id="recentSalesContainer"></div>' +
         '</div>';
     var monthSelect = document.getElementById('dashboardMonthSelect');
     if (monthSelect) {
@@ -1935,77 +1935,77 @@ function loadManageItems() {
     var adminContent = document.getElementById('adminContent');
     adminContent.innerHTML =
         '<div class="card">' +
-            '<h2>' + S.manageItems + ' <small style="opacity:0.45;font-size:0.75rem;font-weight:400">' + ADMIN_VERSION + '</small></h2>' +
-            '<button class="btn-primary" id="addItemBtn" style="margin-bottom:16px;">' + S.addNewItem + '</button>' +
-            '<div class="form-group"><input type="text" id="itemSearch" placeholder="' + S.searchItems + '"></div>' +
-            '<div class="form-group admin-items-cat-filter">' +
-                '<div class="admin-cat-picker" id="itemsCatPicker">' +
-                    '<button type="button" class="admin-cat-picker-btn" id="itemsCatPickerBtn" aria-expanded="false">' +
-                        '<span class="admin-cat-picker-label" id="itemsCatPickerLabel">' + escapeHtmlText(S.allCategories) + '</span>' +
-                        '<span class="admin-cat-picker-chevron" aria-hidden="true">▾</span>' +
-                    '</button>' +
-                    '<div class="admin-cat-picker-panel" id="itemsCatPickerPanel" hidden>' +
-                        '<div class="admin-menu-category-bar">' +
-                            '<div class="admin-category-scroll" id="itemsCategoryScroll"></div>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>' +
-                '<input type="hidden" id="categoryFilter" value="all">' +
-            '</div>' +
-            '<div id="itemsList"><div class="loading">Loading...</div></div>' +
+        '<h2>' + S.manageItems + ' <small style="opacity:0.45;font-size:0.75rem;font-weight:400">' + ADMIN_VERSION + '</small></h2>' +
+        '<button class="btn-primary" id="addItemBtn" style="margin-bottom:16px;">' + S.addNewItem + '</button>' +
+        '<div class="form-group"><input type="text" id="itemSearch" placeholder="' + S.searchItems + '"></div>' +
+        '<div class="form-group admin-items-cat-filter">' +
+        '<div class="admin-cat-picker" id="itemsCatPicker">' +
+        '<button type="button" class="admin-cat-picker-btn" id="itemsCatPickerBtn" aria-expanded="false">' +
+        '<span class="admin-cat-picker-label" id="itemsCatPickerLabel">' + escapeHtmlText(S.allCategories) + '</span>' +
+        '<span class="admin-cat-picker-chevron" aria-hidden="true">▾</span>' +
+        '</button>' +
+        '<div class="admin-cat-picker-panel" id="itemsCatPickerPanel" hidden>' +
+        '<div class="admin-menu-category-bar">' +
+        '<div class="admin-category-scroll" id="itemsCategoryScroll"></div>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '<input type="hidden" id="categoryFilter" value="all">' +
+        '</div>' +
+        '<div id="itemsList"><div class="loading">Loading...</div></div>' +
         '</div>' +
         '<div id="itemModal" class="modal-overlay">' +
-            '<div class="modal">' +
-                '<div class="modal-content">' +
-                    '<span class="modal-close" id="modalClose">&times;</span>' +
-                    '<h2 id="modalTitle">' + S.addNewItem + '</h2>' +
-                    '<form id="itemForm" novalidate>' +
-                        '<div class="form-group"><label>' + S.kurdishName + '</label><input type="text" id="itemNameKu" autocomplete="off"></div>' +
-                        '<div class="form-group"><label>' + S.arabicName + '</label><input type="text" id="itemNameAr" autocomplete="off"></div>' +
-                        '<div class="form-group"><label>' + S.englishName + '</label><input type="text" id="itemNameEn" autocomplete="off"></div>' +
-                        '<div class="form-group"><label>' + S.kurdishDesc + '</label><textarea id="itemDescKu" rows="2"></textarea></div>' +
-                        '<div class="form-group"><label>' + S.arabicDesc + '</label><textarea id="itemDescAr" rows="2"></textarea></div>' +
-                        '<div class="form-group"><label>' + S.englishDesc + '</label><textarea id="itemDescEn" rows="2"></textarea></div>' +
-                        '<div class="form-group"><label>' + S.imageURL + '</label>' +
-                            '<input type="file" accept="image/*" id="itemImageFile" style="margin-bottom:6px;">' +
-                            '<input type="text" id="itemImageURL" placeholder="' + (S.imageUrlOrUpload || 'Paste image URL or upload above') + '">' +
-                            '<img id="itemImagePreview" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;"></div>' +
-                        '<div class="form-group"><label>' + S.price + '</label><input type="text" inputmode="decimal" id="itemPrice" autocomplete="off"></div>' +
-                         '<div class="form-group"><label>' + S.category + '</label>' +
-                             '<div style="display:flex;gap:8px;">' +
-                                 '<select id="itemCategory" style="flex:1;">' +
-                                     '<option value="">' + S.select + '</option>' +
-                                 '</select>' +
-                                 '<button type="button" class="btn-primary" id="addNewCategoryBtn" style="padding:8px 12px;">+</button>' +
-                             '</div></div>' +
-                          '<div class="form-group"><label>' + (S.group || 'Group') + '</label>' +
-                              '<input type="text" id="itemGroupKu" placeholder="' + (S.kurdishName || 'Kurdish') + '">' +
-                              '<input type="text" id="itemGroupAr" placeholder="' + (S.arabicName || 'Arabic') + '" style="margin-top:6px;">' +
-                              '<input type="text" id="itemGroupEn" placeholder="' + (S.englishName || 'English') + '" style="margin-top:6px;">' +
-                          '</div>' +
-                        '<div class="form-group"><label><input type="checkbox" id="itemAvailable" checked> ' + S.available + '</label></div>' +
-                        '<button type="button" class="btn-primary" id="saveItemBtn">' + S.saveItem + '</button>' +
-                        '<button type="button" class="btn-secondary" id="cancelItemBtn" style="margin-left:8px;">' + S.cancel + '</button>' +
-                        '<input type="hidden" id="itemId" value="">' +
-                    '</form>' +
-                '</div>' +
-            '</div>' +
+        '<div class="modal">' +
+        '<div class="modal-content">' +
+        '<span class="modal-close" id="modalClose">&times;</span>' +
+        '<h2 id="modalTitle">' + S.addNewItem + '</h2>' +
+        '<form id="itemForm" novalidate>' +
+        '<div class="form-group"><label>' + S.kurdishName + '</label><input type="text" id="itemNameKu" autocomplete="off"></div>' +
+        '<div class="form-group"><label>' + S.arabicName + '</label><input type="text" id="itemNameAr" autocomplete="off"></div>' +
+        '<div class="form-group"><label>' + S.englishName + '</label><input type="text" id="itemNameEn" autocomplete="off"></div>' +
+        '<div class="form-group"><label>' + S.kurdishDesc + '</label><textarea id="itemDescKu" rows="2"></textarea></div>' +
+        '<div class="form-group"><label>' + S.arabicDesc + '</label><textarea id="itemDescAr" rows="2"></textarea></div>' +
+        '<div class="form-group"><label>' + S.englishDesc + '</label><textarea id="itemDescEn" rows="2"></textarea></div>' +
+        '<div class="form-group"><label>' + S.imageURL + '</label>' +
+        '<input type="file" accept="image/*" id="itemImageFile" style="margin-bottom:6px;">' +
+        '<input type="text" id="itemImageURL" placeholder="' + (S.imageUrlOrUpload || 'Paste image URL or upload above') + '">' +
+        '<img id="itemImagePreview" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;"></div>' +
+        '<div class="form-group"><label>' + S.price + '</label><input type="text" inputmode="decimal" id="itemPrice" autocomplete="off"></div>' +
+        '<div class="form-group"><label>' + S.category + '</label>' +
+        '<div style="display:flex;gap:8px;">' +
+        '<select id="itemCategory" style="flex:1;">' +
+        '<option value="">' + S.select + '</option>' +
+        '</select>' +
+        '<button type="button" class="btn-primary" id="addNewCategoryBtn" style="padding:8px 12px;">+</button>' +
+        '</div></div>' +
+        '<div class="form-group"><label>' + (S.group || 'Group') + '</label>' +
+        '<input type="text" id="itemGroupKu" placeholder="' + (S.kurdishName || 'Kurdish') + '">' +
+        '<input type="text" id="itemGroupAr" placeholder="' + (S.arabicName || 'Arabic') + '" style="margin-top:6px;">' +
+        '<input type="text" id="itemGroupEn" placeholder="' + (S.englishName || 'English') + '" style="margin-top:6px;">' +
+        '</div>' +
+        '<div class="form-group"><label><input type="checkbox" id="itemAvailable" checked> ' + S.available + '</label></div>' +
+        '<button type="button" class="btn-primary" id="saveItemBtn">' + S.saveItem + '</button>' +
+        '<button type="button" class="btn-secondary" id="cancelItemBtn" style="margin-left:8px;">' + S.cancel + '</button>' +
+        '<input type="hidden" id="itemId" value="">' +
+        '</form>' +
+        '</div>' +
+        '</div>' +
         '</div>' +
         '<div id="quickCategoryModal" class="modal-overlay">' +
-            '<div class="modal">' +
-                '<div class="modal-content">' +
-                    '<span class="modal-close" id="quickCategoryModalClose">&times;</span>' +
-                    '<h2>' + S.createNewCategory + '</h2>' +
-                    '<form id="quickCategoryForm">' +
-                        '<div class="form-group"><label>' + S.categoryNameKu + '</label><input type="text" id="quickCategoryNameKu" required></div>' +
-                        '<div class="form-group"><label>' + S.categoryNameAr + '</label><input type="text" id="quickCategoryNameAr" required></div>' +
-                        '<div class="form-group"><label>' + S.categoryNameEn + '</label><input type="text" id="quickCategoryNameEn" required></div>' +
-                        '<div class="form-group"><label>' + S.categoryImage + '</label><input type="url" id="quickCategoryImageURL" placeholder="https://..."></div>' +
-                        '<button type="submit" class="btn-primary">' + S.saveCategory + '</button>' +
-                        '<button type="button" class="btn-secondary" id="cancelQuickCategoryBtn" style="margin-left:8px;">' + S.cancel + '</button>' +
-                    '</form>' +
-                '</div>' +
-            '</div>' +
+        '<div class="modal">' +
+        '<div class="modal-content">' +
+        '<span class="modal-close" id="quickCategoryModalClose">&times;</span>' +
+        '<h2>' + S.createNewCategory + '</h2>' +
+        '<form id="quickCategoryForm">' +
+        '<div class="form-group"><label>' + S.categoryNameKu + '</label><input type="text" id="quickCategoryNameKu" required></div>' +
+        '<div class="form-group"><label>' + S.categoryNameAr + '</label><input type="text" id="quickCategoryNameAr" required></div>' +
+        '<div class="form-group"><label>' + S.categoryNameEn + '</label><input type="text" id="quickCategoryNameEn" required></div>' +
+        '<div class="form-group"><label>' + S.categoryImage + '</label><input type="url" id="quickCategoryImageURL" placeholder="https://..."></div>' +
+        '<button type="submit" class="btn-primary">' + S.saveCategory + '</button>' +
+        '<button type="button" class="btn-secondary" id="cancelQuickCategoryBtn" style="margin-left:8px;">' + S.cancel + '</button>' +
+        '</form>' +
+        '</div>' +
+        '</div>' +
         '</div>';
     loadCategoriesDropdown();
     loadCategoryFilter();
@@ -2063,25 +2063,25 @@ function startItemsListener() {
     hydrateItemsUiFromCache();
 
     if (USE_LOCAL_API) {
-        localApiRequest('menu_items.php').then(function(items) {
-            var docs = items.map(function(item) {
+        localApiRequest('menu_items.php').then(function (items) {
+            var docs = items.map(function (item) {
                 return {
                     id: item.id,
-                    data: function() { return item; }
+                    data: function () { return item; }
                 };
             });
-             _itemsSnapDocs = docs.filter(function(d) { return d.data().category && d.data().category.toLowerCase().trim() !== 'water'; });
+            _itemsSnapDocs = docs.filter(function (d) { return d.data().category && d.data().category.toLowerCase().trim() !== 'water'; });
             refreshCategoryFilterOptions();
             refreshItemCategoryDropdown();
             var searchEl = document.getElementById('itemSearch');
             var catEl = document.getElementById('categoryFilter');
             var searchTerm = searchEl ? searchEl.value : '';
             var cat = catEl ? catEl.value : itemsActiveCategory;
-             renderItemsList(filterItemDocs(_itemsSnapDocs, searchTerm, cat));
+            renderItemsList(filterItemDocs(_itemsSnapDocs, searchTerm, cat));
 
             var cashierCache = [];
             var menuCache = [];
-            _itemsSnapDocs.forEach(function(d) {
+            _itemsSnapDocs.forEach(function (d) {
                 var data = d.data();
                 cashierCache.push({ id: d.id, v: data });
                 menuCache.push(Object.assign({ id: d.id }, data));
@@ -2090,12 +2090,12 @@ function startItemsListener() {
             writeCachedMenuItemsFlat(menuCache);
 
             var catNames = {};
-            _itemsSnapDocs.forEach(function(d) {
+            _itemsSnapDocs.forEach(function (d) {
                 var c = d.data().category;
                 if (c && c.toLowerCase().trim() !== 'water') catNames[c] = true;
             });
             localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(catNames)));
-        }).catch(function(err) {
+        }).catch(function (err) {
             console.warn('[admin items] Local API failed:', err.message);
             if (!hydrateItemsUiFromCache()) {
                 clearAdminLoadingEl('itemsList', '<p style="color:#C62828;">' + S.errorPrefix + (S.menuConnectionHint || 'Check connection') + '</p>');
@@ -2172,7 +2172,7 @@ function startItemsListener() {
         clearAdminLoadingEl('itemsList', '<p>' + S.noItemsFound + '</p>');
     }, 10000);
 
-     itemsUnsubscribe = db.collection(window.MENU_COLLECTION).onSnapshot(function (snap) {
+    itemsUnsubscribe = db.collection(window.MENU_COLLECTION).onSnapshot(function (snap) {
         applyItemsSnap(snap);
     }, function (e) {
         console.error('Items listener error:', e);
@@ -2183,27 +2183,27 @@ function startItemsListener() {
 }
 
 function loadItemsList() {
-     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-     backfillCreatedByForCurrentAdmin();
-     if (hydrateItemsUiFromCache()) {
-         loadCategoryFilter();
-         return;
-     }
-     if (!window.db) {
-         var el = document.getElementById('itemsList');
-         if (el) el.innerHTML = '<p>' + S.noItemsFound + '</p>';
-         return;
-     }
-      adminGetWithTimeout(db.collection(window.MENU_COLLECTION), 8000).then(function (snap) {
-         var docs = [];
-          snap.forEach(function (d) { var data = d.data(); if (data.category && data.category.toLowerCase().trim() !== 'water') { docs.push(d); } });
-         _itemsSnapDocs = docs;
-         renderItemsList(docs);
-         loadCategoryFilter();
+    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+    backfillCreatedByForCurrentAdmin();
+    if (hydrateItemsUiFromCache()) {
+        loadCategoryFilter();
+        return;
+    }
+    if (!window.db) {
+        var el = document.getElementById('itemsList');
+        if (el) el.innerHTML = '<p>' + S.noItemsFound + '</p>';
+        return;
+    }
+    adminGetWithTimeout(db.collection(window.MENU_COLLECTION), 8000).then(function (snap) {
+        var docs = [];
+        snap.forEach(function (d) { var data = d.data(); if (data.category && data.category.toLowerCase().trim() !== 'water') { docs.push(d); } });
+        _itemsSnapDocs = docs;
+        renderItemsList(docs);
+        loadCategoryFilter();
     }).catch(function (e) {
         if (hydrateItemsUiFromCache()) return;
         var el = document.getElementById('itemsList');
-         if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + e.message + '</p>';
+        if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + e.message + '</p>';
     });
 }
 
@@ -2221,7 +2221,7 @@ function loadCategoriesDropdown() {
                 safeSetItem(CACHE_KEY_CATEGORIES, JSON.stringify(cats));
                 refreshItemCategoryDropdown();
             }
-        }).catch(function () {})
+        }).catch(function () { })
         : Promise.resolve();
 
     var sdkPromise = adminGetWithTimeout(db.collection(window.CAT_COLLECTION).orderBy('order', 'asc'), 8000).then(function (snap) {
@@ -2275,15 +2275,15 @@ function getAllItemCategoryIdsForFilter() {
         JSON.parse(localStorage.getItem(CACHE_KEY_MENU_ITEMS) || '[]').forEach(function (it) {
             addName(it.category);
         });
-    } catch (e) {}
+    } catch (e) { }
     try {
         JSON.parse(localStorage.getItem(CACHE_KEY_CASHIER_ITEMS) || '[]').forEach(function (it) {
             addName(it.v && it.v.category);
         });
-    } catch (e) {}
+    } catch (e) { }
     try {
         JSON.parse(localStorage.getItem(CACHE_KEY_MENU_CAT_NAMES) || '[]').forEach(addName);
-    } catch (e) {}
+    } catch (e) { }
     return Object.keys(names).sort();
 }
 
@@ -2466,7 +2466,7 @@ function renderItemsList(items) {
                 '<td>' + avail + '</td>' +
                 '<td><button class="btn-primary btn-sm edit-item" data-id="' + doc.id + '">' + S.edit + '</button> ' +
                 '<button class="btn-danger btn-sm delete-item" data-id="' + doc.id + '">' + S.delete + '</button></td>' +
-            '</tr>';
+                '</tr>';
         });
         html += '</tbody></table></div>';
         list.innerHTML = html;
@@ -2637,9 +2637,9 @@ function applyItemFilter(searchTerm, cat) {
         return;
     }
     db.collection(window.MENU_COLLECTION).get().then(function (snap) {
-        var docs = snap.docs.filter(function (d) { 
+        var docs = snap.docs.filter(function (d) {
             var category = d.data().category;
-            return !(category && category.toLowerCase().trim() === 'water'); 
+            return !(category && category.toLowerCase().trim() === 'water');
         });
         if (searchTerm) {
             var lang = localStorage.getItem('selectedLang') || 'ku';
@@ -2809,24 +2809,24 @@ function saveQuickCategory() {
 }
 
 function saveItem() {
-     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
 
-     if (!window.db) {
-         alert(S.itemSyncFailed + '\nFirebase not ready.');
-         return;
-     }
+    if (!window.db) {
+        alert(S.itemSyncFailed + '\nFirebase not ready.');
+        return;
+    }
 
-     var nameKuEl = document.getElementById('itemNameKu');
-     var nameArEl = document.getElementById('itemNameAr');
-     var nameEnEl = document.getElementById('itemNameEn');
-     var priceEl = document.getElementById('itemPrice');
-     var categoryEl = document.getElementById('itemCategory');
-     if (!nameKuEl || !nameArEl || !nameEnEl || !priceEl || !categoryEl) {
-         alert(S.itemSyncFailed);
-         return;
-     }
+    var nameKuEl = document.getElementById('itemNameKu');
+    var nameArEl = document.getElementById('itemNameAr');
+    var nameEnEl = document.getElementById('itemNameEn');
+    var priceEl = document.getElementById('itemPrice');
+    var categoryEl = document.getElementById('itemCategory');
+    if (!nameKuEl || !nameArEl || !nameEnEl || !priceEl || !categoryEl) {
+        alert(S.itemSyncFailed);
+        return;
+    }
 
-     var nameKu = nameKuEl.value.trim();
+    var nameKu = nameKuEl.value.trim();
     var nameAr = nameArEl.value.trim();
     var nameEn = nameEnEl.value.trim();
     var price = priceEl.value.trim().replace(',', '.');
@@ -2865,100 +2865,100 @@ function saveItem() {
     }, 12000);
 
     function runSaveWhenAuthed() {
-     if (!isAdminAuthenticated()) {
-         clearTimeout(readyTimer);
-         if (saveBtn) {
-             saveBtn.disabled = false;
-             saveBtn.textContent = saveBtn.dataset.prevText || S.saveItem;
-         }
-         alert(S.itemSyncFailed + '\nPlease log in again.');
-         window.location.href = 'login.html';
-         return;
-     }
-
-    var imgUrl = document.getElementById('itemImageURL').value.trim();
-    var placeholderImg = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect fill=%23e0e0e0 width=%27400%27 height=%27300%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 font-size=%2724%27 text-anchor=%27middle%27 dy=%27.3em%27 fill=%23999%27%3ENo+Image%3C/text%3E%3C/svg%3E';
-    var finalImg = imgUrl || placeholderImg;
-
-    if (finalImg.length > 950000) {
-        clearTimeout(readyTimer);
-        if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.textContent = saveBtn.dataset.prevText || S.saveItem;
+        if (!isAdminAuthenticated()) {
+            clearTimeout(readyTimer);
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = saveBtn.dataset.prevText || S.saveItem;
+            }
+            alert(S.itemSyncFailed + '\nPlease log in again.');
+            window.location.href = 'login.html';
+            return;
         }
-        alert(S.itemSyncFailed + '\nImage too large — paste a URL or use a smaller photo.');
-        return;
-    }
 
-    var itemId = document.getElementById('itemId').value;
-    var now = new Date().toISOString();
-      var plainData = {
-          name_ku: nameKu, name_ar: nameAr, name_en: nameEn,
-          description_ku: document.getElementById('itemDescKu').value.trim(),
-          description_ar: document.getElementById('itemDescAr').value.trim(),
-          description_en: document.getElementById('itemDescEn').value.trim(),
-          price: parseFloat(price) || 0,
-          category: category,
-          group_ku: (document.getElementById('itemGroupKu') || {}).value || '',
-          group_ar: (document.getElementById('itemGroupAr') || {}).value || '',
-          group_en: (document.getElementById('itemGroupEn') || {}).value || '',
-          image: finalImg,
-          available: document.getElementById('itemAvailable').checked,
-          updated_at: now,
-          createdBy: getCurrentAdminEmail() || ''
-      };
+        var imgUrl = document.getElementById('itemImageURL').value.trim();
+        var placeholderImg = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect fill=%23e0e0e0 width=%27400%27 height=%27300%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 font-size=%2724%27 text-anchor=%27middle%27 dy=%27.3em%27 fill=%23999%27%3ENo+Image%3C/text%3E%3C/svg%3E';
+        var finalImg = imgUrl || placeholderImg;
 
-    var ref;
-    var promise;
-    var docId;
-    var isCreate = !itemId;
-    if (itemId) {
-        docId = itemId;
-        ref = db.collection(window.MENU_COLLECTION).doc(itemId);
-        promise = ref.update(Object.assign({}, plainData, {
-            updated_at: firebase.firestore.FieldValue.serverTimestamp()
-        }));
-    } else {
-        ref = db.collection(window.MENU_COLLECTION).doc();
-        docId = ref.id;
-        plainData.created_at = now;
-        promise = ref.set(Object.assign({}, plainData, {
-            created_at: firebase.firestore.FieldValue.serverTimestamp(),
-            updated_at: firebase.firestore.FieldValue.serverTimestamp()
-        }));
-    }
-
-    function finishSave(offline) {
-        clearTimeout(readyTimer);
-        if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.textContent = saveBtn.dataset.prevText || S.saveItem;
+        if (finalImg.length > 950000) {
+            clearTimeout(readyTimer);
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = saveBtn.dataset.prevText || S.saveItem;
+            }
+            alert(S.itemSyncFailed + '\nImage too large — paste a URL or use a smaller photo.');
+            return;
         }
-        upsertCachedMenuItem(docId, plainData);
-        document.getElementById('itemModal').classList.remove('active');
-        activeItemModal = null;
-        hydrateItemsUiFromCache();
-        alert(offline ? S.itemSavedOffline : S.itemSavedCloud);
-    }
 
-    function failSave(err) {
-        clearTimeout(readyTimer);
-        if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.textContent = saveBtn.dataset.prevText || S.saveItem;
+        var itemId = document.getElementById('itemId').value;
+        var now = new Date().toISOString();
+        var plainData = {
+            name_ku: nameKu, name_ar: nameAr, name_en: nameEn,
+            description_ku: document.getElementById('itemDescKu').value.trim(),
+            description_ar: document.getElementById('itemDescAr').value.trim(),
+            description_en: document.getElementById('itemDescEn').value.trim(),
+            price: parseFloat(price) || 0,
+            category: category,
+            group_ku: (document.getElementById('itemGroupKu') || {}).value || '',
+            group_ar: (document.getElementById('itemGroupAr') || {}).value || '',
+            group_en: (document.getElementById('itemGroupEn') || {}).value || '',
+            image: finalImg,
+            available: document.getElementById('itemAvailable').checked,
+            updated_at: now,
+            createdBy: getCurrentAdminEmail() || ''
+        };
+
+        var ref;
+        var promise;
+        var docId;
+        var isCreate = !itemId;
+        if (itemId) {
+            docId = itemId;
+            ref = db.collection(window.MENU_COLLECTION).doc(itemId);
+            promise = ref.update(Object.assign({}, plainData, {
+                updated_at: firebase.firestore.FieldValue.serverTimestamp()
+            }));
+        } else {
+            ref = db.collection(window.MENU_COLLECTION).doc();
+            docId = ref.id;
+            plainData.created_at = now;
+            promise = ref.set(Object.assign({}, plainData, {
+                created_at: firebase.firestore.FieldValue.serverTimestamp(),
+                updated_at: firebase.firestore.FieldValue.serverTimestamp()
+            }));
         }
-        alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
-    }
 
-    applyMenuCloudWrite({
-        collection: window.MENU_COLLECTION,
-        docId: docId,
-        isCreate: isCreate,
-        sdkPromise: promise,
-        plainData: plainData,
-        onDone: finishSave,
-        onError: failSave
-    });
+        function finishSave(offline) {
+            clearTimeout(readyTimer);
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = saveBtn.dataset.prevText || S.saveItem;
+            }
+            upsertCachedMenuItem(docId, plainData);
+            document.getElementById('itemModal').classList.remove('active');
+            activeItemModal = null;
+            hydrateItemsUiFromCache();
+            alert(offline ? S.itemSavedOffline : S.itemSavedCloud);
+        }
+
+        function failSave(err) {
+            clearTimeout(readyTimer);
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = saveBtn.dataset.prevText || S.saveItem;
+            }
+            alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
+        }
+
+        applyMenuCloudWrite({
+            collection: window.MENU_COLLECTION,
+            docId: docId,
+            isCreate: isCreate,
+            sdkPromise: promise,
+            plainData: plainData,
+            onDone: finishSave,
+            onError: failSave
+        });
     }
 
     whenAdminReady(function () {
@@ -3075,31 +3075,31 @@ function loadManageCategories() {
     var adminContent = document.getElementById('adminContent');
     adminContent.innerHTML =
         '<div class="card">' +
-            '<h2>' + S.manageCategories + '</h2>' +
-            '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">' +
-                '<button class="btn-primary" id="addCategoryBtn">' + S.addCategory + '</button>' +
-            '</div>' +
-            '<div id="categoriesList"><div class="loading">Loading...</div></div>' +
+        '<h2>' + S.manageCategories + '</h2>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">' +
+        '<button class="btn-primary" id="addCategoryBtn">' + S.addCategory + '</button>' +
+        '</div>' +
+        '<div id="categoriesList"><div class="loading">Loading...</div></div>' +
         '</div>' +
         '<div id="categoryModal" class="modal-overlay">' +
-            '<div class="modal">' +
-                '<div class="modal-content">' +
-                    '<span class="modal-close" id="categoryModalClose">&times;</span>' +
-                    '<h2 id="categoryModalTitle">' + S.addCategory + '</h2>' +
-                    '<form id="categoryForm">' +
-                        '<div class="form-group"><label>' + S.categoryNameKu + '</label><input type="text" id="categoryNameKu" required></div>' +
-                        '<div class="form-group"><label>' + S.categoryNameAr + '</label><input type="text" id="categoryNameAr" required></div>' +
-                        '<div class="form-group"><label>' + S.categoryNameEn + '</label><input type="text" id="categoryNameEn" required></div>' +
-                        '<div class="form-group"><label>' + S.categoryImage + '</label>' +
-                            '<input type="file" accept="image/*" id="categoryImageFile" style="margin-bottom:6px;">' +
-                            '<input type="text" id="categoryImageURL" placeholder="' + (S.imageUrlOrUpload || 'Paste image URL or upload above') + '">' +
-                            '<img id="categoryImagePreview" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;"></div>' +
-                        '<button type="submit" class="btn-primary">' + S.saveCategory + '</button>' +
-                        '<button type="button" class="btn-secondary" id="cancelCategoryBtn" style="margin-left:8px;">' + S.cancel + '</button>' +
-                        '<input type="hidden" id="categoryId" value="">' +
-                    '</form>' +
-                '</div>' +
-            '</div>' +
+        '<div class="modal">' +
+        '<div class="modal-content">' +
+        '<span class="modal-close" id="categoryModalClose">&times;</span>' +
+        '<h2 id="categoryModalTitle">' + S.addCategory + '</h2>' +
+        '<form id="categoryForm">' +
+        '<div class="form-group"><label>' + S.categoryNameKu + '</label><input type="text" id="categoryNameKu" required></div>' +
+        '<div class="form-group"><label>' + S.categoryNameAr + '</label><input type="text" id="categoryNameAr" required></div>' +
+        '<div class="form-group"><label>' + S.categoryNameEn + '</label><input type="text" id="categoryNameEn" required></div>' +
+        '<div class="form-group"><label>' + S.categoryImage + '</label>' +
+        '<input type="file" accept="image/*" id="categoryImageFile" style="margin-bottom:6px;">' +
+        '<input type="text" id="categoryImageURL" placeholder="' + (S.imageUrlOrUpload || 'Paste image URL or upload above') + '">' +
+        '<img id="categoryImagePreview" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;"></div>' +
+        '<button type="submit" class="btn-primary">' + S.saveCategory + '</button>' +
+        '<button type="button" class="btn-secondary" id="cancelCategoryBtn" style="margin-left:8px;">' + S.cancel + '</button>' +
+        '<input type="hidden" id="categoryId" value="">' +
+        '</form>' +
+        '</div>' +
+        '</div>' +
         '</div>';
     loadCategoriesList();
     wireCategoryEvents();
@@ -3114,12 +3114,12 @@ function getMenuCategoryNames() {
             var c = it && it.v && it.v.category;
             if (c) names[c] = true;
         });
-    } catch (e) {}
+    } catch (e) { }
     try {
         JSON.parse(localStorage.getItem('cachedMenuCategoryNames') || '[]').forEach(function (n) {
             if (n) names[n] = true;
         });
-    } catch (e) {}
+    } catch (e) { }
     return names;
 }
 
@@ -3161,7 +3161,7 @@ function renderCategoriesTable(categories) {
             '<td><img src="' + img + '" alt="" width="48" height="48" style="border-radius:8px;object-fit:cover;" onerror="this.src=\'https://placehold.co/50x50?text=Error\'"></td>' +
             '<td>' + name + virtualBadge + '</td>' +
             '<td>' + actions + '</td>' +
-        '</tr>';
+            '</tr>';
     });
     html += '</tbody></table></div>';
     list.innerHTML = html;
@@ -3199,21 +3199,21 @@ function loadCategoriesList() {
     clearAdminLoadingEl('categoriesList', '');
 
     if (USE_LOCAL_API) {
-        localApiRequest('categories.php').then(function(cats) {
-            var merged = mergeCategoryLists(cats.map(function(c) { return { id: c.id, data: c }; }), readCachedCategories());
+        localApiRequest('categories.php').then(function (cats) {
+            var merged = mergeCategoryLists(cats.map(function (c) { return { id: c.id, data: c }; }), readCachedCategories());
             safeSetItem('cachedCategories', JSON.stringify(merged));
             var have = {};
-            merged.forEach(function(c) { have[c.id] = true; });
+            merged.forEach(function (c) { have[c.id] = true; });
             renderCategoriesTable(mergeMenuCategories(merged, have));
 
             // Also update menu category names from items
-            localApiRequest('menu_items.php').then(function(items) {
+            localApiRequest('menu_items.php').then(function (items) {
                 var names = {};
-                items.forEach(function(it) { if (it.category) names[it.category] = true; });
+                items.forEach(function (it) { if (it.category) names[it.category] = true; });
                 localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(names)));
                 renderCategoriesListNow();
-            }).catch(function() {});
-        }).catch(function(err) {
+            }).catch(function () { });
+        }).catch(function (err) {
             console.warn('[admin categories] Local API failed:', err.message);
             renderCategoriesListNow();
         });
@@ -3260,7 +3260,7 @@ function loadCategoriesList() {
         snap.forEach(function (d) { var c = (d.data() || {}).category; if (c) names[c] = true; });
         localStorage.setItem(CACHE_KEY_MENU_CAT_NAMES, JSON.stringify(Object.keys(names)));
         renderCategoriesListNow();
-    }).catch(function () {});
+    }).catch(function () { });
 
     stopCategoriesListener();
     categoriesUnsubscribe = db.collection(window.CAT_COLLECTION).orderBy('order', 'asc').onSnapshot(function (snap) {
@@ -3540,7 +3540,7 @@ function removeCategoryFromCacheAndUi(categoryId) {
         var names = JSON.parse(localStorage.getItem('cachedMenuCategoryNames') || '[]');
         var filtered = names.filter(function (n) { return n !== categoryId; });
         localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(filtered));
-    } catch (e) {}
+    } catch (e) { }
 
     renderCategoriesListNow();
     refreshItemCategoryDropdown();
@@ -3584,7 +3584,7 @@ function getCashierItemsFromLocalStorage() {
             if (!Array.isArray(parsed) || parsed.length === 0) continue;
             var items = parsed.map(normalizeCashierItemEntry).filter(Boolean);
             if (items.length > 0) return items;
-        } catch (e) {}
+        } catch (e) { }
     }
     return [];
 }
@@ -3682,7 +3682,7 @@ function renderCashierProducts(items) {
                 '<div class="cashier-item-img-wrap">' + (img ? '<img src="' + img + '" alt="' + name + '" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=cashier-item-noimg>☕</div>\'">' : '<div class="cashier-item-noimg">☕</div>') + '</div>' +
                 '<div class="cashier-item-info"><div class="cashier-item-name">' + name + '</div><div class="cashier-item-price">' + price.toLocaleString() + ' <span>IQD</span></div></div>' +
                 '<div class="cashier-item-add">+</div>' +
-            '</div>';
+                '</div>';
         });
         grid.innerHTML = html;
         grid.querySelectorAll('.cashier-item-card').forEach(function (card) {
@@ -3712,29 +3712,29 @@ function loadCashier() {
     var orderCountBadge = '<span class="cashier-order-count" id="cashierOrderCount">0</span>';
     adminContent.innerHTML =
         '<div class="cashier-layout">' +
-            '<aside class="cashier-order" id="cashierOrderPanel">' +
-                '<div class="cashier-order-header">' +
-                    '<h3>' + S.currentOrder + orderCountBadge + '</h3>' +
-                    '<div class="cashier-order-header-actions">' +
-                        '<button class="btn-clear-order" id="clearOrderBtn">' + S.clear + '</button>' +
-                        '<button class="cashier-order-toggle" id="cashierOrderToggle" aria-label="Toggle order">▲</button>' +
-                    '</div>' +
-                '</div>' +
-                '<div class="cashier-order-items" id="cashierOrderItems">' +
-                    '<div class="cashier-empty">' + S.noItemsAdded + '</div>' +
-                '</div>' +
-                '<div class="cashier-order-footer">' +
-                    '<div class="cashier-total-row"><span>' + S.total + '</span><span class="cashier-total-amount" id="cashierTotal">0 IQD</span></div>' +
-                    '<div class="cashier-actions">' +
-                        '<button class="btn-print" id="printBtn">🖨️ ' + S.printReceipt + '</button>' +
-                        '<button class="btn-pay" id="payBtn">' + S.payNow + '</button>' +
-                    '</div>' +
-                '</div>' +
-            '</aside>' +
-            '<section class="cashier-products">' +
-                '<div class="cashier-categories" id="cashierCatBar"></div>' +
-                '<div class="cashier-grid" id="cashierGrid"><div class="loading">Loading...</div></div>' +
-            '</section>' +
+        '<aside class="cashier-order" id="cashierOrderPanel">' +
+        '<div class="cashier-order-header">' +
+        '<h3>' + S.currentOrder + orderCountBadge + '</h3>' +
+        '<div class="cashier-order-header-actions">' +
+        '<button class="btn-clear-order" id="clearOrderBtn">' + S.clear + '</button>' +
+        '<button class="cashier-order-toggle" id="cashierOrderToggle" aria-label="Toggle order">▲</button>' +
+        '</div>' +
+        '</div>' +
+        '<div class="cashier-order-items" id="cashierOrderItems">' +
+        '<div class="cashier-empty">' + S.noItemsAdded + '</div>' +
+        '</div>' +
+        '<div class="cashier-order-footer">' +
+        '<div class="cashier-total-row"><span>' + S.total + '</span><span class="cashier-total-amount" id="cashierTotal">0 IQD</span></div>' +
+        '<div class="cashier-actions">' +
+        '<button class="btn-print" id="printBtn">🖨️ ' + S.printReceipt + '</button>' +
+        '<button class="btn-pay" id="payBtn">' + S.payNow + '</button>' +
+        '</div>' +
+        '</div>' +
+        '</aside>' +
+        '<section class="cashier-products">' +
+        '<div class="cashier-categories" id="cashierCatBar"></div>' +
+        '<div class="cashier-grid" id="cashierGrid"><div class="loading">Loading...</div></div>' +
+        '</section>' +
         '</div>';
 
     loadCashierItems();
@@ -3768,8 +3768,8 @@ function applyCashierItemsSnap(snap) {
         showCashierEmptyState();
         return;
     }
-var items = normalizeCashierItems(snap);
-safeSetItem('cachedCashierItems', JSON.stringify(items));
+    var items = normalizeCashierItems(snap);
+    safeSetItem('cachedCashierItems', JSON.stringify(items));
     var menuCache = [];
     snap.forEach(function (d) {
         menuCache.push(Object.assign({ id: d.id }, d.data()));
@@ -3953,11 +3953,11 @@ function buildReceiptPrintHtml(options) {
 
         itemsHtml +=
             '<div class="item">' +
-                '<div class="item-top">' +
-                    '<span class="item-name">' + escapeReceiptHtml(item.name) + '</span>' +
-                    '<span class="item-amt">' + subtotal.toLocaleString() + '</span>' +
-                '</div>' +
-                '<div class="item-calc">' + escapeReceiptHtml(calcLine) + ' IQD</div>' +
+            '<div class="item-top">' +
+            '<span class="item-name">' + escapeReceiptHtml(item.name) + '</span>' +
+            '<span class="item-amt">' + subtotal.toLocaleString() + '</span>' +
+            '</div>' +
+            '<div class="item-calc">' + escapeReceiptHtml(calcLine) + ' IQD</div>' +
             '</div>';
         if (idx < options.items.length - 1) {
             itemsHtml += '<hr class="item-line">';
@@ -3965,97 +3965,97 @@ function buildReceiptPrintHtml(options) {
     });
 
     return '<!DOCTYPE html>' +
-    '<html lang="' + escapeReceiptHtml(options.lang) + '" dir="ltr">' +
-    '<head>' +
+        '<html lang="' + escapeReceiptHtml(options.lang) + '" dir="ltr">' +
+        '<head>' +
         '<meta charset="UTF-8">' +
         '<title>Receipt</title>' +
         '<style>' +
-            '@page { margin: 0; size: auto; }' +
-            '* { box-sizing: border-box; margin: 0; padding: 0; }' +
-            'html { width: ' + w + 'px; max-width: ' + w + 'px; }' +
-            'body {' +
-                'width: ' + w + 'px; max-width: ' + w + 'px;' +
-                'margin: 0; padding: 4px 14px 8px 4px;' +
-                'font-family: Tahoma, Arial, sans-serif;' +
-                'font-size: 10px; line-height: 1.28; color: #000; background: #fff;' +
-                'direction: ltr; text-align: left;' +
-                '-webkit-print-color-adjust: exact; print-color-adjust: exact;' +
-            '}' +
-            '.receipt { width: 100%; max-width: 100%; overflow: hidden; }' +
-            '.brand-logo { display: block; width: 28px; height: 28px; margin: 0 auto 3px; border-radius: 50%; object-fit: cover; }' +
-            '.rule { border: none; border-top: 1px dashed #000; margin: 4px 0; width: 100%; }' +
-            '.rule-solid { border: none; border-top: 1px solid #000; margin: 4px 0; width: 100%; }' +
-            '.brand-title { font-family: Georgia, "Times New Roman", serif; font-size: 11px; font-weight: 700; text-align: center; line-height: 1.2; margin-bottom: 1px; }' +
-            '.brand-title .en { direction: ltr; unicode-bidi: embed; }' +
-            '.brand-title .sep { opacity: 0.4; padding: 0 2px; }' +
-            '.brand-title .ku { font-weight: 700; direction: rtl; unicode-bidi: embed; }' +
-            '.brand-tagline { text-align: center; font-size: 7px; letter-spacing: 0.1em; text-transform: uppercase; color: #444; }' +
-            '.brand-location { text-align: center; font-size: 9px; color: #222; margin-top: 1px; direction: rtl; unicode-bidi: plaintext; }' +
-            '.meta-receipt { text-align: center; font-size: 9px; font-weight: 700; margin-bottom: 3px; }' +
-            '.meta-datetime { width: 100%; margin: 2px 0; }' +
-            '.meta-date, .meta-time { font-size: 9px; font-weight: 600; direction: ltr; unicode-bidi: embed; text-align: center; line-height: 1.35; }' +
-            '.meta-pieces { text-align: center; font-size: 8px; color: #333; margin-top: 2px; }' +
-            'body.lang-ku .meta-receipt, body.lang-ku .meta-pieces, body.lang-ku .thanks-main, body.lang-ku .brand-location { direction: rtl; unicode-bidi: plaintext; }' +
-            'body.lang-ar .meta-receipt, body.lang-ar .meta-pieces, body.lang-ar .thanks-main, body.lang-ar .brand-location { direction: rtl; unicode-bidi: plaintext; }' +
-            '.items-wrap { margin: 2px 0; width: 100%; max-width: 100%; }' +
-            '.item { padding: 3px 0; width: 100%; max-width: 100%; }' +
-            '.item-top { display: flex; flex-direction: row; justify-content: space-between; align-items: flex-start; width: 100%; max-width: 100%; gap: 4px; }' +
-            '.item-name { flex: 1 1 auto; min-width: 0; font-weight: 700; font-size: 10px; word-wrap: break-word; overflow-wrap: break-word; }' +
-            '.item-amt { flex: 0 0 auto; max-width: 42%; font-weight: 700; font-size: 10px; direction: ltr; unicode-bidi: embed; white-space: nowrap; }' +
-            'body.lang-ku .item-top, body.lang-ar .item-top { flex-direction: row-reverse; }' +
-            'body.lang-ku .item-name, body.lang-ar .item-name { text-align: right; direction: rtl; unicode-bidi: plaintext; }' +
-            'body.lang-ku .item-amt, body.lang-ar .item-amt { text-align: left; }' +
-            'body.lang-en .item-name { text-align: left; direction: ltr; }' +
-            'body.lang-en .item-amt { text-align: right; }' +
-            '.item-calc { text-align: center; width: 100%; max-width: 100%; font-size: 8px; color: #333; margin-top: 2px; direction: ltr; unicode-bidi: embed; overflow: hidden; }' +
-            '.item-line { border: none; border-top: 1px dashed #000; margin: 0; height: 0; width: 100%; }' +
-            '.total-box { border: 1.5px solid #000; border-radius: 4px; padding: 4px 5px; margin: 4px 0 3px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 100%; max-width: 100%; gap: 4px; }' +
-            'body.lang-ku .total-box, body.lang-ar .total-box { flex-direction: row-reverse; }' +
-            '.total-label { flex: 1 1 auto; min-width: 0; font-size: 9px; font-weight: 700; text-transform: uppercase; }' +
-            '.total-value { flex: 0 0 auto; font-size: 11px; font-weight: 700; direction: ltr; unicode-bidi: embed; white-space: nowrap; max-width: 55%; }' +
-            'body.lang-ku .total-label, body.lang-ar .total-label { text-align: right; direction: rtl; unicode-bidi: plaintext; }' +
-            'body.lang-en .total-label { text-align: left; direction: ltr; }' +
-            'body.lang-ku .total-value, body.lang-ar .total-value { text-align: left; }' +
-            'body.lang-en .total-value { text-align: right; }' +
-            '.total-currency { font-size: 7px; font-weight: 600; margin-left: 2px; }' +
-            '.footer-thanks { text-align: center; margin-top: 4px; padding-top: 3px; border-top: 1px dashed #000; width: 100%; }' +
-            '.thanks-main { font-size: 10px; font-weight: 700; margin-bottom: 1px; }' +
-            '.thanks-sub { font-size: 7px; color: #444; text-align: center; }' +
-            '.footer-contact { text-align: center; margin-top: 3px; font-size: 9px; width: 100%; }' +
-            '.footer-contact .phone { font-weight: 700; direction: ltr; unicode-bidi: embed; }' +
-            '@media print {' +
-                'html, body { width: ' + w + 'px !important; max-width: ' + w + 'px !important; margin: 0 !important; padding: 2px 14px 6px 4px !important; }' +
-                '@page { margin: 0; size: auto; }' +
-            '}' +
+        '@page { margin: 0; size: auto; }' +
+        '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+        'html { width: ' + w + 'px; max-width: ' + w + 'px; }' +
+        'body {' +
+        'width: ' + w + 'px; max-width: ' + w + 'px;' +
+        'margin: 0; padding: 4px 14px 8px 4px;' +
+        'font-family: Tahoma, Arial, sans-serif;' +
+        'font-size: 10px; line-height: 1.28; color: #000; background: #fff;' +
+        'direction: ltr; text-align: left;' +
+        '-webkit-print-color-adjust: exact; print-color-adjust: exact;' +
+        '}' +
+        '.receipt { width: 100%; max-width: 100%; overflow: hidden; }' +
+        '.brand-logo { display: block; width: 28px; height: 28px; margin: 0 auto 3px; border-radius: 50%; object-fit: cover; }' +
+        '.rule { border: none; border-top: 1px dashed #000; margin: 4px 0; width: 100%; }' +
+        '.rule-solid { border: none; border-top: 1px solid #000; margin: 4px 0; width: 100%; }' +
+        '.brand-title { font-family: Georgia, "Times New Roman", serif; font-size: 11px; font-weight: 700; text-align: center; line-height: 1.2; margin-bottom: 1px; }' +
+        '.brand-title .en { direction: ltr; unicode-bidi: embed; }' +
+        '.brand-title .sep { opacity: 0.4; padding: 0 2px; }' +
+        '.brand-title .ku { font-weight: 700; direction: rtl; unicode-bidi: embed; }' +
+        '.brand-tagline { text-align: center; font-size: 7px; letter-spacing: 0.1em; text-transform: uppercase; color: #444; }' +
+        '.brand-location { text-align: center; font-size: 9px; color: #222; margin-top: 1px; direction: rtl; unicode-bidi: plaintext; }' +
+        '.meta-receipt { text-align: center; font-size: 9px; font-weight: 700; margin-bottom: 3px; }' +
+        '.meta-datetime { width: 100%; margin: 2px 0; }' +
+        '.meta-date, .meta-time { font-size: 9px; font-weight: 600; direction: ltr; unicode-bidi: embed; text-align: center; line-height: 1.35; }' +
+        '.meta-pieces { text-align: center; font-size: 8px; color: #333; margin-top: 2px; }' +
+        'body.lang-ku .meta-receipt, body.lang-ku .meta-pieces, body.lang-ku .thanks-main, body.lang-ku .brand-location { direction: rtl; unicode-bidi: plaintext; }' +
+        'body.lang-ar .meta-receipt, body.lang-ar .meta-pieces, body.lang-ar .thanks-main, body.lang-ar .brand-location { direction: rtl; unicode-bidi: plaintext; }' +
+        '.items-wrap { margin: 2px 0; width: 100%; max-width: 100%; }' +
+        '.item { padding: 3px 0; width: 100%; max-width: 100%; }' +
+        '.item-top { display: flex; flex-direction: row; justify-content: space-between; align-items: flex-start; width: 100%; max-width: 100%; gap: 4px; }' +
+        '.item-name { flex: 1 1 auto; min-width: 0; font-weight: 700; font-size: 10px; word-wrap: break-word; overflow-wrap: break-word; }' +
+        '.item-amt { flex: 0 0 auto; max-width: 42%; font-weight: 700; font-size: 10px; direction: ltr; unicode-bidi: embed; white-space: nowrap; }' +
+        'body.lang-ku .item-top, body.lang-ar .item-top { flex-direction: row-reverse; }' +
+        'body.lang-ku .item-name, body.lang-ar .item-name { text-align: right; direction: rtl; unicode-bidi: plaintext; }' +
+        'body.lang-ku .item-amt, body.lang-ar .item-amt { text-align: left; }' +
+        'body.lang-en .item-name { text-align: left; direction: ltr; }' +
+        'body.lang-en .item-amt { text-align: right; }' +
+        '.item-calc { text-align: center; width: 100%; max-width: 100%; font-size: 8px; color: #333; margin-top: 2px; direction: ltr; unicode-bidi: embed; overflow: hidden; }' +
+        '.item-line { border: none; border-top: 1px dashed #000; margin: 0; height: 0; width: 100%; }' +
+        '.total-box { border: 1.5px solid #000; border-radius: 4px; padding: 4px 5px; margin: 4px 0 3px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 100%; max-width: 100%; gap: 4px; }' +
+        'body.lang-ku .total-box, body.lang-ar .total-box { flex-direction: row-reverse; }' +
+        '.total-label { flex: 1 1 auto; min-width: 0; font-size: 9px; font-weight: 700; text-transform: uppercase; }' +
+        '.total-value { flex: 0 0 auto; font-size: 11px; font-weight: 700; direction: ltr; unicode-bidi: embed; white-space: nowrap; max-width: 55%; }' +
+        'body.lang-ku .total-label, body.lang-ar .total-label { text-align: right; direction: rtl; unicode-bidi: plaintext; }' +
+        'body.lang-en .total-label { text-align: left; direction: ltr; }' +
+        'body.lang-ku .total-value, body.lang-ar .total-value { text-align: left; }' +
+        'body.lang-en .total-value { text-align: right; }' +
+        '.total-currency { font-size: 7px; font-weight: 600; margin-left: 2px; }' +
+        '.footer-thanks { text-align: center; margin-top: 4px; padding-top: 3px; border-top: 1px dashed #000; width: 100%; }' +
+        '.thanks-main { font-size: 10px; font-weight: 700; margin-bottom: 1px; }' +
+        '.thanks-sub { font-size: 7px; color: #444; text-align: center; }' +
+        '.footer-contact { text-align: center; margin-top: 3px; font-size: 9px; width: 100%; }' +
+        '.footer-contact .phone { font-weight: 700; direction: ltr; unicode-bidi: embed; }' +
+        '@media print {' +
+        'html, body { width: ' + w + 'px !important; max-width: ' + w + 'px !important; margin: 0 !important; padding: 2px 14px 6px 4px !important; }' +
+        '@page { margin: 0; size: auto; }' +
+        '}' +
         '</style>' +
-    '</head>' +
-    '<body class="' + langClass + '">' +
+        '</head>' +
+        '<body class="' + langClass + '">' +
         '<div class="receipt">' +
-            '<img class="brand-logo" src="' + escapeReceiptHtml(options.logoUrl || 'assets/shawarma demeshq-logo.jpg') + '" alt="" onerror="this.style.display=\'none\'">' +
-             '<div class="brand-title"><span class="en">Shawarma</span><span class="sep">|</span><span class="ku">Shawarma</span></div>' +
-            '<div class="brand-tagline">Premium Coffee House</div>' +
-            (options.location ? '<div class="brand-location">' + escapeReceiptHtml(options.location) + '</div>' : '') +
-            '<hr class="rule">' +
-            '<div class="meta-receipt">' + escapeReceiptHtml(options.labels.receipt) + ' #' + escapeReceiptHtml(options.receiptNo) + '</div>' +
-            '<div class="meta-datetime">' +
-                '<div class="meta-date">' + escapeReceiptHtml(options.labels.date) + ': ' + escapeReceiptHtml(options.dateStr) + '</div>' +
-                '<div class="meta-time">' + escapeReceiptHtml(options.labels.time) + ': ' + escapeReceiptHtml(options.timeStr) + '</div>' +
-            '</div>' +
-            '<div class="meta-pieces">' + itemCount + ' ' + escapeReceiptHtml(options.labels.pieces) + '</div>' +
-            '<hr class="rule-solid">' +
-            '<div class="items-wrap">' + itemsHtml + '</div>' +
-            '<hr class="rule">' +
-            '<div class="total-box">' +
-                '<span class="total-label">' + escapeReceiptHtml(options.labels.total) + '</span>' +
-                '<span class="total-value">' + options.total.toLocaleString() + '<span class="total-currency">IQD</span></span>' +
-            '</div>' +
-            '<div class="footer-thanks">' +
-                '<div class="thanks-main">' + escapeReceiptHtml(options.labels.thanksMain) + '</div>' +
-                '<div class="thanks-sub">' + escapeReceiptHtml(options.labels.thanksSub) + '</div>' +
-            '</div>' +
-            (options.phone ? '<div class="footer-contact"><div class="phone">' + escapeReceiptHtml(options.phone) + '</div></div>' : '') +
+        '<img class="brand-logo" src="' + escapeReceiptHtml(options.logoUrl || 'assets/shawarma demeshq-logo.jpg') + '" alt="" onerror="this.style.display=\'none\'">' +
+        '<div class="brand-title"><span class="en">Shawarma</span><span class="sep">|</span><span class="ku">Shawarma</span></div>' +
+        '<div class="brand-tagline">Premium Coffee House</div>' +
+        (options.location ? '<div class="brand-location">' + escapeReceiptHtml(options.location) + '</div>' : '') +
+        '<hr class="rule">' +
+        '<div class="meta-receipt">' + escapeReceiptHtml(options.labels.receipt) + ' #' + escapeReceiptHtml(options.receiptNo) + '</div>' +
+        '<div class="meta-datetime">' +
+        '<div class="meta-date">' + escapeReceiptHtml(options.labels.date) + ': ' + escapeReceiptHtml(options.dateStr) + '</div>' +
+        '<div class="meta-time">' + escapeReceiptHtml(options.labels.time) + ': ' + escapeReceiptHtml(options.timeStr) + '</div>' +
         '</div>' +
-    '</body></html>';
+        '<div class="meta-pieces">' + itemCount + ' ' + escapeReceiptHtml(options.labels.pieces) + '</div>' +
+        '<hr class="rule-solid">' +
+        '<div class="items-wrap">' + itemsHtml + '</div>' +
+        '<hr class="rule">' +
+        '<div class="total-box">' +
+        '<span class="total-label">' + escapeReceiptHtml(options.labels.total) + '</span>' +
+        '<span class="total-value">' + options.total.toLocaleString() + '<span class="total-currency">IQD</span></span>' +
+        '</div>' +
+        '<div class="footer-thanks">' +
+        '<div class="thanks-main">' + escapeReceiptHtml(options.labels.thanksMain) + '</div>' +
+        '<div class="thanks-sub">' + escapeReceiptHtml(options.labels.thanksSub) + '</div>' +
+        '</div>' +
+        (options.phone ? '<div class="footer-contact"><div class="phone">' + escapeReceiptHtml(options.phone) + '</div></div>' : '') +
+        '</div>' +
+        '</body></html>';
 }
 
 function printHtmlInFrame(html) {
@@ -4257,20 +4257,20 @@ function showAdminConnectionStatusNow(online) {
 
 function populateTestData() {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-    
+
     if (!confirm('This will add sample menu items for each category. Continue?')) return;
-    
+
     db.collection(window.CAT_COLLECTION).orderBy('order', 'asc').get().then(function (snap) {
         if (snap.empty) {
             alert('No categories found. Please create categories first.');
             return;
         }
-        
+
         var categories = [];
         snap.forEach(function (doc) {
             categories.push({ id: doc.id, data: doc.data() });
         });
-        
+
         var sampleItems = [
             {
                 name_ku: 'قاوەی تایبەت',
@@ -4313,10 +4313,10 @@ function populateTestData() {
                 image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400'
             }
         ];
-        
+
         var addedCount = 0;
         var promises = [];
-        
+
         categories.forEach(function (cat, index) {
             var sample = sampleItems[index % sampleItems.length];
             var item = {
@@ -4332,17 +4332,17 @@ function populateTestData() {
                 available: true,
                 createdBy: getCurrentAdminEmail() || ''
             };
-            
+
             var promise = db.collection(window.MENU_COLLECTION).add(item).then(function () {
                 addedCount++;
                 console.log('Added item for category:', cat.data.name_en);
             }).catch(function (e) {
                 console.error('Error adding item:', e);
             });
-            
+
             promises.push(promise);
         });
-        
+
         Promise.all(promises).then(function () {
             alert('Added ' + addedCount + ' sample items successfully!');
             loadItemsList();
@@ -4383,13 +4383,13 @@ function updateOrderDisplay() {
             '<div class="cashier-order-item-name">' + item.name + '</div>' +
             '<div class="cashier-order-item-price">' + item.price.toLocaleString() + ' IQD</div>' +
             '<div class="cashier-qty-control">' +
-                '<button class="cashier-qty-btn minus" data-idx="' + idx + '">\u2212</button>' +
-                '<span class="cashier-qty-val">' + item.quantity + '</span>' +
-                '<button class="cashier-qty-btn plus" data-idx="' + idx + '">+</button>' +
+            '<button class="cashier-qty-btn minus" data-idx="' + idx + '">\u2212</button>' +
+            '<span class="cashier-qty-val">' + item.quantity + '</span>' +
+            '<button class="cashier-qty-btn plus" data-idx="' + idx + '">+</button>' +
             '</div>' +
             '<div class="cashier-order-item-subtotal">' + sub.toLocaleString() + '</div>' +
             '<button class="cashier-remove-btn" data-idx="' + idx + '">\u2715</button>' +
-        '</div>';
+            '</div>';
     });
     container.innerHTML = html;
     if (totalEl) totalEl.textContent = total.toLocaleString() + ' IQD';
@@ -4426,7 +4426,7 @@ function applyAdminAccent(accent) {
     var allowed = ['gold', 'emerald', 'sapphire', 'amethyst', 'ruby', 'sunset', 'rose', 'graphite', 'cyan'];
     if (allowed.indexOf(accent) === -1) accent = 'sapphire';
     document.documentElement.setAttribute('data-accent', accent);
-    try { localStorage.setItem('adminAccent', accent); } catch (e) {}
+    try { localStorage.setItem('adminAccent', accent); } catch (e) { }
     var themeMeta = { gold: '#D4AF37', emerald: '#10B981', sapphire: '#3B82F6', amethyst: '#8B5CF6', ruby: '#F43F5E', sunset: '#F97316', rose: '#EC4899', graphite: '#94A3B8', cyan: '#06B6D4' };
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta && themeMeta[accent]) meta.setAttribute('content', themeMeta[accent]);
@@ -4479,21 +4479,21 @@ function buildCafeTimePickerMarkup(idPrefix, timeValue, fallback, S, lang) {
 
     return '<div class="cafe-time-picker" data-prefix="' + idPrefix + '">' +
         '<button type="button" class="cafe-time-picker-btn" id="' + idPrefix + 'TimeBtn" aria-expanded="false">' +
-            '<i class="fa-regular fa-clock" aria-hidden="true"></i>' +
-            '<span class="cafe-time-picker-btn-text" id="' + idPrefix + 'TimeLabel">' + display + '</span>' +
-            '<i class="fa-solid fa-chevron-down cafe-time-picker-chevron" aria-hidden="true"></i>' +
+        '<i class="fa-regular fa-clock" aria-hidden="true"></i>' +
+        '<span class="cafe-time-picker-btn-text" id="' + idPrefix + 'TimeLabel">' + display + '</span>' +
+        '<i class="fa-solid fa-chevron-down cafe-time-picker-chevron" aria-hidden="true"></i>' +
         '</button>' +
         '<div class="cafe-time-picker-panel" id="' + idPrefix + 'TimePanel" hidden>' +
-            '<div class="cafe-time-hourmin">' +
-                '<select class="cafe-time-select" id="' + idPrefix + 'Hour" aria-label="hour">' + hourOpts + '</select>' +
-                '<span class="cafe-time-colon">:</span>' +
-                '<select class="cafe-time-select" id="' + idPrefix + 'Minute" aria-label="minute">' + minOpts + '</select>' +
-            '</div>' +
-            '<select class="cafe-time-select cafe-time-period" id="' + idPrefix + 'Period" aria-label="period">' + periodOpts + '</select>' +
-            '<button type="button" class="btn-secondary cafe-time-apply-btn" id="' + idPrefix + 'TimeApply">' + (S.applyTime || 'Apply') + '</button>' +
+        '<div class="cafe-time-hourmin">' +
+        '<select class="cafe-time-select" id="' + idPrefix + 'Hour" aria-label="hour">' + hourOpts + '</select>' +
+        '<span class="cafe-time-colon">:</span>' +
+        '<select class="cafe-time-select" id="' + idPrefix + 'Minute" aria-label="minute">' + minOpts + '</select>' +
+        '</div>' +
+        '<select class="cafe-time-select cafe-time-period" id="' + idPrefix + 'Period" aria-label="period">' + periodOpts + '</select>' +
+        '<button type="button" class="btn-secondary cafe-time-apply-btn" id="' + idPrefix + 'TimeApply">' + (S.applyTime || 'Apply') + '</button>' +
         '</div>' +
         '<input type="hidden" id="' + idPrefix + 'Time" value="' + parts.normalized + '">' +
-    '</div>';
+        '</div>';
 }
 
 function readCafeTimePickerValue(prefix) {
@@ -4627,195 +4627,195 @@ function setupCafeTimePickers(lang) {
 }
 
 function loadSettings() {
-     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-      var adminContent = document.getElementById('adminContent');
-      var themeLabels = {
-          ku: { title: 'ڕووکاری ڕەنگ', hint: 'ڕەنگێک هەڵبژێرە بۆ گۆڕینی ڕووکاری داشبۆرد', gold: 'زێڕین', emerald: 'زمروود', sapphire: 'یاقووتی شین', amethyst: 'بەنەوشەیی', ruby: 'یاقووت', sunset: 'خۆرئاوا', rose: 'گوڵی', graphite: 'خۆڵەمێشی', cyan: 'شینی ئاسمانی' },
-          ar: { title: 'سمة الألوان', hint: 'اختر لوناً لتغيير مظهر لوحة التحكم بالكامل', gold: 'ذهبي', emerald: 'زمردي', sapphire: 'أزرق ياقوتي', amethyst: 'بنفسجي', ruby: 'ياقوتي', sunset: 'برتقالي', rose: 'وردي', graphite: 'رمادي', cyan: 'سماوي' },
-          en: { title: 'Color Theme', hint: 'Pick a color to restyle the entire dashboard', gold: 'Gold', emerald: 'Emerald', sapphire: 'Sapphire', amethyst: 'Amethyst', ruby: 'Ruby', sunset: 'Sunset', rose: 'Rose', graphite: 'Graphite', cyan: 'Cyan' }
-      };
-      var TL = themeLabels[localStorage.getItem('selectedLang') || 'ku'] || themeLabels.en;
-      var themes = [
-          { id: 'sapphire', color: '#3B82F6', dark: '#1D4ED8' },
-          { id: 'gold', color: '#D4AF37', dark: '#B8910C' },
-          { id: 'emerald', color: '#10B981', dark: '#047857' },
-          { id: 'amethyst', color: '#8B5CF6', dark: '#6D28D9' },
-          { id: 'ruby', color: '#F43F5E', dark: '#BE123C' },
-          { id: 'sunset', color: '#F97316', dark: '#C2410C' },
-          { id: 'rose', color: '#EC4899', dark: '#BE185D' },
-          { id: 'cyan', color: '#06B6D4', dark: '#0E7490' },
-          { id: 'graphite', color: '#94A3B8', dark: '#475569' }
-      ];
-      var currentAccent = localStorage.getItem('adminAccent') || 'sapphire';
-      var swatchesHtml = themes.map(function (t) {
-          var glow = 'rgba(0,0,0,0.25)';
-          return '<button type="button" class="theme-swatch' + (t.id === currentAccent ? ' active' : '') + '" data-accent="' + t.id + '" ' +
-                 'style="--swatch:' + t.color + ';--swatch-dark:' + t.dark + ';--swatch-glow:' + glow + ';">' +
-                 '<span class="theme-swatch-check">✓</span>' +
-                 '<span class="theme-swatch-dot"></span>' +
-                 '<span class="theme-swatch-name">' + (TL[t.id] || t.id) + '</span>' +
-                 '</button>';
-      }).join('');
+    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+    var adminContent = document.getElementById('adminContent');
+    var themeLabels = {
+        ku: { title: 'ڕووکاری ڕەنگ', hint: 'ڕەنگێک هەڵبژێرە بۆ گۆڕینی ڕووکاری داشبۆرد', gold: 'زێڕین', emerald: 'زمروود', sapphire: 'یاقووتی شین', amethyst: 'بەنەوشەیی', ruby: 'یاقووت', sunset: 'خۆرئاوا', rose: 'گوڵی', graphite: 'خۆڵەمێشی', cyan: 'شینی ئاسمانی' },
+        ar: { title: 'سمة الألوان', hint: 'اختر لوناً لتغيير مظهر لوحة التحكم بالكامل', gold: 'ذهبي', emerald: 'زمردي', sapphire: 'أزرق ياقوتي', amethyst: 'بنفسجي', ruby: 'ياقوتي', sunset: 'برتقالي', rose: 'وردي', graphite: 'رمادي', cyan: 'سماوي' },
+        en: { title: 'Color Theme', hint: 'Pick a color to restyle the entire dashboard', gold: 'Gold', emerald: 'Emerald', sapphire: 'Sapphire', amethyst: 'Amethyst', ruby: 'Ruby', sunset: 'Sunset', rose: 'Rose', graphite: 'Graphite', cyan: 'Cyan' }
+    };
+    var TL = themeLabels[localStorage.getItem('selectedLang') || 'ku'] || themeLabels.en;
+    var themes = [
+        { id: 'sapphire', color: '#3B82F6', dark: '#1D4ED8' },
+        { id: 'gold', color: '#D4AF37', dark: '#B8910C' },
+        { id: 'emerald', color: '#10B981', dark: '#047857' },
+        { id: 'amethyst', color: '#8B5CF6', dark: '#6D28D9' },
+        { id: 'ruby', color: '#F43F5E', dark: '#BE123C' },
+        { id: 'sunset', color: '#F97316', dark: '#C2410C' },
+        { id: 'rose', color: '#EC4899', dark: '#BE185D' },
+        { id: 'cyan', color: '#06B6D4', dark: '#0E7490' },
+        { id: 'graphite', color: '#94A3B8', dark: '#475569' }
+    ];
+    var currentAccent = localStorage.getItem('adminAccent') || 'sapphire';
+    var swatchesHtml = themes.map(function (t) {
+        var glow = 'rgba(0,0,0,0.25)';
+        return '<button type="button" class="theme-swatch' + (t.id === currentAccent ? ' active' : '') + '" data-accent="' + t.id + '" ' +
+            'style="--swatch:' + t.color + ';--swatch-dark:' + t.dark + ';--swatch-glow:' + glow + ';">' +
+            '<span class="theme-swatch-check">✓</span>' +
+            '<span class="theme-swatch-dot"></span>' +
+            '<span class="theme-swatch-name">' + (TL[t.id] || t.id) + '</span>' +
+            '</button>';
+    }).join('');
 
-      var settingsLang = localStorage.getItem('selectedLang') || 'ku';
-      var openTimeStored = localStorage.getItem('cafeOpenTime') || '14:00';
-      var closeTimeStored = localStorage.getItem('cafeCloseTime') || '02:00';
+    var settingsLang = localStorage.getItem('selectedLang') || 'ku';
+    var openTimeStored = localStorage.getItem('cafeOpenTime') || '14:00';
+    var closeTimeStored = localStorage.getItem('cafeCloseTime') || '02:00';
 
-      adminContent.innerHTML =
-          '<div class="card settings-contact-card">' +
-              '<h2>' + S.settings + '</h2>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--cafe" aria-hidden="true"><i class="fa-solid fa-mug-hot"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeName">' + S.cafeName + '</label>' +
-                      '<input type="text" id="cafeName" value="' + (localStorage.getItem('cafeName') || S.siteName) + '">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--contact" aria-hidden="true">' +
-                      '<i class="fa-solid fa-phone"></i>' +
-                      '<i class="fa-brands fa-whatsapp"></i>' +
-                  '</span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="whatsappPhone">' + S.callWhatsAppNumber + '</label>' +
-                      '<input type="tel" id="whatsappPhone" value="' + (localStorage.getItem('whatsappPhone') || '9647506454656') + '" placeholder="' + S.phonePlaceholder + '">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--maps" aria-hidden="true"><i class="fa-solid fa-map-location-dot"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeLocationUrl">' + S.locationMapsUrl + '</label>' +
-                      '<input type="url" id="cafeLocationUrl" value="' + (localStorage.getItem('cafeLocationUrl') || 'https://maps.app.goo.gl/mmi5iv7mnGKxKZoq9?g_st=ic') + '" placeholder="https://maps.google.com/...">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--pin" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeLocationLabel">' + S.locationLabelField + '</label>' +
-                      '<input type="text" id="cafeLocationLabel" value="' + (localStorage.getItem('cafeLocationLabel') || 'بەحرکە-مجەمع') + '">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--currency" aria-hidden="true">' +
-                      '<i class="fa-solid fa-coins"></i>' +
-                  '</span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeCurrency">' + S.currency + '</label>' +
-                      '<input type="text" id="cafeCurrency" value="IQD" readonly>' +
-                  '</div>' +
-              '</div>' +
-               '<div class="settings-social-field settings-hours-field">' +
-                   '<span class="settings-social-icon settings-social-icon--hours" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>' +
-                   '<div class="settings-social-input-wrap settings-hours-block">' +
-                       '<div class="settings-hours-row">' +
-                           '<div class="settings-hours-input">' +
-                               '<label>' + S.cafeOpenTimeLabel + '</label>' +
-                               '<input type="time" id="cafeOpenTime" class="cafe-time-input" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(openTimeStored, '14:00') : openTimeStored) + '">' +
-                           '</div>' +
-                           '<div class="settings-hours-input">' +
-                               '<label>' + S.cafeCloseTimeLabel + '</label>' +
-                               '<input type="time" id="cafeCloseTime" class="cafe-time-input" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(closeTimeStored, '02:00') : closeTimeStored) + '">' +
-                           '</div>' +
-                       '</div>' +
-                   '</div>' +
-               '</div>' +
-          '</div>' +
-          '<div class="card settings-social-card" style="margin-top:20px;">' +
-              '<div class="settings-section-label"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> ' + S.socialLinks + '</div>' +
-              '<div class="settings-section-hint">' + S.socialLinksHint + '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--instagram" aria-hidden="true"><i class="fa-brands fa-instagram"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeInstagram">' + S.instagramUrl + '</label>' +
-                      '<input type="url" id="cafeInstagram" value="' + (localStorage.getItem('cafeInstagram') || '') + '" placeholder="https://instagram.com/...">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--tiktok" aria-hidden="true"><i class="fa-brands fa-tiktok"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeTiktok">' + S.tiktokUrl + '</label>' +
-                      '<input type="url" id="cafeTiktok" value="' + (localStorage.getItem('cafeTiktok') || '') + '" placeholder="https://tiktok.com/@...">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--snapchat" aria-hidden="true"><i class="fa-brands fa-snapchat"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeSnapchat">' + S.snapchatUrl + '</label>' +
-                      '<input type="url" id="cafeSnapchat" value="' + (localStorage.getItem('cafeSnapchat') || '') + '" placeholder="https://snapchat.com/add/...">' +
-                  '</div>' +
-              '</div>' +
-              '<div class="settings-social-field">' +
-                  '<span class="settings-social-icon settings-social-icon--facebook" aria-hidden="true"><i class="fa-brands fa-facebook-f"></i></span>' +
-                  '<div class="settings-social-input-wrap">' +
-                      '<label for="cafeFacebook">' + S.facebookUrl + '</label>' +
-                      '<input type="url" id="cafeFacebook" value="' + (localStorage.getItem('cafeFacebook') || '') + '" placeholder="https://facebook.com/...">' +
-                  '</div>' +
-              '</div>' +
-'<button class="btn-primary" id="saveSettingsBtn" style="margin-top:8px;">' + S.saveSettings + '</button>' +
-            '</div>' +
-            '<div class="card" style="margin-top:20px;">' +
-                '<div class="settings-section-label">🎨 ' + TL.title + '</div>' +
-              '<div class="settings-section-hint">' + TL.hint + '</div>' +
-              '<div class="theme-picker" id="themePicker">' + swatchesHtml + '</div>' +
-           '</div>';
+    adminContent.innerHTML =
+        '<div class="card settings-contact-card">' +
+        '<h2>' + S.settings + '</h2>' +
+        '<div class="settings-social-field">' +
+        '<span class="settings-social-icon settings-social-icon--cafe" aria-hidden="true"><i class="fa-solid fa-mug-hot"></i></span>' +
+        '<div class="settings-social-input-wrap">' +
+        '<label for="cafeName">' + S.cafeName + '</label>' +
+        '<input type="text" id="cafeName" value="' + (localStorage.getItem('cafeName') || S.siteName) + '">' +
+        '</div>' +
+        '</div>' +
+        '<div class="settings-social-field">' +
+        '<span class="settings-social-icon settings-social-icon--contact" aria-hidden="true">' +
+        '<i class="fa-solid fa-phone"></i>' +
+        '<i class="fa-brands fa-whatsapp"></i>' +
+        '</span>' +
+        '<div class="settings-social-input-wrap">' +
+        '<label for="whatsappPhone">' + S.callWhatsAppNumber + '</label>' +
+        '<input type="tel" id="whatsappPhone" value="' + (localStorage.getItem('whatsappPhone') || '9647506454656') + '" placeholder="' + S.phonePlaceholder + '">' +
+        '</div>' +
+        '</div>' +
+        '<div class="settings-social-field">' +
+        '<span class="settings-social-icon settings-social-icon--maps" aria-hidden="true"><i class="fa-solid fa-map-location-dot"></i></span>' +
+        '<div class="settings-social-input-wrap">' +
+        '<label for="cafeLocationUrl">' + S.locationMapsUrl + '</label>' +
+        '<input type="url" id="cafeLocationUrl" value="' + (localStorage.getItem('cafeLocationUrl') || 'https://maps.app.goo.gl/mmi5iv7mnGKxKZoq9?g_st=ic') + '" placeholder="https://maps.google.com/...">' +
+        '</div>' +
+        '</div>' +
+        '<div class="settings-social-field">' +
+        '<span class="settings-social-icon settings-social-icon--pin" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></span>' +
+        '<div class="settings-social-input-wrap">' +
+        '<label for="cafeLocationLabel">' + S.locationLabelField + '</label>' +
+        '<input type="text" id="cafeLocationLabel" value="' + (localStorage.getItem('cafeLocationLabel') || 'بەحرکە-مجەمع') + '">' +
+        '</div>' +
+        '</div>' +
+        '<div class="settings-social-field">' +
+        '<span class="settings-social-icon settings-social-icon--currency" aria-hidden="true">' +
+        '<i class="fa-solid fa-coins"></i>' +
+        '</span>' +
+        '<div class="settings-social-input-wrap">' +
+        '<label for="cafeCurrency">' + S.currency + '</label>' +
+        '<input type="text" id="cafeCurrency" value="IQD" readonly>' +
+        '</div>' +
+        '</div>' +
+        '<div class="settings-social-field settings-hours-field">' +
+        '<span class="settings-social-icon settings-social-icon--hours" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>' +
+        '<div class="settings-social-input-wrap settings-hours-block">' +
+        '<div class="settings-hours-row">' +
+        '<div class="settings-hours-input">' +
+        '<label>' + S.cafeOpenTimeLabel + '</label>' +
+        '<input type="time" id="cafeOpenTime" class="cafe-time-input" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(openTimeStored, '14:00') : openTimeStored) + '">' +
+        '</div>' +
+        '<div class="settings-hours-input">' +
+        '<label>' + S.cafeCloseTimeLabel + '</label>' +
+        '<input type="time" id="cafeCloseTime" class="cafe-time-input" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(closeTimeStored, '02:00') : closeTimeStored) + '">' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '<div class="card settings-social-card" style="margin-top:20px;">' +
+        '<div class="settings-section-label"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> ' + S.socialLinks + '</div>' +
+        '<div class="settings-section-hint">' + S.socialLinksHint + '</div>' +
+        '<div class="settings-social-field">' +
+        '<span class="settings-social-icon settings-social-icon--instagram" aria-hidden="true"><i class="fa-brands fa-instagram"></i></span>' +
+        '<div class="settings-social-input-wrap">' +
+        '<label for="cafeInstagram">' + S.instagramUrl + '</label>' +
+        '<input type="url" id="cafeInstagram" value="' + (localStorage.getItem('cafeInstagram') || '') + '" placeholder="https://instagram.com/...">' +
+        '</div>' +
+        '</div>' +
+        '<div class="settings-social-field">' +
+        '<span class="settings-social-icon settings-social-icon--tiktok" aria-hidden="true"><i class="fa-brands fa-tiktok"></i></span>' +
+        '<div class="settings-social-input-wrap">' +
+        '<label for="cafeTiktok">' + S.tiktokUrl + '</label>' +
+        '<input type="url" id="cafeTiktok" value="' + (localStorage.getItem('cafeTiktok') || '') + '" placeholder="https://tiktok.com/@...">' +
+        '</div>' +
+        '</div>' +
+        '<div class="settings-social-field">' +
+        '<span class="settings-social-icon settings-social-icon--snapchat" aria-hidden="true"><i class="fa-brands fa-snapchat"></i></span>' +
+        '<div class="settings-social-input-wrap">' +
+        '<label for="cafeSnapchat">' + S.snapchatUrl + '</label>' +
+        '<input type="url" id="cafeSnapchat" value="' + (localStorage.getItem('cafeSnapchat') || '') + '" placeholder="https://snapchat.com/add/...">' +
+        '</div>' +
+        '</div>' +
+        '<div class="settings-social-field">' +
+        '<span class="settings-social-icon settings-social-icon--facebook" aria-hidden="true"><i class="fa-brands fa-facebook-f"></i></span>' +
+        '<div class="settings-social-input-wrap">' +
+        '<label for="cafeFacebook">' + S.facebookUrl + '</label>' +
+        '<input type="url" id="cafeFacebook" value="' + (localStorage.getItem('cafeFacebook') || '') + '" placeholder="https://facebook.com/...">' +
+        '</div>' +
+        '</div>' +
+        '<button class="btn-primary" id="saveSettingsBtn" style="margin-top:8px;">' + S.saveSettings + '</button>' +
+        '</div>' +
+        '<div class="card" style="margin-top:20px;">' +
+        '<div class="settings-section-label">🎨 ' + TL.title + '</div>' +
+        '<div class="settings-section-hint">' + TL.hint + '</div>' +
+        '<div class="theme-picker" id="themePicker">' + swatchesHtml + '</div>' +
+        '</div>';
 
-       var themePicker = document.getElementById('themePicker');
-      if (themePicker) {
-          themePicker.addEventListener('click', function (e) {
-              var btn = e.target.closest('.theme-swatch');
-              if (!btn) return;
-              var accent = btn.getAttribute('data-accent');
-              applyAdminAccent(accent);
-              themePicker.querySelectorAll('.theme-swatch').forEach(function (s) {
-                  s.classList.toggle('active', s === btn);
-              });
-          });
-      }
+    var themePicker = document.getElementById('themePicker');
+    if (themePicker) {
+        themePicker.addEventListener('click', function (e) {
+            var btn = e.target.closest('.theme-swatch');
+            if (!btn) return;
+            var accent = btn.getAttribute('data-accent');
+            applyAdminAccent(accent);
+            themePicker.querySelectorAll('.theme-swatch').forEach(function (s) {
+                s.classList.toggle('active', s === btn);
+            });
+        });
+    }
 
-      var saveBtn = document.getElementById('saveSettingsBtn');
-      if (saveBtn) {
-          saveBtn.addEventListener('click', function () {
-              var cafeName = document.getElementById('cafeName').value.trim();
-              var whatsappPhone = typeof normalizeWhatsAppPhone === 'function'
-                  ? normalizeWhatsAppPhone(document.getElementById('whatsappPhone').value.trim())
-                  : document.getElementById('whatsappPhone').value.trim();
-              var cafeLocationUrl = document.getElementById('cafeLocationUrl').value.trim();
-              var cafeLocationLabel = document.getElementById('cafeLocationLabel').value.trim();
-              var cafeInstagram = typeof normalizeSocialUrl === 'function'
-                  ? normalizeSocialUrl(document.getElementById('cafeInstagram').value.trim(), 'instagram')
-                  : document.getElementById('cafeInstagram').value.trim();
-              var cafeTiktok = typeof normalizeSocialUrl === 'function'
-                  ? normalizeSocialUrl(document.getElementById('cafeTiktok').value.trim(), 'tiktok')
-                  : document.getElementById('cafeTiktok').value.trim();
-              var cafeSnapchat = typeof normalizeSocialUrl === 'function'
-                  ? normalizeSocialUrl(document.getElementById('cafeSnapchat').value.trim(), 'snapchat')
-                  : document.getElementById('cafeSnapchat').value.trim();
-              var cafeFacebook = typeof normalizeSocialUrl === 'function'
-                  ? normalizeSocialUrl(document.getElementById('cafeFacebook').value.trim(), 'facebook')
-                  : document.getElementById('cafeFacebook').value.trim();
-              var openInput = document.getElementById('cafeOpenTime');
-              var closeInput = document.getElementById('cafeCloseTime');
-              var cafeOpenTime = openInput ? openInput.value.trim() : '';
-              var cafeCloseTime = closeInput ? closeInput.value.trim() : '';
-              if (!cafeOpenTime) cafeOpenTime = '14:00';
-              if (!cafeCloseTime) cafeCloseTime = '02:00';
-              if (typeof normalizeCafeTimeValue === 'function') {
-                  cafeOpenTime = normalizeCafeTimeValue(cafeOpenTime, '14:00');
-                  cafeCloseTime = normalizeCafeTimeValue(cafeCloseTime, '02:00');
-              }
+    var saveBtn = document.getElementById('saveSettingsBtn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function () {
+            var cafeName = document.getElementById('cafeName').value.trim();
+            var whatsappPhone = typeof normalizeWhatsAppPhone === 'function'
+                ? normalizeWhatsAppPhone(document.getElementById('whatsappPhone').value.trim())
+                : document.getElementById('whatsappPhone').value.trim();
+            var cafeLocationUrl = document.getElementById('cafeLocationUrl').value.trim();
+            var cafeLocationLabel = document.getElementById('cafeLocationLabel').value.trim();
+            var cafeInstagram = typeof normalizeSocialUrl === 'function'
+                ? normalizeSocialUrl(document.getElementById('cafeInstagram').value.trim(), 'instagram')
+                : document.getElementById('cafeInstagram').value.trim();
+            var cafeTiktok = typeof normalizeSocialUrl === 'function'
+                ? normalizeSocialUrl(document.getElementById('cafeTiktok').value.trim(), 'tiktok')
+                : document.getElementById('cafeTiktok').value.trim();
+            var cafeSnapchat = typeof normalizeSocialUrl === 'function'
+                ? normalizeSocialUrl(document.getElementById('cafeSnapchat').value.trim(), 'snapchat')
+                : document.getElementById('cafeSnapchat').value.trim();
+            var cafeFacebook = typeof normalizeSocialUrl === 'function'
+                ? normalizeSocialUrl(document.getElementById('cafeFacebook').value.trim(), 'facebook')
+                : document.getElementById('cafeFacebook').value.trim();
+            var openInput = document.getElementById('cafeOpenTime');
+            var closeInput = document.getElementById('cafeCloseTime');
+            var cafeOpenTime = openInput ? openInput.value.trim() : '';
+            var cafeCloseTime = closeInput ? closeInput.value.trim() : '';
+            if (!cafeOpenTime) cafeOpenTime = '14:00';
+            if (!cafeCloseTime) cafeCloseTime = '02:00';
+            if (typeof normalizeCafeTimeValue === 'function') {
+                cafeOpenTime = normalizeCafeTimeValue(cafeOpenTime, '14:00');
+                cafeCloseTime = normalizeCafeTimeValue(cafeCloseTime, '02:00');
+            }
 
-              function storeSetting(key, value) {
-                  if (value == null || String(value).trim() === '') {
-                      localStorage.removeItem(key);
-                  } else {
-                      localStorage.setItem(key, String(value).trim());
-                  }
-              }
+            function storeSetting(key, value) {
+                if (value == null || String(value).trim() === '') {
+                    localStorage.removeItem(key);
+                } else {
+                    localStorage.setItem(key, String(value).trim());
+                }
+            }
 
-               storeSetting('cafeName', cafeName);
-               storeSetting('whatsappPhone', whatsappPhone);
-               storeSetting('cafeLocationUrl', cafeLocationUrl);
-storeSetting('cafeLocationLabel', cafeLocationLabel);
+            storeSetting('cafeName', cafeName);
+            storeSetting('whatsappPhone', whatsappPhone);
+            storeSetting('cafeLocationUrl', cafeLocationUrl);
+            storeSetting('cafeLocationLabel', cafeLocationLabel);
             storeSetting('cafeInstagram', cafeInstagram);
             storeSetting('cafeTiktok', cafeTiktok);
             storeSetting('cafeSnapchat', cafeSnapchat);
@@ -4823,623 +4823,623 @@ storeSetting('cafeLocationLabel', cafeLocationLabel);
             storeSetting('cafeOpenTime', cafeOpenTime);
             storeSetting('cafeCloseTime', cafeCloseTime);
             try {
-                   localStorage.setItem('cafeSettingsUpdatedAt', String(Date.now()));
-               } catch (e) {}
+                localStorage.setItem('cafeSettingsUpdatedAt', String(Date.now()));
+            } catch (e) { }
 
-              document.getElementById('whatsappPhone').value = whatsappPhone;
-              document.getElementById('cafeInstagram').value = cafeInstagram;
-              document.getElementById('cafeTiktok').value = cafeTiktok;
-              document.getElementById('cafeSnapchat').value = cafeSnapchat;
-              document.getElementById('cafeFacebook').value = cafeFacebook;
-              var selectedLang = localStorage.getItem('selectedLang') || 'ku';
-               var openHiddenSave = document.getElementById('cafeOpenTime');
-               var closeHiddenSave = document.getElementById('cafeCloseTime');
-               if (openHiddenSave) openHiddenSave.value = cafeOpenTime;
-               if (closeHiddenSave) closeHiddenSave.value = cafeCloseTime;
+            document.getElementById('whatsappPhone').value = whatsappPhone;
+            document.getElementById('cafeInstagram').value = cafeInstagram;
+            document.getElementById('cafeTiktok').value = cafeTiktok;
+            document.getElementById('cafeSnapchat').value = cafeSnapchat;
+            document.getElementById('cafeFacebook').value = cafeFacebook;
+            var selectedLang = localStorage.getItem('selectedLang') || 'ku';
+            var openHiddenSave = document.getElementById('cafeOpenTime');
+            var closeHiddenSave = document.getElementById('cafeCloseTime');
+            if (openHiddenSave) openHiddenSave.value = cafeOpenTime;
+            if (closeHiddenSave) closeHiddenSave.value = cafeCloseTime;
 
-              var settingsPayload = {
-                  cafeName: cafeName,
-                  whatsappPhone: whatsappPhone,
-                  cafeLocationUrl: cafeLocationUrl,
-                  cafeLocationLabel: cafeLocationLabel,
-                  cafeInstagram: cafeInstagram,
-                  cafeTiktok: cafeTiktok,
-                  cafeSnapchat: cafeSnapchat,
-                  cafeFacebook: cafeFacebook,
-                  cafeOpenTime: cafeOpenTime,
-                  cafeCloseTime: cafeCloseTime
-              };
+            var settingsPayload = {
+                cafeName: cafeName,
+                whatsappPhone: whatsappPhone,
+                cafeLocationUrl: cafeLocationUrl,
+                cafeLocationLabel: cafeLocationLabel,
+                cafeInstagram: cafeInstagram,
+                cafeTiktok: cafeTiktok,
+                cafeSnapchat: cafeSnapchat,
+                cafeFacebook: cafeFacebook,
+                cafeOpenTime: cafeOpenTime,
+                cafeCloseTime: cafeCloseTime
+            };
 
-               if (typeof saveCafeSettingsToFirestore === 'function') {
-                    saveCafeSettingsToFirestore(settingsPayload, function (err) {
-                        if (err) {
-                            var msg = (err && err.message ? String(err.message) : String(err)).toLowerCase();
-                            if (msg.indexOf('permission') !== -1 || msg.indexOf('insufficient') !== -1 || msg.indexOf('denied') !== -1) {
-                                 alert('⚠️ Settings saved locally only.\n\nFirestore WRITE was DENIED. Fix:\n1) In Firebase Console → project shawarma-demashq-menu → Firestore → Rules tab, paste the rules and click PUBLISH.\n2) Make sure you are logged in as admin.\n\n(' + (err && err.message ? err.message : err) + ')');
-                            } else {
-                                alert('⚠️ ' + S.settingsSaved + '\n\nCloud sync failed: ' + (err && err.message ? err.message : err) + '\n\nChanges saved locally only.');
-                            }
+            if (typeof saveCafeSettingsToFirestore === 'function') {
+                saveCafeSettingsToFirestore(settingsPayload, function (err) {
+                    if (err) {
+                        var msg = (err && err.message ? String(err.message) : String(err)).toLowerCase();
+                        if (msg.indexOf('permission') !== -1 || msg.indexOf('insufficient') !== -1 || msg.indexOf('denied') !== -1) {
+                            alert('⚠️ Settings saved locally only.\n\nFirestore WRITE was DENIED. Fix:\n1) In Firebase Console → project shawarma-demashq-menu → Firestore → Rules tab, paste the rules and click PUBLISH.\n2) Make sure you are logged in as admin.\n\n(' + (err && err.message ? err.message : err) + ')');
                         } else {
-                            alert(S.settingsSaved);
+                            alert('⚠️ ' + S.settingsSaved + '\n\nCloud sync failed: ' + (err && err.message ? err.message : err) + '\n\nChanges saved locally only.');
                         }
-                    });
-                } else {
-                    alert(S.settingsSaved);
+                    } else {
+                        alert(S.settingsSaved);
+                    }
+                });
+            } else {
+                alert(S.settingsSaved);
+            }
+        });
+    }
+
+    if (typeof loadCafeSettingsFromFirestore === 'function') {
+        loadCafeSettingsFromFirestore(function () {
+            var fields = {
+                cafeName: 'cafeName',
+                whatsappPhone: 'whatsappPhone',
+                cafeLocationUrl: 'cafeLocationUrl',
+                cafeLocationLabel: 'cafeLocationLabel',
+                cafeInstagram: 'cafeInstagram',
+                cafeTiktok: 'cafeTiktok',
+                cafeSnapchat: 'cafeSnapchat'
+            };
+            Object.keys(fields).forEach(function (storageKey) {
+                var input = document.getElementById(fields[storageKey]);
+                if (!input) return;
+                var value = localStorage.getItem(storageKey) || input.value || '';
+                if (storageKey === 'whatsappPhone' && typeof normalizeWhatsAppPhone === 'function') {
+                    value = normalizeWhatsAppPhone(value);
                 }
-          });
-      }
+                input.value = value;
+            });
+            var openLoaded = document.getElementById('cafeOpenTime');
+            var closeLoaded = document.getElementById('cafeCloseTime');
+            if (openLoaded) openLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeOpenTime') || '14:00', '14:00') : (localStorage.getItem('cafeOpenTime') || '14:00'));
+            if (closeLoaded) closeLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeCloseTime') || '02:00', '02:00') : (localStorage.getItem('cafeCloseTime') || '02:00'));
+        });
+    }
 
-      if (typeof loadCafeSettingsFromFirestore === 'function') {
-          loadCafeSettingsFromFirestore(function () {
-              var fields = {
-                  cafeName: 'cafeName',
-                  whatsappPhone: 'whatsappPhone',
-                  cafeLocationUrl: 'cafeLocationUrl',
-                  cafeLocationLabel: 'cafeLocationLabel',
-                  cafeInstagram: 'cafeInstagram',
-                  cafeTiktok: 'cafeTiktok',
-                  cafeSnapchat: 'cafeSnapchat'
-              };
-              Object.keys(fields).forEach(function (storageKey) {
-                  var input = document.getElementById(fields[storageKey]);
-                  if (!input) return;
-                  var value = localStorage.getItem(storageKey) || input.value || '';
-                  if (storageKey === 'whatsappPhone' && typeof normalizeWhatsAppPhone === 'function') {
-                      value = normalizeWhatsAppPhone(value);
-                  }
-                  input.value = value;
-              });
-              var openLoaded = document.getElementById('cafeOpenTime');
-              var closeLoaded = document.getElementById('cafeCloseTime');
-              if (openLoaded) openLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeOpenTime') || '14:00', '14:00') : (localStorage.getItem('cafeOpenTime') || '14:00'));
-              if (closeLoaded) closeLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeCloseTime') || '02:00', '02:00') : (localStorage.getItem('cafeCloseTime') || '02:00'));
-          });
-      }
-
- }
+}
 
 
- /* ============ EXPENSES ============ */
+/* ============ EXPENSES ============ */
 
- function readCachedExpenses() {
-     try {
-         return JSON.parse(localStorage.getItem('cachedExpenses') || '[]').map(normalizeExpenseEntry);
-     } catch (e) {
-         return [];
-     }
- }
+function readCachedExpenses() {
+    try {
+        return JSON.parse(localStorage.getItem('cachedExpenses') || '[]').map(normalizeExpenseEntry);
+    } catch (e) {
+        return [];
+    }
+}
 
-  function writeCachedExpenses(items) {
-      safeSetItem('cachedExpenses', JSON.stringify(items));
-      syncExpensesLiveFromCache();
-  }
+function writeCachedExpenses(items) {
+    safeSetItem('cachedExpenses', JSON.stringify(items));
+    syncExpensesLiveFromCache();
+}
 
- function expenseTimestampToMs(item) {
-     if (!item) return 0;
-     var sec = deriveExpenseTimestampSeconds(item);
-     if (sec != null) return sec * 1000;
-     return 0;
- }
+function expenseTimestampToMs(item) {
+    if (!item) return 0;
+    var sec = deriveExpenseTimestampSeconds(item);
+    if (sec != null) return sec * 1000;
+    return 0;
+}
 
- function expenseEntryFromDoc(doc) {
-     var exp = doc.data();
-     var ts = exp.timestamp;
-     var timestampSeconds = null;
-     if (ts && ts.seconds != null) timestampSeconds = ts.seconds;
-     else if (ts && ts._seconds != null) timestampSeconds = ts._seconds;
-     else if (ts && typeof ts.toDate === 'function') timestampSeconds = Math.floor(ts.toDate().getTime() / 1000);
-     return normalizeExpenseEntry({
-         id: doc.id,
-         name: exp.name,
-         price: exp.price || 0,
-         date: exp.date,
-         time: exp.time,
-         timestamp: ts,
-         timestampSeconds: timestampSeconds
-     });
- }
+function expenseEntryFromDoc(doc) {
+    var exp = doc.data();
+    var ts = exp.timestamp;
+    var timestampSeconds = null;
+    if (ts && ts.seconds != null) timestampSeconds = ts.seconds;
+    else if (ts && ts._seconds != null) timestampSeconds = ts._seconds;
+    else if (ts && typeof ts.toDate === 'function') timestampSeconds = Math.floor(ts.toDate().getTime() / 1000);
+    return normalizeExpenseEntry({
+        id: doc.id,
+        name: exp.name,
+        price: exp.price || 0,
+        date: exp.date,
+        time: exp.time,
+        timestamp: ts,
+        timestampSeconds: timestampSeconds
+    });
+}
 
- function getExpenseMonthRange(month) {
-     var year = new Date().getFullYear();
-     return {
-         start: new Date(year, month, 1),
-         end: new Date(year, month + 1, 1)
-     };
- }
+function getExpenseMonthRange(month) {
+    var year = new Date().getFullYear();
+    return {
+        start: new Date(year, month, 1),
+        end: new Date(year, month + 1, 1)
+    };
+}
 
- function filterExpensesByMonth(items, month) {
-     var year = new Date().getFullYear();
-     return items.filter(function (item) {
-         return isExpenseInMonth(item, month, year);
-     }).sort(function (a, b) {
-         return expenseTimestampToMs(b) - expenseTimestampToMs(a);
-     });
- }
+function filterExpensesByMonth(items, month) {
+    var year = new Date().getFullYear();
+    return items.filter(function (item) {
+        return isExpenseInMonth(item, month, year);
+    }).sort(function (a, b) {
+        return expenseTimestampToMs(b) - expenseTimestampToMs(a);
+    });
+}
 
- function filterExpensesByDay(items, dayStart) {
-     return items.filter(function (item) {
-         return isExpenseOnLocalDay(item, dayStart);
-     }).sort(function (a, b) {
-         return expenseTimestampToMs(b) - expenseTimestampToMs(a);
-     });
- }
+function filterExpensesByDay(items, dayStart) {
+    return items.filter(function (item) {
+        return isExpenseOnLocalDay(item, dayStart);
+    }).sort(function (a, b) {
+        return expenseTimestampToMs(b) - expenseTimestampToMs(a);
+    });
+}
 
- function upsertCachedExpense(entry) {
-     normalizeExpenseEntry(entry);
-     var items = readCachedExpenses();
-     var idx = -1;
-     for (var i = 0; i < items.length; i++) {
-         if (items[i].id === entry.id) { idx = i; break; }
-     }
-     if (idx >= 0) items[idx] = entry;
-     else items.push(entry);
-     writeCachedExpenses(items);
- }
+function upsertCachedExpense(entry) {
+    normalizeExpenseEntry(entry);
+    var items = readCachedExpenses();
+    var idx = -1;
+    for (var i = 0; i < items.length; i++) {
+        if (items[i].id === entry.id) { idx = i; break; }
+    }
+    if (idx >= 0) items[idx] = entry;
+    else items.push(entry);
+    writeCachedExpenses(items);
+}
 
- function removeCachedExpense(id) {
-     writeCachedExpenses(readCachedExpenses().filter(function (e) { return e.id !== id; }));
- }
+function removeCachedExpense(id) {
+    writeCachedExpenses(readCachedExpenses().filter(function (e) { return e.id !== id; }));
+}
 
- function mergeExpensesSnapIntoCache(snap) {
-     if (!snap || snap.empty) return;
-     var all = readCachedExpenses();
-     snap.forEach(function (doc) {
-         var entry = expenseEntryFromDoc(doc);
-         var found = false;
-         for (var i = 0; i < all.length; i++) {
-             if (all[i].id === entry.id) { all[i] = entry; found = true; break; }
-         }
-         if (!found) all.push(entry);
-     });
-     writeCachedExpenses(all);
- }
+function mergeExpensesSnapIntoCache(snap) {
+    if (!snap || snap.empty) return;
+    var all = readCachedExpenses();
+    snap.forEach(function (doc) {
+        var entry = expenseEntryFromDoc(doc);
+        var found = false;
+        for (var i = 0; i < all.length; i++) {
+            if (all[i].id === entry.id) { all[i] = entry; found = true; break; }
+        }
+        if (!found) all.push(entry);
+    });
+    writeCachedExpenses(all);
+}
 
- function paintExpensesStatsFromCache(month) {
-     if (month === undefined || month === null) month = new Date().getMonth();
-     var year = new Date().getFullYear();
-     var today = new Date();
-     today.setHours(0, 0, 0, 0);
-     var tomorrow = new Date(today);
-     tomorrow.setDate(tomorrow.getDate() + 1);
-     var mStart = new Date(year, month, 1);
-     var mEnd = new Date(year, month + 1, 1);
+function paintExpensesStatsFromCache(month) {
+    if (month === undefined || month === null) month = new Date().getMonth();
+    var year = new Date().getFullYear();
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    var mStart = new Date(year, month, 1);
+    var mEnd = new Date(year, month + 1, 1);
 
-     var todayTotal = sumExpensesInRange(today, tomorrow);
-     var monthItems = filterExpensesByMonth(readCachedExpenses(), month);
-     var monthTotal = 0;
-     monthItems.forEach(function (e) { monthTotal += e.price || 0; });
+    var todayTotal = sumExpensesInRange(today, tomorrow);
+    var monthItems = filterExpensesByMonth(readCachedExpenses(), month);
+    var monthTotal = 0;
+    monthItems.forEach(function (e) { monthTotal += e.price || 0; });
 
-     var el = document.getElementById('expTodayTotal');
-     if (el) el.textContent = todayTotal.toLocaleString() + ' IQD';
-     var elM = document.getElementById('expMonthTotal');
-     if (elM) elM.textContent = monthTotal.toLocaleString() + ' IQD';
-     var elC = document.getElementById('expCount');
-     if (elC) elC.textContent = monthItems.length.toString();
- }
+    var el = document.getElementById('expTodayTotal');
+    if (el) el.textContent = todayTotal.toLocaleString() + ' IQD';
+    var elM = document.getElementById('expMonthTotal');
+    if (elM) elM.textContent = monthTotal.toLocaleString() + ' IQD';
+    var elC = document.getElementById('expCount');
+    if (elC) elC.textContent = monthItems.length.toString();
+}
 
- function renderExpensesList(month, items) {
-     var list = document.getElementById('expensesList');
-     if (!list) return;
-     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+function renderExpensesList(month, items) {
+    var list = document.getElementById('expensesList');
+    if (!list) return;
+    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
 
-     if (!items || items.length === 0) {
-         list.innerHTML = '<div class="expenses-empty">' +
-             '<div class="expenses-empty-icon">📭</div>' +
-             '<p>' + S.noExpenses + '</p>' +
-         '</div>';
-         return;
-     }
+    if (!items || items.length === 0) {
+        list.innerHTML = '<div class="expenses-empty">' +
+            '<div class="expenses-empty-icon">📭</div>' +
+            '<p>' + S.noExpenses + '</p>' +
+            '</div>';
+        return;
+    }
 
-     var now = new Date();
-     var isCurrentMonth = month === now.getMonth() && now.getFullYear() === new Date().getFullYear();
-     var todayStart = new Date();
-     todayStart.setHours(0, 0, 0, 0);
-     var todayItems = isCurrentMonth ? filterExpensesByDay(items, todayStart) : [];
-     var todayIds = {};
-     todayItems.forEach(function (e) { todayIds[e.id] = true; });
-     var monthRest = isCurrentMonth ? items.filter(function (e) { return !todayIds[e.id]; }) : items;
+    var now = new Date();
+    var isCurrentMonth = month === now.getMonth() && now.getFullYear() === new Date().getFullYear();
+    var todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    var todayItems = isCurrentMonth ? filterExpensesByDay(items, todayStart) : [];
+    var todayIds = {};
+    todayItems.forEach(function (e) { todayIds[e.id] = true; });
+    var monthRest = isCurrentMonth ? items.filter(function (e) { return !todayIds[e.id]; }) : items;
 
-     function buildRows(listItems) {
-         var total = 0;
-         var rows = '';
-         listItems.forEach(function (item) {
-             total += (item.price || 0);
-             var ms = expenseTimestampToMs(item);
-             var dateObj = ms ? new Date(ms) : null;
-             var dateStr = dateObj ? dateObj.toLocaleDateString('ku-IQ') : (item.date || '—');
-             var timeStr = dateObj ? dateObj.toLocaleTimeString('ku-IQ', { hour: '2-digit', minute: '2-digit' }) : (item.time || '');
-             rows += '<tr class="expense-row">' +
-                 '<td class="expense-cell expense-cell--name"><span class="expense-name">' + (item.name || '—') + '</span></td>' +
-                 '<td class="expense-cell expense-cell--price"><span class="expense-price">' + (item.price || 0).toLocaleString() + ' IQD</span></td>' +
-                 '<td class="expense-cell expense-cell--date"><span class="expense-date">' + dateStr + '</span><span class="expense-time">' + timeStr + '</span></td>' +
-                 '<td class="expense-cell expense-cell--actions">' +
-                     '<button type="button" class="btn-primary btn-sm edit-expense" data-id="' + item.id + '" title="' + S.edit + '">✎</button> ' +
-                     '<button type="button" class="btn-danger btn-sm delete-expense" data-id="' + item.id + '">✕</button>' +
-                 '</td>' +
-             '</tr>';
-         });
-         return { rows: rows, total: total };
-     }
+    function buildRows(listItems) {
+        var total = 0;
+        var rows = '';
+        listItems.forEach(function (item) {
+            total += (item.price || 0);
+            var ms = expenseTimestampToMs(item);
+            var dateObj = ms ? new Date(ms) : null;
+            var dateStr = dateObj ? dateObj.toLocaleDateString('ku-IQ') : (item.date || '—');
+            var timeStr = dateObj ? dateObj.toLocaleTimeString('ku-IQ', { hour: '2-digit', minute: '2-digit' }) : (item.time || '');
+            rows += '<tr class="expense-row">' +
+                '<td class="expense-cell expense-cell--name"><span class="expense-name">' + (item.name || '—') + '</span></td>' +
+                '<td class="expense-cell expense-cell--price"><span class="expense-price">' + (item.price || 0).toLocaleString() + ' IQD</span></td>' +
+                '<td class="expense-cell expense-cell--date"><span class="expense-date">' + dateStr + '</span><span class="expense-time">' + timeStr + '</span></td>' +
+                '<td class="expense-cell expense-cell--actions">' +
+                '<button type="button" class="btn-primary btn-sm edit-expense" data-id="' + item.id + '" title="' + S.edit + '">✎</button> ' +
+                '<button type="button" class="btn-danger btn-sm delete-expense" data-id="' + item.id + '">✕</button>' +
+                '</td>' +
+                '</tr>';
+        });
+        return { rows: rows, total: total };
+    }
 
-     function buildTable(title, listItems) {
-         if (!listItems.length) return '';
-         var built = buildRows(listItems);
-         return (title ? '<h3 class="expenses-day-heading">' + title + '</h3>' : '') +
-             '<div class="expenses-table-wrapper">' +
-             '<table class="expenses-table">' +
-                 '<thead><tr>' +
-                     '<th>' + S.expenseName + '</th>' +
-                     '<th>' + S.expensePrice + '</th>' +
-                     '<th>' + S.expenseDate + '</th>' +
-                     '<th></th>' +
-                 '</tr></thead>' +
-                 '<tbody>' + built.rows + '</tbody>' +
-                 '<tfoot><tr>' +
-                     '<td colspan="4" class="expense-total-cell">' +
-                         '<span class="expense-total-label">' + S.totalExpenses + ':</span>' +
-                         '<span class="expense-total-value">' + built.total.toLocaleString() + ' IQD</span>' +
-                     '</td>' +
-                 '</tr></tfoot>' +
-             '</table></div>';
-     }
+    function buildTable(title, listItems) {
+        if (!listItems.length) return '';
+        var built = buildRows(listItems);
+        return (title ? '<h3 class="expenses-day-heading">' + title + '</h3>' : '') +
+            '<div class="expenses-table-wrapper">' +
+            '<table class="expenses-table">' +
+            '<thead><tr>' +
+            '<th>' + S.expenseName + '</th>' +
+            '<th>' + S.expensePrice + '</th>' +
+            '<th>' + S.expenseDate + '</th>' +
+            '<th></th>' +
+            '</tr></thead>' +
+            '<tbody>' + built.rows + '</tbody>' +
+            '<tfoot><tr>' +
+            '<td colspan="4" class="expense-total-cell">' +
+            '<span class="expense-total-label">' + S.totalExpenses + ':</span>' +
+            '<span class="expense-total-value">' + built.total.toLocaleString() + ' IQD</span>' +
+            '</td>' +
+            '</tr></tfoot>' +
+            '</table></div>';
+    }
 
-     var html = '';
-     if (todayItems.length) {
-         html += buildTable(S.todayExpenses, todayItems);
-     }
-     if (monthRest.length) {
-         html += buildTable(todayItems.length ? (S.monthlyExpenses || S.expenses) : '', monthRest);
-     }
-     if (!html) {
-         list.innerHTML = '<div class="expenses-empty">' +
-             '<div class="expenses-empty-icon">📭</div>' +
-             '<p>' + S.noExpenses + '</p>' +
-         '</div>';
-         return;
-     }
+    var html = '';
+    if (todayItems.length) {
+        html += buildTable(S.todayExpenses, todayItems);
+    }
+    if (monthRest.length) {
+        html += buildTable(todayItems.length ? (S.monthlyExpenses || S.expenses) : '', monthRest);
+    }
+    if (!html) {
+        list.innerHTML = '<div class="expenses-empty">' +
+            '<div class="expenses-empty-icon">📭</div>' +
+            '<p>' + S.noExpenses + '</p>' +
+            '</div>';
+        return;
+    }
 
-     list.innerHTML = html;
+    list.innerHTML = html;
 
-     list.querySelectorAll('.edit-expense').forEach(function (btn) {
-         btn.addEventListener('click', function () {
-             editExpense(this.getAttribute('data-id'));
-         });
-     });
-     list.querySelectorAll('.delete-expense').forEach(function (btn) {
-         btn.addEventListener('click', function () {
-             deleteExpense(this.getAttribute('data-id'));
-         });
-     });
- }
+    list.querySelectorAll('.edit-expense').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            editExpense(this.getAttribute('data-id'));
+        });
+    });
+    list.querySelectorAll('.delete-expense').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            deleteExpense(this.getAttribute('data-id'));
+        });
+    });
+}
 
- function loadExpenses() {
-     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-     var adminContent = document.getElementById('adminContent');
-     var now = new Date();
-     var currentMonth = now.getMonth();
-     var monthsHtml = '';
-     var mNames = ['january','february','march','april','may','june','july','august','september','october','november','december'];
-     for (var m = 0; m < 12; m++) {
-         monthsHtml += '<option value="' + m + '"' + (m === currentMonth ? ' selected' : '') + '>' + (m + 1) + ' — ' + S[mNames[m]] + ' ' + now.getFullYear() + '</option>';
-     }
+function loadExpenses() {
+    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+    var adminContent = document.getElementById('adminContent');
+    var now = new Date();
+    var currentMonth = now.getMonth();
+    var monthsHtml = '';
+    var mNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+    for (var m = 0; m < 12; m++) {
+        monthsHtml += '<option value="' + m + '"' + (m === currentMonth ? ' selected' : '') + '>' + (m + 1) + ' — ' + S[mNames[m]] + ' ' + now.getFullYear() + '</option>';
+    }
 
-     adminContent.innerHTML =
-         '<div class="expenses-page">' +
-             '<div class="expenses-header">' +
-                 '<div class="expenses-header-title">' +
-                     '<h2>📉 ' + S.expenses + '</h2>' +
-                 '</div>' +
-                 '<div class="expenses-header-actions">' +
-                     '<div class="month-selector">' +
-                         '<select id="expensesMonthSelect">' + monthsHtml + '</select>' +
-                     '</div>' +
-                     '<button class="btn-primary" id="addExpenseBtn">+ ' + S.addExpense + '</button>' +
-                 '</div>' +
-             '</div>' +
-             '<div class="expenses-stats">' +
-                 '<div class="expense-stat-card expense-stat--today">' +
-                     '<div class="expense-stat-icon">📅</div>' +
-                     '<div class="expense-stat-info">' +
-                         '<span class="expense-stat-label">' + S.todayExpenses + '</span>' +
-                         '<span class="expense-stat-value" id="expTodayTotal">0 IQD</span>' +
-                     '</div>' +
-                 '</div>' +
-                 '<div class="expense-stat-card expense-stat--month">' +
-                     '<div class="expense-stat-icon">📊</div>' +
-                     '<div class="expense-stat-info">' +
-                         '<span class="expense-stat-label">' + S.monthlyExpenses + '</span>' +
-                         '<span class="expense-stat-value" id="expMonthTotal">0 IQD</span>' +
-                     '</div>' +
-                 '</div>' +
-                 '<div class="expense-stat-card expense-stat--count">' +
-                     '<div class="expense-stat-icon">📋</div>' +
-                     '<div class="expense-stat-info">' +
-                         '<span class="expense-stat-label">' + S.total + '</span>' +
-                         '<span class="expense-stat-value" id="expCount">0</span>' +
-                     '</div>' +
-                 '</div>' +
-             '</div>' +
-             '<div class="expenses-table-container">' +
-                 '<div id="expensesList"></div>' +
-             '</div>' +
-         '</div>' +
-         '<div id="expenseModal" class="modal-overlay">' +
-             '<div class="modal expense-modal">' +
-                 '<div class="modal-content">' +
-                     '<span class="modal-close" id="expenseModalClose">&times;</span>' +
-                     '<h2 id="expenseModalTitle">' + S.addExpense + '</h2>' +
-                     '<form id="expenseForm" novalidate>' +
-                         '<div class="form-group">' +
-                             '<label>' + S.expenseName + '</label>' +
-                             '<input type="text" id="expenseName" list="expenseSuggestions" autocomplete="off">' +
-                             '<datalist id="expenseSuggestions">' +
-                                 '<option value="' + S.water + '">' +
-                                 '<option value="' + S.milk + '">' +
-                                 '<option value="' + S.coffee + '">' +
-                                 '<option value="' + S.electric + '">' +
-                                 '<option value="' + S.gas + '">' +
-                                 '<option value="' + S.rent + '">' +
-                                 '<option value="' + S.salary + '">' +
-                                 '<option value="' + S.other + '">' +
-                             '</datalist>' +
-                         '</div>' +
-                         '<div class="form-row">' +
-                             '<div class="form-group">' +
-                                 '<label>' + S.expensePrice + '</label>' +
-                                 '<input type="text" inputmode="decimal" id="expensePrice" min="0" autocomplete="off">' +
-                             '</div>' +
-                             '<div class="form-group">' +
-                                 '<label>' + S.expenseDate + '</label>' +
-                                 '<input type="date" id="expenseDate">' +
-                             '</div>' +
-                         '</div>' +
-                         '<div class="form-group">' +
-                             '<label>' + S.expenseTime + '</label>' +
-                             '<input type="time" id="expenseTime">' +
-                         '</div>' +
-                         '<button type="button" class="btn-primary" id="saveExpenseBtn">' + S.saveItem + '</button>' +
-                         '<button type="button" class="btn-secondary" id="cancelExpenseBtn" style="margin-left:8px;">' + S.cancel + '</button>' +
-                         '<input type="hidden" id="expenseId" value="">' +
-                     '</form>' +
-                 '</div>' +
-             '</div>' +
-         '</div>';
+    adminContent.innerHTML =
+        '<div class="expenses-page">' +
+        '<div class="expenses-header">' +
+        '<div class="expenses-header-title">' +
+        '<h2>📉 ' + S.expenses + '</h2>' +
+        '</div>' +
+        '<div class="expenses-header-actions">' +
+        '<div class="month-selector">' +
+        '<select id="expensesMonthSelect">' + monthsHtml + '</select>' +
+        '</div>' +
+        '<button class="btn-primary" id="addExpenseBtn">+ ' + S.addExpense + '</button>' +
+        '</div>' +
+        '</div>' +
+        '<div class="expenses-stats">' +
+        '<div class="expense-stat-card expense-stat--today">' +
+        '<div class="expense-stat-icon">📅</div>' +
+        '<div class="expense-stat-info">' +
+        '<span class="expense-stat-label">' + S.todayExpenses + '</span>' +
+        '<span class="expense-stat-value" id="expTodayTotal">0 IQD</span>' +
+        '</div>' +
+        '</div>' +
+        '<div class="expense-stat-card expense-stat--month">' +
+        '<div class="expense-stat-icon">📊</div>' +
+        '<div class="expense-stat-info">' +
+        '<span class="expense-stat-label">' + S.monthlyExpenses + '</span>' +
+        '<span class="expense-stat-value" id="expMonthTotal">0 IQD</span>' +
+        '</div>' +
+        '</div>' +
+        '<div class="expense-stat-card expense-stat--count">' +
+        '<div class="expense-stat-icon">📋</div>' +
+        '<div class="expense-stat-info">' +
+        '<span class="expense-stat-label">' + S.total + '</span>' +
+        '<span class="expense-stat-value" id="expCount">0</span>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '<div class="expenses-table-container">' +
+        '<div id="expensesList"></div>' +
+        '</div>' +
+        '</div>' +
+        '<div id="expenseModal" class="modal-overlay">' +
+        '<div class="modal expense-modal">' +
+        '<div class="modal-content">' +
+        '<span class="modal-close" id="expenseModalClose">&times;</span>' +
+        '<h2 id="expenseModalTitle">' + S.addExpense + '</h2>' +
+        '<form id="expenseForm" novalidate>' +
+        '<div class="form-group">' +
+        '<label>' + S.expenseName + '</label>' +
+        '<input type="text" id="expenseName" list="expenseSuggestions" autocomplete="off">' +
+        '<datalist id="expenseSuggestions">' +
+        '<option value="' + S.water + '">' +
+        '<option value="' + S.milk + '">' +
+        '<option value="' + S.coffee + '">' +
+        '<option value="' + S.electric + '">' +
+        '<option value="' + S.gas + '">' +
+        '<option value="' + S.rent + '">' +
+        '<option value="' + S.salary + '">' +
+        '<option value="' + S.other + '">' +
+        '</datalist>' +
+        '</div>' +
+        '<div class="form-row">' +
+        '<div class="form-group">' +
+        '<label>' + S.expensePrice + '</label>' +
+        '<input type="text" inputmode="decimal" id="expensePrice" min="0" autocomplete="off">' +
+        '</div>' +
+        '<div class="form-group">' +
+        '<label>' + S.expenseDate + '</label>' +
+        '<input type="date" id="expenseDate">' +
+        '</div>' +
+        '</div>' +
+        '<div class="form-group">' +
+        '<label>' + S.expenseTime + '</label>' +
+        '<input type="time" id="expenseTime">' +
+        '</div>' +
+        '<button type="button" class="btn-primary" id="saveExpenseBtn">' + S.saveItem + '</button>' +
+        '<button type="button" class="btn-secondary" id="cancelExpenseBtn" style="margin-left:8px;">' + S.cancel + '</button>' +
+        '<input type="hidden" id="expenseId" value="">' +
+        '</form>' +
+        '</div>' +
+        '</div>' +
+        '</div>';
 
-     var monthSelect = document.getElementById('expensesMonthSelect');
-     if (monthSelect) {
-         monthSelect.addEventListener('change', function () {
-             renderExpensesUI(parseInt(this.value, 10));
-         });
-     }
+    var monthSelect = document.getElementById('expensesMonthSelect');
+    if (monthSelect) {
+        monthSelect.addEventListener('change', function () {
+            renderExpensesUI(parseInt(this.value, 10));
+        });
+    }
 
-     var addBtn = document.getElementById('addExpenseBtn');
-     if (addBtn) {
-         addBtn.addEventListener('click', function () {
-             document.getElementById('expenseModalTitle').textContent = S.addExpense;
-             document.getElementById('expenseForm').reset();
-             document.getElementById('expenseId').value = '';
-             var today = getLocalDateKey(new Date());
-             var now = new Date().toTimeString().slice(0, 5);
-             document.getElementById('expenseDate').value = today;
-             document.getElementById('expenseTime').value = now;
-             document.getElementById('expenseModal').classList.add('active');
-         });
-     }
+    var addBtn = document.getElementById('addExpenseBtn');
+    if (addBtn) {
+        addBtn.addEventListener('click', function () {
+            document.getElementById('expenseModalTitle').textContent = S.addExpense;
+            document.getElementById('expenseForm').reset();
+            document.getElementById('expenseId').value = '';
+            var today = getLocalDateKey(new Date());
+            var now = new Date().toTimeString().slice(0, 5);
+            document.getElementById('expenseDate').value = today;
+            document.getElementById('expenseTime').value = now;
+            document.getElementById('expenseModal').classList.add('active');
+        });
+    }
 
-     var closeBtn = document.getElementById('expenseModalClose');
-     if (closeBtn) {
-         closeBtn.addEventListener('click', function () {
-             document.getElementById('expenseModal').classList.remove('active');
-         });
-     }
+    var closeBtn = document.getElementById('expenseModalClose');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function () {
+            document.getElementById('expenseModal').classList.remove('active');
+        });
+    }
 
-     var cancelBtn = document.getElementById('cancelExpenseBtn');
-     if (cancelBtn) {
-         cancelBtn.addEventListener('click', function () {
-             document.getElementById('expenseModal').classList.remove('active');
-         });
-     }
+    var cancelBtn = document.getElementById('cancelExpenseBtn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function () {
+            document.getElementById('expenseModal').classList.remove('active');
+        });
+    }
 
-     var form = document.getElementById('expenseForm');
-     function triggerSaveExpense() {
-         try { saveExpense(); } catch (err) {
-             console.error('saveExpense error:', err);
-             alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
-         }
-     }
-     if (form) {
-         form.addEventListener('submit', function (e) {
-             e.preventDefault();
-             triggerSaveExpense();
-         });
-     }
-     var saveExpenseBtn = document.getElementById('saveExpenseBtn');
-     if (saveExpenseBtn) {
-         saveExpenseBtn.addEventListener('click', function (e) {
-             e.preventDefault();
-             triggerSaveExpense();
-         });
-     }
+    var form = document.getElementById('expenseForm');
+    function triggerSaveExpense() {
+        try { saveExpense(); } catch (err) {
+            console.error('saveExpense error:', err);
+            alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
+        }
+    }
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            triggerSaveExpense();
+        });
+    }
+    var saveExpenseBtn = document.getElementById('saveExpenseBtn');
+    if (saveExpenseBtn) {
+        saveExpenseBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            triggerSaveExpense();
+        });
+    }
 
-     renderExpensesUI(currentMonth);
-     startAdminLiveListeners();
- }
+    renderExpensesUI(currentMonth);
+    startAdminLiveListeners();
+}
 
- function renderExpensesUI(month) {
-     if (month === undefined || month === null) month = new Date().getMonth();
-     var year = new Date().getFullYear();
-     var today = new Date();
-     today.setHours(0, 0, 0, 0);
-     var tomorrow = new Date(today);
-     tomorrow.setDate(tomorrow.getDate() + 1);
-     var mStart = new Date(year, month, 1);
-     var mEnd = new Date(year, month + 1, 1);
-     var todayMs = today.getTime();
-     var tomorrowMs = tomorrow.getTime();
-     var startMs = mStart.getTime();
-     var endMs = mEnd.getTime();
+function renderExpensesUI(month) {
+    if (month === undefined || month === null) month = new Date().getMonth();
+    var year = new Date().getFullYear();
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    var mStart = new Date(year, month, 1);
+    var mEnd = new Date(year, month + 1, 1);
+    var todayMs = today.getTime();
+    var tomorrowMs = tomorrow.getTime();
+    var startMs = mStart.getTime();
+    var endMs = mEnd.getTime();
 
-     var all = readCachedExpenses();
-     var monthItems = filterExpensesByMonth(all, month);
-     var todayTotal = 0;
-     var monthTotal = 0;
-     all.forEach(function (e) {
-         if (isExpenseOnLocalDay(e, today)) todayTotal += e.price || 0;
-         if (isExpenseInMonth(e, month, year)) monthTotal += e.price || 0;
-     });
+    var all = readCachedExpenses();
+    var monthItems = filterExpensesByMonth(all, month);
+    var todayTotal = 0;
+    var monthTotal = 0;
+    all.forEach(function (e) {
+        if (isExpenseOnLocalDay(e, today)) todayTotal += e.price || 0;
+        if (isExpenseInMonth(e, month, year)) monthTotal += e.price || 0;
+    });
 
-     var el = document.getElementById('expTodayTotal');
-     if (el) el.textContent = todayTotal.toLocaleString() + ' IQD';
-     var elM = document.getElementById('expMonthTotal');
-     if (elM) elM.textContent = monthTotal.toLocaleString() + ' IQD';
-     var elC = document.getElementById('expCount');
-     if (elC) elC.textContent = monthItems.length.toString();
+    var el = document.getElementById('expTodayTotal');
+    if (el) el.textContent = todayTotal.toLocaleString() + ' IQD';
+    var elM = document.getElementById('expMonthTotal');
+    if (elM) elM.textContent = monthTotal.toLocaleString() + ' IQD';
+    var elC = document.getElementById('expCount');
+    if (elC) elC.textContent = monthItems.length.toString();
 
-     renderExpensesList(month, monthItems);
- }
+    renderExpensesList(month, monthItems);
+}
 
- function loadExpensesStats(month) {
-     renderExpensesUI(month);
- }
+function loadExpensesStats(month) {
+    renderExpensesUI(month);
+}
 
- function loadExpensesList(month) {
-     renderExpensesUI(month);
- }
+function loadExpensesList(month) {
+    renderExpensesUI(month);
+}
 
- function editExpense(expenseId) {
-     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-     var expense = readCachedExpenses().filter(function (e) { return e.id === expenseId; })[0];
-     if (!expense) return;
+function editExpense(expenseId) {
+    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+    var expense = readCachedExpenses().filter(function (e) { return e.id === expenseId; })[0];
+    if (!expense) return;
 
-     document.getElementById('expenseModalTitle').textContent = S.editExpense || S.editItem;
-     document.getElementById('expenseId').value = expense.id;
-     document.getElementById('expenseName').value = expense.name || '';
-     document.getElementById('expensePrice').value = expense.price != null ? expense.price : '';
+    document.getElementById('expenseModalTitle').textContent = S.editExpense || S.editItem;
+    document.getElementById('expenseId').value = expense.id;
+    document.getElementById('expenseName').value = expense.name || '';
+    document.getElementById('expensePrice').value = expense.price != null ? expense.price : '';
 
-     var dateVal = expense.date || '';
-     var timeVal = expense.time || '';
-     if (!dateVal || !timeVal) {
-         var ms = expenseTimestampToMs(expense);
-         if (ms) {
-             var d = new Date(ms);
-             dateVal = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-             timeVal = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-         }
-     }
-     document.getElementById('expenseDate').value = dateVal;
-     document.getElementById('expenseTime').value = timeVal;
-     document.getElementById('expenseModal').classList.add('active');
- }
+    var dateVal = expense.date || '';
+    var timeVal = expense.time || '';
+    if (!dateVal || !timeVal) {
+        var ms = expenseTimestampToMs(expense);
+        if (ms) {
+            var d = new Date(ms);
+            dateVal = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            timeVal = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        }
+    }
+    document.getElementById('expenseDate').value = dateVal;
+    document.getElementById('expenseTime').value = timeVal;
+    document.getElementById('expenseModal').classList.add('active');
+}
 
- function saveExpense() {
-     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-     var name = document.getElementById('expenseName').value.trim();
-     var price = document.getElementById('expensePrice').value.trim();
-     var date = document.getElementById('expenseDate').value;
-     var time = document.getElementById('expenseTime').value;
+function saveExpense() {
+    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+    var name = document.getElementById('expenseName').value.trim();
+    var price = document.getElementById('expensePrice').value.trim();
+    var date = document.getElementById('expenseDate').value;
+    var time = document.getElementById('expenseTime').value;
 
-     if (!name || !price || !date || !time) {
-         alert(S.fillAll);
-         return;
-     }
+    if (!name || !price || !date || !time) {
+        alert(S.fillAll);
+        return;
+    }
 
-     var expenseId = document.getElementById('expenseId').value;
-     var dateTime = new Date(date + 'T' + time);
-     if (isNaN(dateTime.getTime())) {
-         alert(S.fillAll);
-         return;
-     }
+    var expenseId = document.getElementById('expenseId').value;
+    var dateTime = new Date(date + 'T' + time);
+    if (isNaN(dateTime.getTime())) {
+        alert(S.fillAll);
+        return;
+    }
 
-     var expenseMonth = dateTime.getMonth();
-     var monthSelect = document.getElementById('expensesMonthSelect');
-     if (monthSelect) monthSelect.value = String(expenseMonth);
+    var expenseMonth = dateTime.getMonth();
+    var monthSelect = document.getElementById('expensesMonthSelect');
+    if (monthSelect) monthSelect.value = String(expenseMonth);
 
-     var tempId = expenseId || ('local-' + Date.now());
-     var cacheEntry = {
-         id: tempId,
-         name: name,
-         price: parseFloat(price) || 0,
-         date: date,
-         time: time,
-         timestampSeconds: Math.floor(dateTime.getTime() / 1000)
-     };
-     upsertCachedExpense(cacheEntry);
-     syncExpensesLiveFromCache();
+    var tempId = expenseId || ('local-' + Date.now());
+    var cacheEntry = {
+        id: tempId,
+        name: name,
+        price: parseFloat(price) || 0,
+        date: date,
+        time: time,
+        timestampSeconds: Math.floor(dateTime.getTime() / 1000)
+    };
+    upsertCachedExpense(cacheEntry);
+    syncExpensesLiveFromCache();
 
-     document.getElementById('expenseModal').classList.remove('active');
-     renderExpensesUI(expenseMonth);
-     if (document.getElementById('todaySales')) renderDashboardUI(getDashboardMonth());
+    document.getElementById('expenseModal').classList.remove('active');
+    renderExpensesUI(expenseMonth);
+    if (document.getElementById('todaySales')) renderDashboardUI(getDashboardMonth());
 
-     if (!window.db) {
-         alert(S.expenseSavedOffline || S.expenseSaved);
-         return;
-     }
+    if (!window.db) {
+        alert(S.expenseSavedOffline || S.expenseSaved);
+        return;
+    }
 
-     var expenseData = {
-         name: name,
-         price: parseFloat(price) || 0,
-         date: date,
-         time: time,
-         timestamp: firebase.firestore.Timestamp.fromDate(dateTime),
-         updated_at: firebase.firestore.FieldValue.serverTimestamp()
-     };
+    var expenseData = {
+        name: name,
+        price: parseFloat(price) || 0,
+        date: date,
+        time: time,
+        timestamp: firebase.firestore.Timestamp.fromDate(dateTime),
+        updated_at: firebase.firestore.FieldValue.serverTimestamp()
+    };
 
-     var isLocalId = expenseId && String(expenseId).indexOf('local-') === 0;
-     var isServerUpdate = expenseId && !isLocalId;
+    var isLocalId = expenseId && String(expenseId).indexOf('local-') === 0;
+    var isServerUpdate = expenseId && !isLocalId;
 
-     if (!isServerUpdate) {
-         expenseData.created_at = firebase.firestore.FieldValue.serverTimestamp();
-     }
+    if (!isServerUpdate) {
+        expenseData.created_at = firebase.firestore.FieldValue.serverTimestamp();
+    }
 
-     var promise;
-     if (isServerUpdate) {
-         promise = db.collection('expenses').doc(expenseId).update(expenseData);
-     } else {
-         promise = db.collection('expenses').add(expenseData);
-     }
+    var promise;
+    if (isServerUpdate) {
+        promise = db.collection('expenses').doc(expenseId).update(expenseData);
+    } else {
+        promise = db.collection('expenses').add(expenseData);
+    }
 
-     applyWrite(promise, function (offline) {
-         alert(offline ? (S.expenseSavedOffline || S.expenseSaved) : S.expenseSaved);
-     });
+    applyWrite(promise, function (offline) {
+        alert(offline ? (S.expenseSavedOffline || S.expenseSaved) : S.expenseSaved);
+    });
 
-     if (promise && typeof promise.then === 'function') {
-         promise.then(function (ref) {
-             if (!isServerUpdate && ref && ref.id) {
-                 if (isLocalId) removeCachedExpense(expenseId);
-                 else if (!expenseId) removeCachedExpense(tempId);
-                 upsertCachedExpense(Object.assign({}, cacheEntry, { id: ref.id }));
-                 syncExpensesLiveFromCache();
-             }
-             renderExpensesUI(expenseMonth);
-             if (document.getElementById('todaySales')) renderDashboardUI(getDashboardMonth());
-         }).catch(function (err) {
-             console.error('Expense save sync error:', err);
-         });
-     }
- }
+    if (promise && typeof promise.then === 'function') {
+        promise.then(function (ref) {
+            if (!isServerUpdate && ref && ref.id) {
+                if (isLocalId) removeCachedExpense(expenseId);
+                else if (!expenseId) removeCachedExpense(tempId);
+                upsertCachedExpense(Object.assign({}, cacheEntry, { id: ref.id }));
+                syncExpensesLiveFromCache();
+            }
+            renderExpensesUI(expenseMonth);
+            if (document.getElementById('todaySales')) renderDashboardUI(getDashboardMonth());
+        }).catch(function (err) {
+            console.error('Expense save sync error:', err);
+        });
+    }
+}
 
- function deleteExpense(expenseId) {
-     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-     if (!confirm(S.deleteExpenseConfirm)) return;
+function deleteExpense(expenseId) {
+    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+    if (!confirm(S.deleteExpenseConfirm)) return;
 
-     removeCachedExpense(expenseId);
-     syncExpensesLiveFromCache();
-     var monthSelect = document.getElementById('expensesMonthSelect');
-     var month = monthSelect ? parseInt(monthSelect.value, 10) : new Date().getMonth();
-     renderExpensesUI(month);
-     if (document.getElementById('todaySales')) renderDashboardUI(getDashboardMonth());
+    removeCachedExpense(expenseId);
+    syncExpensesLiveFromCache();
+    var monthSelect = document.getElementById('expensesMonthSelect');
+    var month = monthSelect ? parseInt(monthSelect.value, 10) : new Date().getMonth();
+    renderExpensesUI(month);
+    if (document.getElementById('todaySales')) renderDashboardUI(getDashboardMonth());
 
-     if (!window.db || String(expenseId).indexOf('local-') === 0) {
-         alert(S.expenseDeleted);
-         return;
-     }
+    if (!window.db || String(expenseId).indexOf('local-') === 0) {
+        alert(S.expenseDeleted);
+        return;
+    }
 
-     applyWrite(db.collection('expenses').doc(expenseId).delete(), function (offline) {
-         alert(offline ? (S.expenseDeletedOffline || S.expenseDeleted) : S.expenseDeleted);
-     });
- }
+    applyWrite(db.collection('expenses').doc(expenseId).delete(), function (offline) {
+        alert(offline ? (S.expenseDeletedOffline || S.expenseDeleted) : S.expenseDeleted);
+    });
+}
 
- /* ============ LOGOUT ============ */
+/* ============ LOGOUT ============ */
 
 function handleLogout() {
     stopDashboardListeners();
