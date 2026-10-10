@@ -1,24 +1,9 @@
 // App.js — Shawarma Premium Menu
 // Handles: i18n, theme, category filtering, product detail modal, video player
 
-var urlParams = new URLSearchParams(window.location.search || '');
-var CURRENT_BRANCH = urlParams.get('branch') || window.CURRENT_BRANCH || '1';
-window.CURRENT_BRANCH = CURRENT_BRANCH;
-var MENU_COLLECTION = (CURRENT_BRANCH === '2') ? 'menuItems_branch2' : 'menuItems';
-window.MENU_COLLECTION = MENU_COLLECTION;
-var CAT_COLLECTION = (CURRENT_BRANCH === '2') ? 'categories_branch2' : 'categories';
-window.CAT_COLLECTION = CAT_COLLECTION;
-
-function getBranchKey(key) {
-    var b = CURRENT_BRANCH || window.CURRENT_BRANCH || '1';
-    return (b === '1') ? key : (key + '_branch' + b);
-}
-window.getBranchKey = getBranchKey;
-
 window.openMenu = function (lang) {
     localStorage.setItem('selectedLang', lang);
-    var branchQuery = (CURRENT_BRANCH === '2') ? '&branch=2' : '';
-    window.location.href = 'menu.html?lang=' + encodeURIComponent(lang) + branchQuery;
+    window.location.href = 'menu.html?lang=' + lang;
 };
 
 function safeSetItem(key, value) {
@@ -60,7 +45,6 @@ var NON_ESSENTIAL_CACHE_KEYS = [
 function evictNonEssentialCacheKeys() {
     NON_ESSENTIAL_CACHE_KEYS.forEach(function (k) {
         try { localStorage.removeItem(k); } catch (e) {}
-        try { localStorage.removeItem(getBranchKey(k)); } catch (e) {}
     });
 }
 
@@ -884,13 +868,7 @@ const i18n = {
 let cachedMenuItems = [];
 let _activeCategory = null;
 const ALL_CATEGORY_ID = '__all__';
-
-// Language-specific category orders
-const PREFERRED_CATEGORY_ORDER = {
-    en: ['Chicken Shawarma', 'Western', 'Bread', 'Appetizer', 'Salad', 'Drinks', 'Coffee', 'Tea', 'Cold Drinks', 'Dessert', 'Shisha', 'Special Drinks'],
-    ar: ['شاورما دجاج', 'غربي', 'خبز', 'مقبلات', 'سلطات', 'مشروبات', 'قهوة', 'شاي', 'مشروبات باردة', 'حلويات', 'شيشة', 'مشروبات خاصة'],
-    ku: ['Şawirma Mirîşk', 'Rojhilatî', 'Nan', 'Pêşxwar', 'Salata', 'Vexwarin', 'Qehwe', 'Çay', 'Vexwarinên Sar', 'Şîrînî', 'Nargîl', 'Vexwarinên Taybet']
-};
+const PREFERRED_CATEGORY_ORDER = ['Chicken Shawarma', 'Pizza', 'Western', 'Bread', 'Appetizer', 'Salad', 'Drinks', 'Coffee', 'Tea', 'Cold Drinks', 'Dessert', 'Shisha', 'Special Drinks'];
 
 // Resolve a category's preferred ordering index, matching by id OR by any of its
 // localized name fields (categories created with an auto-generated id, e.g.
@@ -905,12 +883,8 @@ function categoryPreferredIndex(cat) {
             if (n) names.push(String(n).trim());
         });
     }
-    
-    var lang = localStorage.getItem('selectedLang') || 'en';
-    var order = PREFERRED_CATEGORY_ORDER[lang] || PREFERRED_CATEGORY_ORDER.en;
-    
-    for (var i = 0; i < order.length; i++) {
-        var p = order[i].trim();
+    for (var i = 0; i < PREFERRED_CATEGORY_ORDER.length; i++) {
+        var p = PREFERRED_CATEGORY_ORDER[i].trim();
         if (id === p) return i;
         if (names.indexOf(p) !== -1) return i;
     }
@@ -989,6 +963,8 @@ function firestoreGetWithTimeout(ref, ms) {
         })
     ]);
 }
+
+var APP_VERSION = 'v91';
 
 function isFirestoreApiDisabledError(err) {
     if (!err || !err.message) return false;
@@ -1100,43 +1076,30 @@ function fetchMenuViaRest(timeoutMs) {
         return Promise.reject(new Error('Firebase config missing'));
     }
     var baseUrl = getFirestoreRestBaseUrl();
+    var url = baseUrl + encodeURIComponent(cfg.projectId) +
+        '/databases/(default)/documents/menuItems?key=' + encodeURIComponent(cfg.apiKey);
     var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-
-    function fetchPage(pageToken) {
-        var url = baseUrl + encodeURIComponent(cfg.projectId) +
-            '/databases/(default)/documents/' + encodeURIComponent(MENU_COLLECTION) + '?pageSize=300&key=' + encodeURIComponent(cfg.apiKey);
-        if (pageToken) url += '&pageToken=' + encodeURIComponent(pageToken);
-        var timer = null;
-        var opts = { cache: 'no-store' };
-        if (controller) {
-            timer = setTimeout(function () { controller.abort(); }, timeoutMs);
-            opts.signal = controller.signal;
-        }
-        return fetch(url, opts).then(function (r) {
-            if (timer) clearTimeout(timer);
-            if (!r.ok) {
-                return r.text().then(function (body) {
-                    var msg = 'REST HTTP ' + r.status;
-                    if (body && body.indexOf('Cloud Firestore API has not been used') !== -1) {
-                        window._firestoreApiDisabled = true;
-                        msg = body;
-                    }
-                    throw new Error(msg);
-                });
-            }
-            return r.json();
-        }).then(function (json) {
-            var docs = parseMenuItemsFromRest(json);
-            if (json.nextPageToken) {
-                return fetchPage(json.nextPageToken).then(function (more) {
-                    return docs.concat(more);
-                });
-            }
-            return docs;
-        });
+    var timer = null;
+    var opts = { cache: 'no-store' };
+    if (controller) {
+        timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+        opts.signal = controller.signal;
     }
-
-    return fetchPage(null).catch(function (err) {
+    return fetch(url, opts).then(function (r) {
+        if (timer) clearTimeout(timer);
+        if (!r.ok) {
+            return r.text().then(function (body) {
+                var msg = 'REST HTTP ' + r.status;
+                if (body && body.indexOf('Cloud Firestore API has not been used') !== -1) {
+                    window._firestoreApiDisabled = true;
+                    msg = body;
+                }
+                throw new Error(msg);
+            });
+        }
+        return r.json();
+    }).then(parseMenuItemsFromRest).catch(function (err) {
+        if (timer) clearTimeout(timer);
         if (isFirestoreApiDisabledError(err)) showFirestoreApiDisabledAlert();
         throw err;
     });
@@ -1167,15 +1130,15 @@ async function loadCategoriesFromFirebase() {
     if (!window.db) return false;
     if (window._firestoreApiDisabled) return false;
     try {
-        const catSnap = await firestoreGetWithTimeout(window.db.collection(CAT_COLLECTION).orderBy('order', 'asc'), 8000);
+        const catSnap = await firestoreGetWithTimeout(window.db.collection('categories').orderBy('order', 'asc'), 8000);
         const categories = [];
         catSnap.forEach(doc => {
             categories.push({ id: doc.id, data: doc.data() });
         });
         const sig = categories.map(function (c) { return c.id; }).join('|');
-        const prev = localStorage.getItem(getBranchKey('cachedCategoriesSig')) || '';
-        safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(categories));
-        safeSetItem(getBranchKey('cachedCategoriesSig'), sig);
+        const prev = localStorage.getItem('cachedCategoriesSig') || '';
+        safeSetItem('cachedCategories', JSON.stringify(categories));
+        safeSetItem('cachedCategoriesSig', sig);
         if (cachedMenuItems.length > 0) {
             renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
         }
@@ -1196,7 +1159,7 @@ function applyMenuItemsUpdate(items, options) {
     _lastMenuItemsSignature = sig;
 
     cachedMenuItems = items;
-    safeSetItem(getBranchKey('cachedMenuItems'), JSON.stringify(items));
+    safeSetItem('cachedMenuItems', JSON.stringify(items));
 
     const container = document.getElementById('menuGrid');
     if (!container) return;
@@ -1226,7 +1189,7 @@ function applyMenuItemsUpdate(items, options) {
 }
 
 function showCachedMenuIfAvailable() {
-    const cached = localStorage.getItem(getBranchKey('cachedMenuItems'));
+    const cached = localStorage.getItem('cachedMenuItems');
     if (!cached) return false;
 
     try {
@@ -1258,15 +1221,13 @@ async function loadMenuItems() {
             'cachedMenuItemsSig',
             'cachedCategories',
             'cachedCategoriesSig'
-        ].forEach(function(key) {
-            localStorage.removeItem(key);
-            localStorage.removeItem(getBranchKey(key));
-        });
+        ].forEach(function(key) { localStorage.removeItem(key); });
     }
 
     const hadCache = showCachedMenuIfAvailable();
     if (!hadCache) {
-        container.innerHTML = '<div class="loading-menu">' + strings.loadingMenu + '</div>';
+        container.innerHTML = '<div class="loading-menu">' + strings.loadingMenu +
+            '<br><small style="opacity:0.45;font-size:0.75rem;margin-top:6px;display:block">' + APP_VERSION + '</small></div>';
     }
 
     if (USE_LOCAL_API) {
@@ -1301,15 +1262,29 @@ async function loadMenuItems() {
         return;
     }
 
-    // Optimized: MenuData handles onSnapshot + get() fallback in one place.
-    MenuData.loadItems(4000, function (items) {
+    if (loadMenuItems._loadTimer) clearTimeout(loadMenuItems._loadTimer);
+    loadMenuItems._loadTimer = setTimeout(function () {
+        if (menuStillLoading()) {
+            fetchMenuViaRest(12000).then(function (items) {
+                applyMenuItemsUpdate(items, { force: true });
+            }).catch(function () {
+                fetchMenuItemsFallback(strings, 'timeout');
+            });
+        }
+    }, 4000);
+
+    // REST fetch runs immediately — bypasses Firestore SDK when it hangs on mobile hosts.
+    fetchMenuViaRest(10000).then(function (items) {
         if (loadMenuItems._loadTimer) {
             clearTimeout(loadMenuItems._loadTimer);
             loadMenuItems._loadTimer = null;
         }
         applyMenuItemsUpdate(items, { force: true });
-    }, function (err) {
-        console.warn('[menu] MenuData load failed:', err.message);
+    }).catch(function (err) {
+        console.warn('[menu] REST load failed:', err.message);
+        if (isFirestoreApiDisabledError(err)) {
+            showFirestoreApiDisabledAlert();
+        }
         if (!hadCache && !_menuUiReady) {
             var container = document.getElementById('menuGrid');
             if (container) {
@@ -1330,26 +1305,55 @@ async function loadMenuItems() {
         }
     });
 
-    MenuData.loadCategories(4000, function (categories) {
-        safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(categories));
-        var sig = categories.map(function(c) { return c.id; }).join('|');
-        safeSetItem(getBranchKey('cachedCategoriesSig'), sig);
-        if (cachedMenuItems && cachedMenuItems.length > 0) {
-            renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
-            // Update active category title now that we have the category names
-            if (_activeCategory && _activeCategory !== ALL_CATEGORY_ID) {
-                var lang = localStorage.getItem('selectedLang') || 'ku';
-                var activeTitle = document.getElementById('activeCategoryTitle');
-                if (activeTitle) {
-                    activeTitle.textContent = getCategoryDisplayName(_activeCategory, lang);
-                }
-            }
-        }
-    }, function (err) {
-        console.warn('[menu] MenuData categories error:', err.message);
-    });
+    try {
+        await waitForFirebaseDb(8000);
 
-    loadMenuItems._inProgress = false;
+        // Do not block menu on categories — load in background.
+        loadCategoriesFromFirebase().then(function (categoriesChanged) {
+            if (categoriesChanged && cachedMenuItems.length > 0) {
+                renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
+            }
+        }).catch(function () {});
+
+        // Primary path: one-shot fetch (works when onSnapshot hangs on mobile hosts).
+        fetchMenuItemsFallback(strings, 'initial-get');
+
+        if (loadMenuItems._unsubscribe) loadMenuItems._unsubscribe();
+        loadMenuItems._unsubscribe = window.db.collection('menuItems').onSnapshot(
+            liveSnap => {
+                if (loadMenuItems._loadTimer) {
+                    clearTimeout(loadMenuItems._loadTimer);
+                    loadMenuItems._loadTimer = null;
+                }
+                applyMenuItemsUpdate(parseMenuItemsFromSnapshot(liveSnap));
+            },
+            err => {
+                console.warn('[realtime] error:', err.message);
+                handleMenuLoadFailure(err, strings);
+            }
+        );
+
+        if (window._categoriesUnsubscribe) window._categoriesUnsubscribe();
+        window._categoriesUnsubscribe = window.db.collection('categories').orderBy('order', 'asc').onSnapshot(
+            snap => {
+                const cats = [];
+                snap.forEach(doc => cats.push({ id: doc.id, data: doc.data() }));
+                safeSetItem('cachedCategories', JSON.stringify(cats));
+                const sig = cats.map(c => c.id).join('|');
+                const prev = localStorage.getItem('cachedCategoriesSig') || '';
+                safeSetItem('cachedCategoriesSig', sig);
+                if (cachedMenuItems && cachedMenuItems.length > 0) {
+                    renderCategories(cachedMenuItems, { autoSelect: false, forceRebuild: true });
+                }
+            },
+            err => console.warn('[realtime categories] error:', err.message)
+        );
+    } catch (error) {
+        console.error('Error loading menu:', error);
+        handleMenuLoadFailure(error, strings, hadCache);
+    } finally {
+        loadMenuItems._inProgress = false;
+    }
 }
 
 function handleMenuLoadFailure(error, strings, hadCache) {
@@ -1359,6 +1363,7 @@ function handleMenuLoadFailure(error, strings, hadCache) {
         showFirestoreApiDisabledAlert();
     }
     showMenuLoadError(strings, error);
+    fetchMenuItemsFallback(strings, 'snapshot-failed');
 }
 
 function showMenuLoadError(strings, error) {
@@ -1405,7 +1410,7 @@ function fetchMenuItemsFallback(strings, reason) {
             if (!_menuUiReady) showMenuLoadError(strings, restErr);
             return;
         }
-        firestoreGetWithTimeout(window.db.collection(MENU_COLLECTION), 8000).then(function (snap) {
+        firestoreGetWithTimeout(window.db.collection('menuItems'), 8000).then(function (snap) {
             if (loadMenuItems._loadTimer) {
                 clearTimeout(loadMenuItems._loadTimer);
                 loadMenuItems._loadTimer = null;
@@ -1423,7 +1428,7 @@ function loadFromCache() {
     var container = document.getElementById('menuGrid');
     if (!container) return;
 
-    var cached = localStorage.getItem(getBranchKey('cachedMenuItems'));
+    var cached = localStorage.getItem('cachedMenuItems');
     if (cached) {
         try {
             var items = normalizeMenuItemsList(JSON.parse(cached));
@@ -1466,17 +1471,17 @@ function buildAllCategoryButton(label) {
 }
 
 function filterItemsByCategory(items, category) {
-    if (category === ALL_CATEGORY_ID) return items || MenuData.getItems();
-    var catLower = String(category).toLowerCase();
-    var source = items && items.length ? items : MenuData.getItems();
-    return source.filter(function (i) { 
-        if (!i.category) return false;
-        // Try exact match first (for Firestore document IDs)
-        if (String(i.category) === String(category)) return true;
-        // Then try case-insensitive match
-        if (String(i.category).toLowerCase() === catLower) return true;
-        return false;
-    });
+    if (category === ALL_CATEGORY_ID) return items;
+    var cachedCats = localStorage.getItem('cachedCategories');
+    if (cachedCats) {
+        try {
+            var categories = JSON.parse(cachedCats);
+            if (categories.some(function (c) { return c.id === category; })) {
+                return items.filter(function (i) { return i.category && i.category === category; });
+            }
+        } catch (e) {}
+    }
+    return items.filter(function (i) { return i.category && i.category === category; });
 }
 
 function renderCategories(items, options) {
@@ -1488,92 +1493,33 @@ function renderCategories(items, options) {
      const strings = i18n[lang] || i18n.en;
      const allBtn = isEmenuPage() ? buildAllCategoryButton(strings.allItems) : '';
 
-      // Load categories from Firebase or cache
-      const cachedCats = localStorage.getItem(getBranchKey('cachedCategories'));
-      let categories = [];
-      if (cachedCats) {
-          try {
-              categories = JSON.parse(cachedCats);
-          } catch (e) {
-              console.error('Error parsing cached categories:', e);
-          }
-      }
+     // Load categories from Firebase or cache
+     const cachedCats = localStorage.getItem('cachedCategories');
+     let categories = [];
+     if (cachedCats) {
+         try {
+             categories = JSON.parse(cachedCats);
+         } catch (e) {
+             console.error('Error parsing cached categories:', e);
+         }
+     }
 
-      // Deduplicate real category docs by lowercase ID before anything else.
-      var seenCat = {};
-      categories = categories.filter(function (c) {
-          if (!c || !c.id) return false;
-          var lower = String(c.id).toLowerCase();
-          if (seenCat[lower]) return false;
-          seenCat[lower] = true;
-          return true;
-      });
-
-      // Merge item categories into the menu category list so any category used by items
-      // is shown even if there is no matching categories document or the IDs differ.
-      var seenItem = {};
-      categories.forEach(function (c) {
-          if (c && c.id) seenItem[String(c.id).toLowerCase()] = true;
-      });
-      items.forEach(function (item) {
-          var cat = item.category;
-          if (!cat || cat === 'Water' || seenItem[String(cat).toLowerCase()]) return;
-          
-          // First, try exact match (for Firestore document IDs)
-          var existingCat = categories.find(function (c) {
-              return c && c.id && String(c.id) === String(cat);
-          });
-          
-          // If no exact match, try case-insensitive match
-          if (!existingCat) {
-              existingCat = categories.find(function (c) {
-                  return c && c.id && String(c.id).toLowerCase() === String(cat).toLowerCase();
-              });
-          }
-          
-          if (existingCat) {
-              // Already exists, skip
-              seenItem[String(cat).toLowerCase()] = true;
-              return;
-          }
-          
-          seenItem[String(cat).toLowerCase()] = true;
-          
-          // Try to find a matching category by name in the cached categories
-          var matchedCat = null;
-          var catLower = String(cat).toLowerCase();
-          categories.forEach(function (c) {
-              if (!c || !c.data) return;
-              ['name_ku', 'name_ar', 'name_en'].forEach(function (field) {
-                  if (c.data[field] && String(c.data[field]).toLowerCase() === catLower) {
-                      matchedCat = c;
-                  }
-              });
-          });
-          
-          if (matchedCat) {
-              // Use the matched category's data
-              categories.push({
-                  id: matchedCat.id,
-                  data: matchedCat.data
-              });
-          } else {
-              // No match found - this might be a document ID, try to get the name from i18n
-              var key = cat.replace(/\s+/g, '');
-              key = key.charAt(0).toLowerCase() + key.slice(1);
-              var fallbackName = strings[key] || cat;
-              
-              // If still no match, use fallback name
-              categories.push({
-                  id: cat,
-                  data: { name_ku: fallbackName, name_ar: fallbackName, name_en: fallbackName, image: '' }
-              });
-          }
-      });
+       // Merge item categories into the menu category list so any category used by items
+       // is shown even if there is no matching categories document or the IDs differ.
+        const existingIds = new Set(categories.map(function(c){ return c.id; }));
+        items.forEach(item => {
+            const cat = item.category;
+             if (!cat || cat === 'Water' || existingIds.has(cat)) return;
+            existingIds.add(cat);
+            categories.push({
+                id: cat,
+                data: { name_ku: cat, name_ar: cat, name_en: cat, image: '' }
+            });
+        });
 
         categories.sort(function (a, b) {
-            var ao = (a.data && a.data.order) != null ? Number(a.data.order) : null;
-            var bo = (b.data && b.data.order) != null ? Number(b.data.order) : null;
+            var ao = (a.data && a.data.order) != null ? a.data.order : null;
+            var bo = (b.data && b.data.order) != null ? b.data.order : null;
             if (ao != null && bo != null) return ao - bo;
             if (ao != null) return -1;
             if (bo != null) return 1;
@@ -1598,8 +1544,7 @@ function renderCategories(items, options) {
 
        // If no Firebase categories, use fallback
        if (categories.length === 0) {
-            const lang = localStorage.getItem('selectedLang') || 'en';
-            const categoryOrder = (PREFERRED_CATEGORY_ORDER[lang] || PREFERRED_CATEGORY_ORDER.en).slice();
+            const categoryOrder = PREFERRED_CATEGORY_ORDER.slice();
             const foundCategories = items.length > 0 ? new Set(items.map(i => i.category).filter(Boolean).filter(c => c !== 'Water')) : new Set(categoryOrder);
             const ordered = categoryOrder.filter(function(c){ 
                 return Array.from(foundCategories).indexOf(c) !== -1;
@@ -1863,13 +1808,11 @@ function createMenuCard(item, lang, strings) {
     const imageUrl = normalizeImageUrl(item.image) || fallbackImage;
 
     let categoryName = '';
-    const cachedCats = localStorage.getItem(getBranchKey('cachedCategories'));
+    const cachedCats = localStorage.getItem('cachedCategories');
     if (cachedCats && item.category) {
         try {
             const categories = JSON.parse(cachedCats);
-            const lower = String(item.category).toLowerCase();
-            const cat = categories.find(c => c.id === item.category) ||
-                categories.find(c => c.id && String(c.id).toLowerCase() === lower);
+            const cat = categories.find(c => c.id === item.category);
             if (cat) {
                 categoryName = cat.data['name_' + lang] || cat.data.name_en || '';
             }
@@ -1986,10 +1929,10 @@ function renderMenuItems(items) {
           let categoryOrder = [];
           const categoryExactMap = {};
           try {
-              const cachedCats = JSON.parse(localStorage.getItem(getBranchKey('cachedCategories')) || '[]');
+              const cachedCats = JSON.parse(localStorage.getItem('cachedCategories') || '[]');
               cachedCats.sort(function (a, b) {
-                  var ao = (a.data && a.data.order) != null ? Number(a.data.order) : null;
-                  var bo = (b.data && b.data.order) != null ? Number(b.data.order) : null;
+                  var ao = (a.data && a.data.order) != null ? a.data.order : null;
+                  var bo = (b.data && b.data.order) != null ? b.data.order : null;
                   if (ao != null && bo != null) return ao - bo;
                   if (ao != null) return -1;
                   if (bo != null) return 1;
@@ -2130,45 +2073,14 @@ function getCategoryDisplayName(categoryId, lang) {
     lang = lang || localStorage.getItem('selectedLang') || 'ku';
     var strings = i18n[lang] || i18n.en;
     if (categoryId === ALL_CATEGORY_ID) return strings.allItems;
-    
-    // Helper to find name from a categories array
-    function findName(categories, catId) {
-        if (!categories) return null;
-        var cat = categories.find(function (c) { return c.id === catId; });
-        if (!cat) {
-            var lower = String(catId).toLowerCase();
-            cat = categories.find(function (c) { return c.id && String(c.id).toLowerCase() === lower; });
-        }
-        if (cat && cat.data) {
-            return cat.data['name_' + lang] || cat.data.name_en || null;
-        }
-        return null;
-    }
-    
-    // First try in-memory categories from MenuData (most up-to-date)
-    if (window.MenuData && typeof window.MenuData.getCategories === 'function') {
-        var memName = findName(window.MenuData.getCategories(), categoryId);
-        if (memName) return memName;
-    }
-    
-    // Then try localStorage cached categories
-    var cachedCats = localStorage.getItem(getBranchKey('cachedCategories'));
+    var cachedCats = localStorage.getItem('cachedCategories');
     if (cachedCats) {
         try {
             var categories = JSON.parse(cachedCats);
-            var name = findName(categories, categoryId);
-            if (name) return name;
+            var cat = categories.find(function (c) { return c.id === categoryId; });
+            if (cat) return cat.data['name_' + lang] || cat.data.name_en || categoryId;
         } catch (e) {}
     }
-    
-    // If categoryId looks like a descriptive name (not a Firestore doc ID), use it directly
-    // Firestore doc IDs are typically short (UUID-like or alphanumeric without spaces)
-    // Display names like "Chicken Shawarma" contain spaces
-    if (String(categoryId).indexOf(' ') !== -1) {
-        return categoryId;
-    }
-    
-    // Fallback: check i18n mapping or return the ID as last resort
     var key = categoryId.replace(/\s+/g, '');
     key = key.charAt(0).toLowerCase() + key.slice(1);
     return strings[key] || categoryId;
@@ -2739,8 +2651,8 @@ function setupMenuThemePicker() {
 }
 
 var HERO_TYPE_PHRASES = [
-    { text: ' مطعم الدمشقي', dir: 'rtl' },
-    { text: 'Dimashqi Restauran', dir: 'ltr' }
+    { text: 'شاورمة الدمشقیة', dir: 'rtl' },
+    { text: 'Shawarma', dir: 'ltr' }
 ];
 
 function heroTypeChars(str) {
@@ -2828,14 +2740,14 @@ function stopHeroTitleLoop() {
 
 function loadCart() {
     try {
-        cartItems = JSON.parse(localStorage.getItem(getBranchKey('cart_items')) || '[]');
+        cartItems = JSON.parse(localStorage.getItem('cart_items') || '[]');
     } catch(e) {
         cartItems = [];
     }
 }
 
 function saveCart() {
-    localStorage.setItem(getBranchKey('cart_items'), JSON.stringify(cartItems));
+    localStorage.setItem('cart_items', JSON.stringify(cartItems));
 }
 
 function addToCart(item) {
@@ -3038,51 +2950,54 @@ function sendWhatsAppOrder() {
         }
     };
 
-    var statusEl = document.getElementById('cartLocationStatus');
-    
-    // Always request location when sending via WhatsApp
-    if (!navigator.geolocation) {
-        alert('Geolocation is not supported by your browser. Please enter your location manually.');
+    if (window._customerLocationUrl) {
         sendOrder();
         return;
     }
 
-    statusEl.textContent = 'Getting your location...';
-    statusEl.className = 'cart-location-status';
-    statusEl.classList.remove('hidden');
+    var statusEl = document.getElementById('cartLocationStatus');
+    if (!navigator.geolocation) {
+        if (statusEl) {
+            statusEl.textContent = formT.locationNotShared || 'Location not shared';
+            statusEl.className = 'cart-location-status error';
+            statusEl.classList.remove('hidden');
+            setTimeout(function() {
+                statusEl.classList.add('hidden');
+            }, 3000);
+        }
+        sendOrder();
+        return;
+    }
 
     navigator.geolocation.getCurrentPosition(
         function (pos) {
             var lat = pos.coords.latitude;
             var lng = pos.coords.longitude;
             window._customerLocationUrl = 'https://maps.google.com/?q=' + lat + ',' + lng;
-            statusEl.textContent = 'Location captured ✓';
-            statusEl.className = 'cart-location-status success';
-            setTimeout(function() {
-                statusEl.classList.add('hidden');
-            }, 2000);
+            if (statusEl) {
+                statusEl.textContent = 'Location captured ✓';
+                statusEl.className = 'cart-location-status success';
+                setTimeout(function() {
+                    statusEl.classList.add('hidden');
+                }, 2000);
+            }
             sendOrder();
         },
         function (err) {
             window._customerLocationUrl = '';
-            var errorMsg = 'Unable to get your location.';
-            if (err.code === 1) {
-                errorMsg = 'Location permission denied. Please enable location access or enter your location manually.';
-            } else if (err.code === 2) {
-                errorMsg = 'Unable to determine your location. Please enter your location manually.';
-            } else if (err.code === 3) {
-                errorMsg = 'Location request timed out. Please try again or enter your location manually.';
+            var msg = formT.locationNotShared || 'Location not shared';
+            if (err && err.code === 1) msg = 'Location permission denied — you can continue without it';
+            if (statusEl) {
+                statusEl.textContent = msg;
+                statusEl.className = 'cart-location-status error';
+                statusEl.classList.remove('hidden');
+                setTimeout(function() {
+                    statusEl.classList.add('hidden');
+                }, 3000);
             }
-            alert(errorMsg);
-            statusEl.textContent = 'Location not captured';
-            statusEl.className = 'cart-location-status error';
-            setTimeout(function() {
-                statusEl.classList.add('hidden');
-            }, 3000);
-            // Allow user to proceed without location
             sendOrder();
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
     );
 }
 
@@ -3099,8 +3014,7 @@ var CAFE_SETTING_KEYS = [
     'cafeCloseTime',
     'cafeInstagram',
     'cafeTiktok',
-    'cafeSnapchat',
-    'cafeFacebook'
+    'cafeSnapchat'
 ];
 
 function toLocaleDigits(value, lang) {
@@ -3823,7 +3737,7 @@ function registerServiceWorker() {
         window.location.reload();
     });
 
-    navigator.serviceWorker.register('./sw.js?v=117').then(function (reg) {
+    navigator.serviceWorker.register('./sw.js').then(function (reg) {
         function activateWaiting(worker) {
             if (worker) worker.postMessage({ type: 'SKIP_WAITING' });
         }
@@ -3866,16 +3780,16 @@ window.checkForAppUpdate = checkForAppUpdate;
 
 var INSTALL_TUTORIAL_IMAGES = {
     ios: [
-        'images/install/ios-step-1.png?v=2',
-        'images/install/ios-step-2.png?v=2',
-        'images/install/ios-step-3.png?v=2',
-        'images/install/ios-step-4.png?v=2'
+        'images/install/ios-step-1.png',
+        'images/install/ios-step-2.png',
+        'images/install/ios-step-3.png',
+        'images/install/ios-step-4.png'
     ],
     android: [
-        'images/install/android-step-1.png?v=2',
-        'images/install/android-step-2.png?v=2',
-        'images/install/android-step-3.png?v=2',
-        'images/install/android-step-4.png?v=2'
+        'images/install/android-step-1.png',
+        'images/install/android-step-2.png',
+        'images/install/android-step-3.png',
+        'images/install/android-step-4.png'
     ]
 };
 

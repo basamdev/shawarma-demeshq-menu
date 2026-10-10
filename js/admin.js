@@ -1,35 +1,5 @@
 // Admin.js — Shawarma Admin Panel
 
-var urlParams = new URLSearchParams(window.location.search || '');
-var CURRENT_BRANCH = urlParams.get('branch') || window.CURRENT_BRANCH || '1';
-window.CURRENT_BRANCH = CURRENT_BRANCH;
-var MENU_COLLECTION = (CURRENT_BRANCH === '2') ? 'menuItems_branch2' : 'menuItems';
-window.MENU_COLLECTION = MENU_COLLECTION;
-var CAT_COLLECTION = (CURRENT_BRANCH === '2') ? 'categories_branch2' : 'categories';
-window.CAT_COLLECTION = CAT_COLLECTION;
-
-function getActiveBranch() {
-    var p = new URLSearchParams(window.location.search || '');
-    return p.get('branch') || window.CURRENT_BRANCH || '1';
-}
-
-function getActiveMenuCollection() {
-    return (getActiveBranch() === '2') ? 'menuItems_branch2' : 'menuItems';
-}
-
-function getActiveCatCollection() {
-    return (getActiveBranch() === '2') ? 'categories_branch2' : 'categories';
-}
-
-function getBranchKey(key) {
-    var b = getActiveBranch();
-    return (b === '1') ? key : (key + '_branch' + b);
-}
-window.getBranchKey = getBranchKey;
-window.getActiveBranch = getActiveBranch;
-window.getActiveMenuCollection = getActiveMenuCollection;
-window.getActiveCatCollection = getActiveCatCollection;
-
 var USE_LOCAL_API = false;
 var API_BASE = 'api';
 
@@ -102,7 +72,7 @@ let itemsActiveCategory = 'all';
 
 function readCachedMenuItemsFlat() {
     try {
-        return JSON.parse(localStorage.getItem(getBranchKey('cachedMenuItems')) || '[]');
+        return JSON.parse(localStorage.getItem('cachedMenuItems') || '[]');
     } catch (e) {
         return [];
     }
@@ -110,7 +80,7 @@ function readCachedMenuItemsFlat() {
 
 function writeCachedMenuItemsFlat(items) {
     try {
-        localStorage.setItem(getBranchKey('cachedMenuItems'), JSON.stringify(items));
+        localStorage.setItem('cachedMenuItems', JSON.stringify(items));
         syncCashierCacheFromMenuFlat(items);
     } catch (e) {
         console.warn('Could not write menu cache:', e);
@@ -126,7 +96,7 @@ function syncCashierCacheFromMenuFlat(items) {
         cashier.push({ id: it.id, v: v });
     });
     try {
-        localStorage.setItem(getBranchKey('cachedCashierItems'), JSON.stringify(cashier));
+        localStorage.setItem('cachedCashierItems', JSON.stringify(cashier));
     } catch (e) {}
 }
 
@@ -161,7 +131,6 @@ var NON_ESSENTIAL_CACHE_KEYS = [
 function evictNonEssentialCacheKeys() {
     NON_ESSENTIAL_CACHE_KEYS.forEach(function (k) {
         try { localStorage.removeItem(k); } catch (e) {}
-        try { localStorage.removeItem(getBranchKey(k)); } catch (e) {}
     });
 }
 
@@ -199,9 +168,8 @@ function withOwnerFilter(query) {
 function backfillCreatedByForCurrentAdmin() {
     var email = getCurrentAdminEmail();
     if (!email || !window.db) return;
-    var backfillKey = getBranchKey('createdByBackfilled_' + email);
-    if (localStorage.getItem(backfillKey)) return;
-    db.collection(MENU_COLLECTION).get().then(function (snap) {
+    if (localStorage.getItem('createdByBackfilled_' + email)) return;
+    db.collection('menuItems').get().then(function (snap) {
         var batch = db.batch();
         var updated = 0;
         snap.forEach(function (doc) {
@@ -213,11 +181,11 @@ function backfillCreatedByForCurrentAdmin() {
         });
         if (updated > 0) {
             batch.commit().then(function () {
-                localStorage.setItem(backfillKey, '1');
+                localStorage.setItem('createdByBackfilled_' + email, '1');
                 console.log('[backfill] Tagged ' + updated + ' items with createdBy');
             }).catch(function () {});
         } else {
-            localStorage.setItem(backfillKey, '1');
+            localStorage.setItem('createdByBackfilled_' + email, '1');
         }
     }).catch(function () {});
 }
@@ -392,19 +360,19 @@ function warmAdminOfflineCache(done) {
         return;
     }
     var tasks = [];
-    tasks.push(db.collection(MENU_COLLECTION).get().then(function (snap) {
+    tasks.push(db.collection('menuItems').get().then(function (snap) {
         var menu = [];
         snap.forEach(function (d) {
             menu.push(Object.assign({ id: d.id }, d.data()));
         });
         writeCachedMenuItemsFlat(menu);
     }).catch(function () {}));
-    tasks.push(db.collection(CAT_COLLECTION).orderBy('order', 'asc').get().then(function (snap) {
+    tasks.push(db.collection('categories').orderBy('order', 'asc').get().then(function (snap) {
         var categories = [];
         snap.forEach(function (d) {
             categories.push({ id: d.id, data: d.data() });
         });
-        safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(categories));
+        safeSetItem('cachedCategories', JSON.stringify(categories));
     }).catch(function () {}));
     tasks.push(warmExpensesCacheFromServer());
     tasks.push(warmSalesCacheFromServer());
@@ -417,6 +385,8 @@ function warmAdminOfflineCache(done) {
         if (typeof done === 'function') done();
     });
 }
+
+var ADMIN_VERSION = 'v102';
 
 function getDashboardMonth() {
     var sel = document.getElementById('dashboardMonthSelect');
@@ -633,41 +603,20 @@ function fetchPublicCollectionViaRest(collectionName, timeoutMs) {
 }
 
 function fetchMenuItemsForAdmin(timeoutMs) {
-    if (window._firestoreApiDisabled) return Promise.resolve([]);
-    if (typeof fetchAllAdminCollectionViaRest === 'function') {
-        return fetchAllAdminCollectionViaRest(MENU_COLLECTION, timeoutMs || 12000).then(function (docs) {
-            return docs.map(function (d) {
-                var data = d.data || {};
-                return {
-                    id: d.id,
-                    name_ku: data.name_ku || '',
-                    name_ar: data.name_ar || '',
-                    name_en: data.name_en || '',
-                    price: data.price || 0,
-                    category: data.category || '',
-                    image: data.image || '',
-                    available: data.available !== false,
-                    description_ku: data.description_ku || '',
-                    description_ar: data.description_ar || '',
-                    description_en: data.description_en || '',
-                    group_ku: data.group_ku || '',
-                    group_ar: data.group_ar || '',
-                    group_en: data.group_en || '',
-                    updated_at: data.updated_at || '',
-                    createdBy: data.createdBy || ''
-                };
-            });
-        });
-    }
     if (typeof fetchMenuViaRest === 'function') {
         return fetchMenuViaRest(timeoutMs || 12000);
     }
-    return Promise.resolve([]);
+    if (window._firestoreApiDisabled) return Promise.resolve([]);
+    return fetchPublicCollectionViaRest('menuItems', timeoutMs).then(function (docs) {
+        return docs.map(function (d) {
+            return Object.assign({ id: d.id }, d.data || {});
+        });
+    });
 }
 
 function fetchCategoriesForAdmin(timeoutMs) {
     if (window._firestoreApiDisabled) return Promise.resolve([]);
-    return fetchPublicCollectionViaRest(CAT_COLLECTION, timeoutMs).then(function (docs) {
+    return fetchPublicCollectionViaRest('categories', timeoutMs).then(function (docs) {
         return docs.map(function (d) { return { id: d.id, data: d.data || {} }; }).sort(function (a, b) {
             var ao = (a.data && a.data.order) != null ? a.data.order : null;
             var bo = (b.data && b.data.order) != null ? b.data.order : null;
@@ -891,7 +840,6 @@ function deleteDocumentViaRest(collectionName, docId) {
 /** Menu writes: SDK first (8s), then Firestore REST — mobile SDK often hangs. */
 function applyMenuCloudWrite(config) {
     if (!config || !config.onDone) return;
-    var targetColl = config.collection || getActiveMenuCollection();
 
     if (!navigator.onLine) {
         applyWrite(config.sdkPromise, config.onDone, config.onError, {});
@@ -902,10 +850,10 @@ function applyMenuCloudWrite(config) {
         console.warn('[menu cloud write] SDK failed, REST fallback:', err && (err.message || err));
         var restPromise;
         if (config.isDelete) {
-            restPromise = deleteDocumentViaRest(targetColl, config.docId);
+            restPromise = deleteDocumentViaRest(config.collection, config.docId);
         } else {
             restPromise = writeDocumentViaRest(
-                targetColl,
+                config.collection,
                 config.docId,
                 config.plainData,
                 !!config.isCreate
@@ -1335,11 +1283,8 @@ function adminGetWithTimeout(queryOrRef, ms) {
     return queryOrRef.get({ source: 'cache' }).then(function (snap) {
         cacheSnap = snap;
         if (snap && !snap.empty) {
-            return raceServer().then(function (serverSnap) {
-                return serverSnap;
-            }).catch(function () {
-                return snap;
-            });
+            raceServer().catch(function () {});
+            return snap;
         }
         return raceServer();
     }).catch(function (err) {
@@ -1442,18 +1387,6 @@ document.addEventListener('DOMContentLoaded', function () {
     wireAdminLangButtons();
     initSidebar();
 
-    if (CURRENT_BRANCH === '2') {
-        document.title = 'Shawarma (Branch 2) - لوحة التحكم';
-        var adminTitleEl = document.querySelector('.admin-title');
-        if (adminTitleEl && !adminTitleEl.querySelector('.branch-indicator')) {
-            var branchBadge = document.createElement('span');
-            branchBadge.className = 'branch-indicator';
-            branchBadge.textContent = 'Branch 2';
-            branchBadge.style.cssText = 'display:inline-block;margin-left:8px;padding:2px 8px;font-size:0.75rem;background:var(--primary,#9B6135);color:#fff;border-radius:12px;vertical-align:middle;font-weight:600;';
-            adminTitleEl.appendChild(branchBadge);
-        }
-    }
-
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState !== 'visible') return;
         if (!isAdminAuthenticated() || !navigator.onLine) return;
@@ -1527,8 +1460,6 @@ function initSidebar() {
 }
 
 function initAdminPanel() {
-    maybeRunCategoryCleanup();
-    maybeRunCategoryRename();
     var navButtons = document.querySelectorAll('.admin-nav-btn');
     navButtons.forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -1558,16 +1489,6 @@ function initAdminPanel() {
             startAdminLiveListeners();
             refreshAdminCurrentSection();
         });
-    } else {
-        var fallbackBtn = document.querySelector('.admin-nav-btn[data-section="items"]');
-        if (fallbackBtn) {
-            fallbackBtn.classList.add('active');
-            loadAdminSection('items');
-            whenAdminReady(function () {
-                startAdminLiveListeners();
-                refreshAdminCurrentSection();
-            });
-        }
     }
 }
 
@@ -1577,6 +1498,9 @@ function loadAdminSection(section) {
     }
     if (section !== 'categories') {
         stopCategoriesListener();
+    }
+    if (section !== 'items') {
+        stopItemsListener();
     }
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     var adminContent = document.getElementById('adminContent');
@@ -1830,7 +1754,7 @@ function renderRecentSalesTable(sales, S, container) {
 
 function readCachedCategories() {
     try {
-        return JSON.parse(localStorage.getItem(getBranchKey('cachedCategories')) || '[]');
+        return JSON.parse(localStorage.getItem('cachedCategories') || '[]');
     } catch (e) {
         return [];
     }
@@ -1846,38 +1770,30 @@ function upsertCachedCategory(id, data) {
     var entry = { id: id, data: data };
     if (idx >= 0) cats[idx] = entry;
     else cats.push(entry);
-    safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(cats));
+    safeSetItem('cachedCategories', JSON.stringify(cats));
 }
 
 function refreshCategoriesCache(callback) {
-    if (!MenuData.getCategories().length) {
-        MenuData.loadCategories(5000, function (categories) {
-            safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(categories));
-            if (callback) callback(categories);
-        }, function () {
-            if (callback) callback(readCachedCategories());
-        });
+    if (!window.db) {
+        if (callback) callback(readCachedCategories());
         return;
     }
-    safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(MenuData.getCategories()));
-    if (callback) callback(MenuData.getCategories());
-}
-
-function normalizeCategoryId(id) {
-    return id ? String(id).toLowerCase().trim() : id;
-}
-
-function safeCategoryPreferredIndex(cat) {
-    try {
-        if (typeof categoryPreferredIndex === 'function') return categoryPreferredIndex(cat);
-    } catch (e) {}
-    return -1;
+    db.collection('categories').orderBy('order', 'asc').get().then(function (snap) {
+        var categories = [];
+        snap.forEach(function (doc) {
+            categories.push({ id: doc.id, data: doc.data() });
+        });
+        safeSetItem('cachedCategories', JSON.stringify(categories));
+        if (callback) callback(categories);
+    }).catch(function () {
+        if (callback) callback(readCachedCategories());
+    });
 }
 
 function buildCategoryMapFromCache() {
     var catMap = {};
     readCachedCategories().forEach(function (c) {
-        if (c && c.id) catMap[normalizeCategoryId(c.id)] = c.data || {};
+        if (c && c.id) catMap[c.id] = c.data || {};
     });
     return catMap;
 }
@@ -1885,11 +1801,10 @@ function buildCategoryMapFromCache() {
 function getCategoryLabel(categoryId, lang, catMap) {
     if (!categoryId) return '-';
     lang = lang || localStorage.getItem('selectedLang') || 'ku';
-    var lowerId = normalizeCategoryId(categoryId);
-    var data = (catMap && (catMap[categoryId] || catMap[lowerId])) || null;
+    var data = (catMap && catMap[categoryId]) || null;
     if (!data) {
         readCachedCategories().some(function (c) {
-            if (c.id && normalizeCategoryId(c.id) === lowerId) { data = c.data; return true; }
+            if (c.id === categoryId) { data = c.data; return true; }
             return false;
         });
     }
@@ -1909,21 +1824,29 @@ function loadManageItems() {
     var adminContent = document.getElementById('adminContent');
     adminContent.innerHTML =
         '<div class="card">' +
-            '<h2>' + S.manageItems + '</h2>' +
+            '<h2>' + S.manageItems + ' <small style="opacity:0.45;font-size:0.75rem;font-weight:400">' + ADMIN_VERSION + '</small></h2>' +
             '<button class="btn-primary" id="addItemBtn" style="margin-bottom:16px;">' + S.addNewItem + '</button>' +
             '<div class="form-group"><input type="text" id="itemSearch" placeholder="' + S.searchItems + '"></div>' +
-            '<div class="admin-menu-category-bar">' +
-                '<div class="admin-category-scroll" id="itemsCategoryScroll"></div>' +
+            '<div class="form-group admin-items-cat-filter">' +
+                '<div class="admin-cat-picker" id="itemsCatPicker">' +
+                    '<button type="button" class="admin-cat-picker-btn" id="itemsCatPickerBtn" aria-expanded="false">' +
+                        '<span class="admin-cat-picker-label" id="itemsCatPickerLabel">' + escapeHtmlText(S.allCategories) + '</span>' +
+                        '<span class="admin-cat-picker-chevron" aria-hidden="true">▾</span>' +
+                    '</button>' +
+                    '<div class="admin-cat-picker-panel" id="itemsCatPickerPanel" hidden>' +
+                        '<div class="admin-menu-category-bar">' +
+                            '<div class="admin-category-scroll" id="itemsCategoryScroll"></div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<input type="hidden" id="categoryFilter" value="all">' +
             '</div>' +
-            '<input type="hidden" id="categoryFilter" value="all">' +
             '<div id="itemsList"><div class="loading">Loading...</div></div>' +
         '</div>' +
         '<div id="itemModal" class="modal-overlay">' +
             '<div class="modal">' +
                 '<div class="modal-content">' +
-                    '<button class="modal-close" id="modalClose" aria-label="Close">' +
-                        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
-                    '</button>' +
+                    '<span class="modal-close" id="modalClose">&times;</span>' +
                     '<h2 id="modalTitle">' + S.addNewItem + '</h2>' +
                     '<form id="itemForm" novalidate>' +
                         '<div class="form-group"><label>' + S.kurdishName + '</label><input type="text" id="itemNameKu" autocomplete="off"></div>' +
@@ -1960,9 +1883,7 @@ function loadManageItems() {
         '<div id="quickCategoryModal" class="modal-overlay">' +
             '<div class="modal">' +
                 '<div class="modal-content">' +
-                    '<button class="modal-close" id="quickCategoryModalClose" aria-label="Close">' +
-                        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
-                    '</button>' +
+                    '<span class="modal-close" id="quickCategoryModalClose">&times;</span>' +
                     '<h2>' + S.createNewCategory + '</h2>' +
                     '<form id="quickCategoryForm">' +
                         '<div class="form-group"><label>' + S.categoryNameKu + '</label><input type="text" id="quickCategoryNameKu" required></div>' +
@@ -1979,93 +1900,8 @@ function loadManageItems() {
     loadCategoryFilter();
     refreshCategoriesCache();
     wireItemEvents();
-    
-    // Show loading state
-    var itemsListEl = document.getElementById('itemsList');
-    if (itemsListEl) {
-        itemsListEl.innerHTML = '<div class="loading" style="text-align:center;padding:20px;color:var(--text-muted);">Loading items...</div>';
-    }
-    
-    // Try to load from cache first for immediate display
-    var hasCachedData = hydrateItemsUiFromCache();
-    if (hasCachedData) {
-        console.log('[admin items] Loaded from cache');
-    }
-
-    // Detect mobile and use slightly longer timeout for slower mobile connections
-    var isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    var itemsTimeout = isMobile ? 6000 : 3000;
-    var safetyTimeout = isMobile ? 8000 : 5000;
-
-    var loadTimer = setTimeout(function () {
-        if (MenuData.getItems().length === 0) {
-            var el = document.getElementById('itemsList');
-            if (el) {
-                // Try cache one more time before showing error
-                if (!hydrateItemsUiFromCache()) {
-                    // On mobile, try REST API fallback before showing error
-                    if (isMobile && typeof fetchMenuItemsForAdmin === 'function') {
-                        console.log('[admin items] Trying REST API fallback');
-                        fetchMenuItemsForAdmin(12000).then(function(items) {
-                            if (items && items.length > 0) {
-                                _itemsSnapDocs = items.map(function (d) {
-                                    return { id: d.id, data: function () { return d; } };
-                                });
-                                renderItemsList(_itemsSnapDocs);
-                                loadCategoryFilter();
-                            } else {
-                                el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
-                            }
-                        }).catch(function() {
-                            el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
-                        });
-                    } else {
-                        el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
-                    }
-                }
-            }
-        }
-    }, safetyTimeout);
-
-    MenuData.loadItems(itemsTimeout, function (items) {
-        clearTimeout(loadTimer);
-        console.log('[admin items] Loaded from Firebase:', items.length, 'items');
-        _itemsSnapDocs = items.map(function (d) {
-            return { id: d.id, data: function () { return d; } };
-        });
-        renderItemsList(_itemsSnapDocs);
-        loadCategoryFilter();
-    }, function (err) {
-        clearTimeout(loadTimer);
-        console.error('[admin items] Error loading items:', err);
-        // Always try to show cached data on error
-        if (hydrateItemsUiFromCache()) {
-            console.log('[admin items] Showing cached data after error');
-            return;
-        }
-        // On mobile, try REST API fallback
-        if (isMobile && typeof fetchMenuItemsForAdmin === 'function') {
-            console.log('[admin items] Trying REST API fallback after error');
-            fetchMenuItemsForAdmin(12000).then(function(items) {
-                if (items && items.length > 0) {
-                    _itemsSnapDocs = items.map(function (d) {
-                        return { id: d.id, data: function () { return d; } };
-                    });
-                    renderItemsList(_itemsSnapDocs);
-                    loadCategoryFilter();
-                } else {
-                    var el = document.getElementById('itemsList');
-                    if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + err.message + '</p>';
-                }
-            }).catch(function() {
-                var el = document.getElementById('itemsList');
-                if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + err.message + '</p>';
-            });
-        } else {
-            var el = document.getElementById('itemsList');
-            if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + err.message + '</p>';
-        }
-    });
+    hydrateItemsUiFromCache();
+    startItemsListener();
 }
 
 function stopItemsListener() {
@@ -2098,13 +1934,7 @@ function filterItemDocs(docs, searchTerm, cat) {
         });
     }
     if (cat && cat !== 'all') {
-        var catLower = cat.toLowerCase().trim();
-        filtered = filtered.filter(function (d) {
-            var dc = d.data().category;
-            if (!dc) return false;
-            var dcLower = String(dc).toLowerCase().trim();
-            return dcLower === catLower || dcLower.indexOf(catLower) !== -1;
-        });
+        filtered = filtered.filter(function (d) { return d.data().category === cat; });
     }
     return filtered;
 }
@@ -2145,7 +1975,7 @@ function startItemsListener() {
                 cashierCache.push({ id: d.id, v: data });
                 menuCache.push(Object.assign({ id: d.id }, data));
             });
-            safeSetItem(getBranchKey('cachedCashierItems'), JSON.stringify(cashierCache));
+            safeSetItem('cachedCashierItems', JSON.stringify(cashierCache));
             writeCachedMenuItemsFlat(menuCache);
 
             var catNames = {};
@@ -2153,7 +1983,7 @@ function startItemsListener() {
                 var c = d.data().category;
                 if (c && c.toLowerCase().trim() !== 'water') catNames[c] = true;
             });
-            localStorage.setItem(getBranchKey('cachedMenuCategoryNames'), JSON.stringify(Object.keys(catNames)));
+            localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(catNames)));
         }).catch(function(err) {
             console.warn('[admin items] Local API failed:', err.message);
             if (!hydrateItemsUiFromCache()) {
@@ -2193,7 +2023,7 @@ function startItemsListener() {
             cashierCache.push({ id: d.id, v: data });
             menuCache.push(Object.assign({ id: d.id }, data));
         });
-        safeSetItem(getBranchKey('cachedCashierItems'), JSON.stringify(cashierCache));
+        safeSetItem('cachedCashierItems', JSON.stringify(cashierCache));
         writeCachedMenuItemsFlat(menuCache);
 
         var catNames = {};
@@ -2201,10 +2031,10 @@ function startItemsListener() {
             var c = d.data().category;
             if (c && c !== 'Water') catNames[c] = true;
         });
-        localStorage.setItem(getBranchKey('cachedMenuCategoryNames'), JSON.stringify(Object.keys(catNames)));
+        localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(catNames)));
     }
 
-    adminGetWithTimeout(db.collection(MENU_COLLECTION), 8000).then(applyItemsSnap).catch(function (e) {
+    adminGetWithTimeout(db.collection('menuItems'), 8000).then(applyItemsSnap).catch(function (e) {
         console.warn('[admin items] get failed:', e.message);
         if (isFirestoreApiDisabledError(e)) {
             showFirestoreApiDisabledAlert();
@@ -2231,7 +2061,7 @@ function startItemsListener() {
         clearAdminLoadingEl('itemsList', '<p>' + S.noItemsFound + '</p>');
     }, 10000);
 
-     itemsUnsubscribe = db.collection(MENU_COLLECTION).onSnapshot(function (snap) {
+     itemsUnsubscribe = db.collection('menuItems').onSnapshot(function (snap) {
         applyItemsSnap(snap);
     }, function (e) {
         console.error('Items listener error:', e);
@@ -2253,14 +2083,17 @@ function loadItemsList() {
          if (el) el.innerHTML = '<p>' + S.noItemsFound + '</p>';
          return;
      }
-     var items = MenuData.getItems();
-     if (items.length > 0) {
-         _itemsSnapDocs = items.map(function (d) {
-             return { id: d.id, data: function () { return d; } };
-         });
-         renderItemsList(_itemsSnapDocs);
+      adminGetWithTimeout(db.collection('menuItems'), 8000).then(function (snap) {
+         var docs = [];
+          snap.forEach(function (d) { var data = d.data(); if (data.category && data.category.toLowerCase().trim() !== 'water') { docs.push(d); } });
+         _itemsSnapDocs = docs;
+         renderItemsList(docs);
          loadCategoryFilter();
-     }
+    }).catch(function (e) {
+        if (hydrateItemsUiFromCache()) return;
+        var el = document.getElementById('itemsList');
+         if (el) el.innerHTML = '<p style="color:#C62828;">' + S.errorPrefix + e.message + '</p>';
+    });
 }
 
 function loadCategoriesDropdown() {
@@ -2271,19 +2104,30 @@ function loadCategoriesDropdown() {
 
     if (!window.db) return Promise.resolve();
 
-    if (!MenuData.getCategories().length) {
-        return new Promise(function (resolve) {
-            MenuData.loadCategories(12000, function (categories) {
-                safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(categories));
+    var restPromise = (typeof fetchCategoriesForAdmin === 'function')
+        ? fetchCategoriesForAdmin(12000).then(function (cats) {
+            if (cats && cats.length) {
+                safeSetItem('cachedCategories', JSON.stringify(cats));
                 refreshItemCategoryDropdown();
-                resolve();
-            }, function () {
-                resolve();
-            });
-        });
-    }
+            }
+        }).catch(function () {})
+        : Promise.resolve();
 
-    return Promise.resolve();
+    var sdkPromise = adminGetWithTimeout(db.collection('categories').orderBy('order', 'asc'), 8000).then(function (snap) {
+        var categories = [];
+        snap.forEach(function (doc) {
+            categories.push({ id: doc.id, data: doc.data() });
+        });
+        if (categories.length) {
+            safeSetItem('cachedCategories', JSON.stringify(categories));
+            refreshItemCategoryDropdown();
+        }
+    }).catch(function (e) {
+        console.error('Error loading categories:', e);
+        refreshItemCategoryDropdown();
+    });
+
+    return Promise.all([restPromise, sdkPromise]);
 }
 
 function loadCategoriesFromCache() {
@@ -2310,38 +2154,34 @@ function getUniqueItemCategoryIds(docs) {
 function getAllItemCategoryIdsForFilter() {
     var names = {};
     function addName(c) {
-        if (c && normalizeCategoryId(c) !== 'water') names[normalizeCategoryId(c)] = true;
+        if (c && c.toLowerCase().trim() !== 'water') names[c] = true;
     }
     getUniqueItemCategoryIds(_itemsSnapDocs).forEach(addName);
     readCachedCategories().forEach(function (c) {
         if (c && c.id) addName(c.id);
     });
     try {
-        JSON.parse(localStorage.getItem(getBranchKey('cachedMenuItems')) || '[]').forEach(function (it) {
+        JSON.parse(localStorage.getItem('cachedMenuItems') || '[]').forEach(function (it) {
             addName(it.category);
         });
     } catch (e) {}
     try {
-        JSON.parse(localStorage.getItem(getBranchKey('cachedCashierItems')) || '[]').forEach(function (it) {
+        JSON.parse(localStorage.getItem('cachedCashierItems') || '[]').forEach(function (it) {
             addName(it.v && it.v.category);
         });
     } catch (e) {}
     try {
-        JSON.parse(localStorage.getItem(getBranchKey('cachedMenuCategoryNames')) || '[]').forEach(addName);
+        JSON.parse(localStorage.getItem('cachedMenuCategoryNames') || '[]').forEach(addName);
     } catch (e) {}
-    var sorted = Object.keys(names).sort();
-    console.log('[admin items] Available categories for filter:', sorted);
-    return sorted;
+    return Object.keys(names).sort();
 }
 
 function buildCategorySelectOptions(categories, itemCategoryIds, lang, S, allOption) {
     var seen = {};
     var html = allOption ? '<option value="all">' + S.allCategories + '</option>' : '<option value="">' + S.select + '</option>';
     (categories || []).forEach(function (c) {
-        if (!c || !c.id) return;
-        var lower = String(c.id).toLowerCase();
-        if (seen[lower]) return;
-        seen[lower] = true;
+        if (!c || !c.id || seen[c.id]) return;
+        seen[c.id] = true;
         var cat = c.data || {};
         var name = cat['name_' + lang] || cat.name_en || cat.name_ku || cat.name_ar || c.id || S.unnamed;
         html += '<option value="' + escapeHtmlAttr(c.id) + '">' + escapeHtmlText(name) + '</option>';
@@ -2396,18 +2236,14 @@ function updateItemsCatPickerLabel() {
 }
 
 function selectItemsCategory(catId) {
-    console.log('[admin items] selectItemsCategory called with:', catId);
     itemsActiveCategory = catId || 'all';
     var cf = document.getElementById('categoryFilter');
-    if (cf) {
-        cf.value = itemsActiveCategory;
-        console.log('[admin items] Category filter set to:', cf.value);
-    }
+    if (cf) cf.value = itemsActiveCategory;
+    updateItemsCatPickerLabel();
     renderItemsCategoryBar();
+    closeItemsCatPicker();
     var search = document.getElementById('itemSearch');
-    var searchTerm = search ? search.value : '';
-    console.log('[admin items] Applying filter with search:', searchTerm, 'category:', itemsActiveCategory);
-    applyItemFilter(searchTerm, itemsActiveCategory);
+    applyItemFilter(search ? search.value : '', itemsActiveCategory);
 }
 
 function renderItemsCategoryBar() {
@@ -2435,26 +2271,12 @@ function renderItemsCategoryBar() {
     }
 
     scroll.innerHTML = html;
-    
-    // Remove old event listener to prevent duplication
-    if (scroll._categoryClickHandler) {
-        scroll.removeEventListener('pointerdown', scroll._categoryClickHandler);
-    }
-    
-    // Use pointer events for better Safari compatibility (unifies mouse, touch, pen)
-    function handleCategoryClick(e) {
-        var catBtn = e.target.closest('.category-btn');
-        if (catBtn) {
-            e.preventDefault();
-            e.stopPropagation();
-            var catId = catBtn.getAttribute('data-cat') || 'all';
-            console.log('[admin items] Category button clicked:', catId);
-            selectItemsCategory(catId);
-        }
-    }
-    
-    scroll._categoryClickHandler = handleCategoryClick;
-    scroll.addEventListener('pointerdown', handleCategoryClick);
+    scroll.querySelectorAll('.category-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            selectItemsCategory(this.getAttribute('data-cat') || 'all');
+        });
+    });
+    updateItemsCatPickerLabel();
 }
 
 function refreshCategoryFilterOptions() {
@@ -2469,7 +2291,7 @@ function refreshItemCategoryDropdown() {
     var prev = select.value;
     select.innerHTML = buildCategorySelectOptions(
         readCachedCategories(),
-        [],
+        getAllItemCategoryIdsForFilter(),
         lang,
         S,
         false
@@ -2486,26 +2308,22 @@ function loadCategoryFilter() {
     var cf = document.getElementById('categoryFilter');
     if (!cf) return;
 
-    // Render category bar immediately from cache if available
-    renderItemsCategoryBar();
-
     if (!window.db) {
+        refreshCategoryFilterOptions();
         return;
     }
 
-    if (!MenuData.getCategories().length) {
-        MenuData.loadCategories(6000, function (categories) {
-            safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(categories));
-            refreshCategoryFilterOptions();
-        }, function (err) {
-            console.error('Error loading category filter:', err);
-            refreshCategoryFilterOptions();
+    adminGetWithTimeout(db.collection('categories').orderBy('order', 'asc'), 8000).then(function (snap) {
+        var categories = [];
+        snap.forEach(function (doc) {
+            categories.push({ id: doc.id, data: doc.data() });
         });
-        return;
-    }
-
-    safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(MenuData.getCategories()));
-    refreshCategoryFilterOptions();
+        safeSetItem('cachedCategories', JSON.stringify(categories));
+        refreshCategoryFilterOptions();
+    }).catch(function (e) {
+        console.error('Error loading category filter:', e);
+        refreshCategoryFilterOptions();
+    });
 }
 
 function renderItemsList(items) {
@@ -2542,44 +2360,12 @@ function renderItemsList(items) {
         html += '</tbody></table></div>';
         list.innerHTML = html;
 
-        // Use pointer events for better Safari compatibility (unifies mouse, touch, pen)
-        function handleButtonClick(e) {
-            var editBtn = e.target.closest('.edit-item');
-            if (editBtn) {
-                e.preventDefault();
-                e.stopPropagation();
-                var itemId = editBtn.getAttribute('data-id');
-                console.log('[admin items] Edit button clicked for:', itemId);
-                if (typeof editItem === 'function') {
-                    editItem(itemId);
-                } else {
-                    console.error('[admin items] editItem function not available');
-                }
-                return;
-            }
-            var deleteBtn = e.target.closest('.delete-item');
-            if (deleteBtn) {
-                e.preventDefault();
-                e.stopPropagation();
-                var itemId = deleteBtn.getAttribute('data-id');
-                console.log('[admin items] Delete button clicked for:', itemId);
-                if (typeof deleteItem === 'function') {
-                    deleteItem(itemId);
-                } else {
-                    console.error('[admin items] deleteItem function not available');
-                }
-                return;
-            }
-        }
-
-        // Remove old event listener to prevent duplication
-        if (list._buttonClickHandler) {
-            list.removeEventListener('pointerdown', list._buttonClickHandler);
-        }
-        
-        list._buttonClickHandler = handleButtonClick;
-        // Use pointer events for better cross-browser compatibility (especially Safari)
-        list.addEventListener('pointerdown', handleButtonClick);
+        list.querySelectorAll('.edit-item').forEach(function (btn) {
+            btn.addEventListener('click', function () { editItem(this.getAttribute('data-id')); });
+        });
+        list.querySelectorAll('.delete-item').forEach(function (btn) {
+            btn.addEventListener('click', function () { deleteItem(this.getAttribute('data-id')); });
+        });
     }
 
     // Paint immediately — do not wait for categories fetch (was causing infinite Loading...).
@@ -2587,24 +2373,18 @@ function renderItemsList(items) {
 
     if (!window.db) return;
 
-    if (MenuData.getCategories().length > 0) {
+    adminGetWithTimeout(db.collection('categories').orderBy('order', 'asc'), 5000).then(function (catSnap) {
         var catMap = {};
-        MenuData.getCategories().forEach(function (c) {
-            catMap[normalizeCategoryId(c.id)] = c.data;
+        var categories = [];
+        catSnap.forEach(function (catDoc) {
+            catMap[catDoc.id] = catDoc.data();
+            categories.push({ id: catDoc.id, data: catDoc.data() });
         });
+        safeSetItem('cachedCategories', JSON.stringify(categories));
         paintRows(catMap);
-    } else {
-        MenuData.loadCategories(5000, function (categories) {
-            var catMap = {};
-            categories.forEach(function (c) {
-                catMap[normalizeCategoryId(c.id)] = c.data;
-            });
-            safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(categories));
-            paintRows(catMap);
-        }, function () {
-            paintRows(buildCategoryMapFromCache());
-        });
-    }
+    }).catch(function () {
+        paintRows(buildCategoryMapFromCache());
+    });
 }
 
 function wireItemEvents() {
@@ -2688,6 +2468,24 @@ function wireItemEvents() {
         });
     }
 
+    var pickerBtn = document.getElementById('itemsCatPickerBtn');
+    if (pickerBtn) {
+        pickerBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var panel = document.getElementById('itemsCatPickerPanel');
+            if (panel && panel.hidden) openItemsCatPicker();
+            else closeItemsCatPicker();
+        });
+    }
+    if (!window._itemsCatPickerDocClick) {
+        window._itemsCatPickerDocClick = true;
+        document.addEventListener('click', function (e) {
+            var root = document.getElementById('itemsCatPicker');
+            if (!root || root.contains(e.target)) return;
+            closeItemsCatPicker();
+        });
+    }
+
     // Quick category modal events
     var addNewCatBtn = document.getElementById('addNewCategoryBtn');
     if (addNewCatBtn) {
@@ -2723,20 +2521,29 @@ function wireItemEvents() {
 
 function applyItemFilter(searchTerm, cat) {
     cat = cat || itemsActiveCategory || 'all';
-    console.log('[admin items] applyItemFilter - searchTerm:', searchTerm, 'cat:', cat, 'itemsActiveCategory:', itemsActiveCategory);
-    var items = MenuData.getItems();
-    console.log('[admin items] Total items from MenuData:', items.length);
-    if (items.length > 0) {
-        _itemsSnapDocs = items.map(function (d) {
-            return { id: d.id, data: function () { return d; } };
-        });
-        var filtered = filterItemDocs(_itemsSnapDocs, searchTerm, cat);
-        console.log('[admin items] Filtered items count:', filtered.length);
-        renderItemsList(filtered);
+    if (_itemsSnapDocs.length > 0) {
+        renderItemsList(filterItemDocs(_itemsSnapDocs, searchTerm, cat));
         return;
     }
-    console.log('[admin items] No items available, showing empty list');
-    renderItemsList([]);
+    db.collection('menuItems').get().then(function (snap) {
+        var docs = snap.docs.filter(function (d) { 
+            var category = d.data().category;
+            return !(category && category.toLowerCase().trim() === 'water'); 
+        });
+        if (searchTerm) {
+            var lang = localStorage.getItem('selectedLang') || 'ku';
+            var term = searchTerm.toLowerCase();
+            docs = docs.filter(function (d) {
+                var item = d.data();
+                var name = (item['name_' + lang] || item.name_en || '').toLowerCase();
+                return name.indexOf(term) !== -1;
+            });
+        }
+        if (cat && cat !== 'all') {
+            docs = docs.filter(function (d) { return d.data().category === cat; });
+        }
+        renderItemsList(docs);
+    });
 }
 
 /* Offline-resilient write helper.
@@ -2865,12 +2672,9 @@ function saveQuickCategory() {
         updated_at: now
     };
 
-    var targetCat = getActiveCatCollection();
-    window.CAT_COLLECTION = targetCat;
-    CAT_COLLECTION = targetCat;
-    var newCatRef = db.collection(targetCat).doc();
+    var newCatRef = db.collection('categories').doc();
     applyMenuCloudWrite({
-        collection: targetCat,
+        collection: 'categories',
         docId: newCatRef.id,
         isCreate: true,
         sdkPromise: newCatRef.set(Object.assign({}, plainData, {
@@ -2895,9 +2699,6 @@ function saveQuickCategory() {
 
 function saveItem() {
      var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-     var targetMenuCollection = getActiveMenuCollection();
-     window.MENU_COLLECTION = targetMenuCollection;
-     MENU_COLLECTION = targetMenuCollection;
 
      if (!window.db) {
          alert(S.itemSyncFailed + '\nFirebase not ready.');
@@ -2918,7 +2719,7 @@ function saveItem() {
     var nameAr = nameArEl.value.trim();
     var nameEn = nameEnEl.value.trim();
     var price = priceEl.value.trim().replace(',', '.');
-    var category = categoryEl.value.trim();
+    var category = categoryEl.value;
 
     if (!nameKu || !nameAr || !nameEn || !price) {
         alert(S.fillAll);
@@ -2964,10 +2765,6 @@ function saveItem() {
          return;
      }
 
-    var currentCollection = getActiveMenuCollection();
-    window.MENU_COLLECTION = currentCollection;
-    MENU_COLLECTION = currentCollection;
-
     var imgUrl = document.getElementById('itemImageURL').value.trim();
     var placeholderImg = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect fill=%23e0e0e0 width=%27400%27 height=%27300%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 font-size=%2724%27 text-anchor=%27middle%27 dy=%27.3em%27 fill=%23999%27%3ENo+Image%3C/text%3E%3C/svg%3E';
     var finalImg = imgUrl || placeholderImg;
@@ -3006,12 +2803,12 @@ function saveItem() {
     var isCreate = !itemId;
     if (itemId) {
         docId = itemId;
-        ref = db.collection(currentCollection).doc(itemId);
+        ref = db.collection('menuItems').doc(itemId);
         promise = ref.update(Object.assign({}, plainData, {
             updated_at: firebase.firestore.FieldValue.serverTimestamp()
         }));
     } else {
-        ref = db.collection(currentCollection).doc();
+        ref = db.collection('menuItems').doc();
         docId = ref.id;
         plainData.created_at = now;
         promise = ref.set(Object.assign({}, plainData, {
@@ -3043,7 +2840,7 @@ function saveItem() {
     }
 
     applyMenuCloudWrite({
-        collection: currentCollection,
+        collection: 'menuItems',
         docId: docId,
         isCreate: isCreate,
         sdkPromise: promise,
@@ -3113,8 +2910,7 @@ function editItem(itemId) {
         return;
     }
 
-    var targetColl = getActiveMenuCollection();
-    db.collection(targetColl).doc(itemId).get().then(function (doc) {
+    db.collection('menuItems').doc(itemId).get().then(function (doc) {
         if (!doc.exists) {
             if (!cached) alert(S.noItemsFound);
             return;
@@ -3132,12 +2928,11 @@ function deleteItem(itemId) {
         alert(S.itemSyncFailed + '\nPlease log in again.');
         return;
     }
-    var targetColl = getActiveMenuCollection();
     applyMenuCloudWrite({
-        collection: targetColl,
+        collection: 'menuItems',
         docId: itemId,
         isDelete: true,
-        sdkPromise: db.collection(targetColl).doc(itemId).delete(),
+        sdkPromise: db.collection('menuItems').doc(itemId).delete(),
         onDone: function () {
             removeCachedMenuItem(itemId);
             hydrateItemsUiFromCache();
@@ -3151,17 +2946,10 @@ function deleteItem(itemId) {
 /* ============ CATEGORIES ============ */
 
 function mergeCategoryLists(serverCats, cachedCats) {
-    var result = [];
-    var seen = {};
-    var all = (serverCats && serverCats.length ? serverCats : []).concat(cachedCats || []);
-    all.forEach(function (c) {
-        if (!c || !c.id) return;
-        var lower = normalizeCategoryId(c.id);
-        if (seen[lower]) return;
-        seen[lower] = true;
-        result.push(c);
-    });
-    return result;
+    if (serverCats && serverCats.length) {
+        return serverCats.filter(function (c) { return c && c.id; });
+    }
+    return (cachedCats || []).filter(function (c) { return c && c.id; });
 }
 
 function renderCategoriesListNow() {
@@ -3185,9 +2973,7 @@ function loadManageCategories() {
         '<div id="categoryModal" class="modal-overlay">' +
             '<div class="modal">' +
                 '<div class="modal-content">' +
-                    '<button class="modal-close" id="categoryModalClose" aria-label="Close">' +
-                        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
-                    '</button>' +
+                    '<span class="modal-close" id="categoryModalClose">&times;</span>' +
                     '<h2 id="categoryModalTitle">' + S.addCategory + '</h2>' +
                     '<form id="categoryForm">' +
                         '<div class="form-group"><label>' + S.categoryNameKu + '</label><input type="text" id="categoryNameKu" required></div>' +
@@ -3213,13 +2999,13 @@ function loadManageCategories() {
 function getMenuCategoryNames() {
     var names = {};
     try {
-        JSON.parse(localStorage.getItem(getBranchKey('cachedCashierItems')) || '[]').forEach(function (it) {
+        JSON.parse(localStorage.getItem('cachedCashierItems') || '[]').forEach(function (it) {
             var c = it && it.v && it.v.category;
             if (c) names[c] = true;
         });
     } catch (e) {}
     try {
-        JSON.parse(localStorage.getItem(getBranchKey('cachedMenuCategoryNames')) || '[]').forEach(function (n) {
+        JSON.parse(localStorage.getItem('cachedMenuCategoryNames') || '[]').forEach(function (n) {
             if (n) names[n] = true;
         });
     } catch (e) {}
@@ -3232,95 +3018,57 @@ function renderCategoriesTable(categories) {
     if (!list) return;
     var lang = localStorage.getItem('selectedLang') || 'ku';
 
-    if (!categories || !categories.length) {
+    if (!categories.length) {
         list.innerHTML = '<p style="color:var(--text-muted);padding:8px 2px;">' + S.noCategories + '</p>';
         return;
     }
-
-    try {
-        categories.sort(function (a, b) {
-            var ao = (a.data && a.data.order) != null ? Number(a.data.order) : null;
-            var bo = (b.data && b.data.order) != null ? Number(b.data.order) : null;
-            if (ao != null && bo != null) {
-                if (ao !== bo) return ao - bo;
-                return String(a.id).localeCompare(String(b.id));
-            }
-            if (ao != null) return -1;
-            if (bo != null) return 1;
-            var ai = safeCategoryPreferredIndex(a);
-            var bi = safeCategoryPreferredIndex(b);
-            if (ai !== bi) return ai - bi;
-            return String(a.id).localeCompare(String(b.id));
-        });
-    } catch (sortErr) {
-        console.warn('[admin categories] sort failed, using original order:', sortErr);
-    }
+    categories.sort(function (a, b) {
+        var ao = (a.data && a.data.order) != null ? a.data.order : null;
+        var bo = (b.data && b.data.order) != null ? b.data.order : null;
+        if (ao != null && bo != null) return ao - bo;
+        if (ao != null) return -1;
+        if (bo != null) return 1;
+        var ai = categoryPreferredIndex(a);
+        var bi = categoryPreferredIndex(b);
+        if (ai === -1 && bi === -1) return 0;
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+    });
 
     var html = '<div class="table-responsive"><table class="admin-table"><thead><tr><th>' + (S.image || 'Image') + '</th><th>' + (S.name || 'Name') + '</th><th>' + (S.actions || 'Actions') + '</th></tr></thead><tbody>';
-    try {
-        categories.forEach(function (c) {
-            try {
-                var cat = (c && c.data) || {};
-                var name = cat['name_' + lang] || cat.name_ku || cat.name_ar || cat.name_en || (c && c.id) || S.unnamed;
-                var img = cat.image || 'https://placehold.co/50x50?text=No+Image';
-                var virtualBadge = c.virtual ? ' <span class="cat-virtual-badge">' + (S.fromMenu || 'from menu') + '</span>' : '';
-                var actions = '<button class="btn-primary btn-sm edit-category" data-id="' + escapeHtmlAttr(c.id) + '"' + (c.virtual ? ' data-virtual="1"' : '') + '>' + (c.virtual ? (S.addCategory || 'Add') : S.edit) + '</button>';
-                if (!c.virtual) {
-                    actions += ' <button class="btn-danger btn-sm delete-category" data-id="' + escapeHtmlAttr(c.id) + '">' + S.delete + '</button>';
-                }
-                html += '<tr>' +
-                    '<td><img src="' + escapeHtmlAttr(img) + '" alt="" width="48" height="48" style="border-radius:8px;object-fit:cover;" onerror="this.src=\'https://placehold.co/50x50?text=Error\'"></td>' +
-                    '<td>' + escapeHtmlText(name) + virtualBadge + '</td>' +
-                    '<td>' + actions + '</td>' +
-                    '</tr>';
-            } catch (rowErr) {
-                console.warn('[admin categories] row render error:', rowErr, c);
-            }
-        });
-    } catch (forEachErr) {
-        console.warn('[admin categories] forEach failed:', forEachErr);
-    }
+    categories.forEach(function (c) {
+        var cat = c.data || {};
+        var name = cat['name_' + lang] || cat.name_ku || cat.name_ar || cat.name_en || c.id || S.unnamed;
+        var img = cat.image || 'https://placehold.co/50x50?text=No+Image';
+        var virtualBadge = c.virtual ? ' <span class="cat-virtual-badge">' + (S.fromMenu || 'from menu') + '</span>' : '';
+        var actions = '<button class="btn-primary btn-sm edit-category" data-id="' + c.id + '"' + (c.virtual ? ' data-virtual="1"' : '') + '>' + (c.virtual ? (S.addCategory || 'Add') : S.edit) + '</button>';
+        if (!c.virtual) {
+            actions += ' <button class="btn-danger btn-sm delete-category" data-id="' + c.id + '">' + S.delete + '</button>';
+        }
+        html += '<tr>' +
+            '<td><img src="' + img + '" alt="" width="48" height="48" style="border-radius:8px;object-fit:cover;" onerror="this.src=\'https://placehold.co/50x50?text=Error\'"></td>' +
+            '<td>' + name + virtualBadge + '</td>' +
+            '<td>' + actions + '</td>' +
+        '</tr>';
+    });
     html += '</tbody></table></div>';
     list.innerHTML = html;
 
-    try {
-        function handleCategoryClick(e) {
-            var editBtn = e.target.closest('.edit-category');
-            if (editBtn) {
-                e.preventDefault();
-                e.stopPropagation();
-                editCategory(editBtn.getAttribute('data-id'));
-                return;
-            }
-            var deleteBtn = e.target.closest('.delete-category');
-            if (deleteBtn) {
-                e.preventDefault();
-                e.stopPropagation();
-                deleteCategory(deleteBtn.getAttribute('data-id'));
-                return;
-            }
-        }
-
-        if (list._categoryClickHandler) {
-            list.removeEventListener('pointerdown', list._categoryClickHandler);
-        }
-        list._categoryClickHandler = handleCategoryClick;
-        list.addEventListener('pointerdown', handleCategoryClick);
-    } catch (evErr) {
-        console.warn('[admin categories] event wiring failed:', evErr);
-    }
+    list.querySelectorAll('.edit-category').forEach(function (btn) {
+        btn.addEventListener('click', function () { editCategory(this.getAttribute('data-id')); });
+    });
+    list.querySelectorAll('.delete-category').forEach(function (btn) {
+        btn.addEventListener('click', function () { deleteCategory(this.getAttribute('data-id')); });
+    });
 }
 
 function mergeMenuCategories(realCats, haveIds) {
     var merged = realCats.slice();
     var lang = localStorage.getItem('selectedLang') || 'ku';
     var menuNames = getMenuCategoryNames();
-    var normalizedRealIds = {};
-    realCats.forEach(function (c) {
-        if (c && c.id) normalizedRealIds[normalizeCategoryId(c.id)] = true;
-    });
     Object.keys(menuNames).forEach(function (name) {
-        if (normalizedRealIds[normalizeCategoryId(name)]) return;
+        if (haveIds[name]) return;
         var label = getCategoryLabel(name, lang, buildCategoryMapFromCache());
         merged.push({
             id: name,
@@ -3342,7 +3090,7 @@ function loadCategoriesList() {
     if (USE_LOCAL_API) {
         localApiRequest('categories.php').then(function(cats) {
             var merged = mergeCategoryLists(cats.map(function(c) { return { id: c.id, data: c }; }), readCachedCategories());
-            safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(merged));
+            safeSetItem('cachedCategories', JSON.stringify(merged));
             var have = {};
             merged.forEach(function(c) { have[c.id] = true; });
             renderCategoriesTable(mergeMenuCategories(merged, have));
@@ -3351,7 +3099,7 @@ function loadCategoriesList() {
             localApiRequest('menu_items.php').then(function(items) {
                 var names = {};
                 items.forEach(function(it) { if (it.category) names[it.category] = true; });
-                localStorage.setItem(getBranchKey('cachedMenuCategoryNames'), JSON.stringify(Object.keys(names)));
+                localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(names)));
                 renderCategoriesListNow();
             }).catch(function() {});
         }).catch(function(err) {
@@ -3368,96 +3116,68 @@ function loadCategoriesList() {
         return;
     }
 
-    // Load categories via the shared MenuData layer (onSnapshot with a get()
-    // timeout fallback) — the same reliable path menu.html uses. This fixes the
-    // infinite "Loading..." on mobile and keeps the list live-updating.
-    function applyCategories(categories) {
-        var merged = mergeCategoryLists(categories, readCachedCategories());
-        safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(merged));
+    adminGetWithTimeout(db.collection('categories').orderBy('order', 'asc'), 8000).then(function (snap) {
+        var fromServer = [];
+        snap.forEach(function (doc) {
+            fromServer.push({ id: doc.id, data: doc.data() });
+        });
+        var merged = mergeCategoryLists(fromServer, readCachedCategories());
+        safeSetItem('cachedCategories', JSON.stringify(merged));
         var have = {};
         merged.forEach(function (c) { have[c.id] = true; });
         renderCategoriesTable(mergeMenuCategories(merged, have));
-    }
-
-    if (MenuData.getCategories().length) {
-        applyCategories(MenuData.getCategories());
-    }
-
-    // Detect mobile and use slightly longer timeout for slower mobile connections
-    var isMobileCat = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    var catTimeout = isMobileCat ? 6000 : 3000;
-    var catSafetyTimeout = isMobileCat ? 8000 : 5000;
-
-    // Safety timeout for slow mobile networks
-    var catLoadTimer = setTimeout(function () {
-        var el = document.getElementById('categoriesList');
-        if (el && el.querySelector('.loading')) {
-            // Try to show cached categories before showing error
-            if (!renderCategoriesListNow()) {
-                // On mobile, try REST API fallback before showing error
-                if (isMobileCat && typeof fetchCategoriesForAdmin === 'function') {
-                    console.log('[admin categories] Trying REST API fallback');
-                    fetchCategoriesForAdmin(12000).then(function(categories) {
-                        if (categories && categories.length > 0) {
-                            applyCategories(categories);
-                        } else {
-                            el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
-                        }
-                    }).catch(function() {
-                        el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
-                    });
-                } else {
-                    el.innerHTML = '<p style="color:var(--text-muted);">' + (S.menuConnectionHint || 'Check your connection and try again.') + '</p>';
-                }
-            }
-        }
-    }, catSafetyTimeout);
-
-    MenuData.loadCategories(catTimeout, function (categories) {
-        clearTimeout(catLoadTimer);
-        applyCategories(categories);
-    }, function (err) {
-        clearTimeout(catLoadTimer);
+    }).catch(function (err) {
         if (isFirestoreApiDisabledError(err)) {
             showFirestoreApiDisabledAlert();
         }
-        // On mobile, try REST API fallback
-        if (isMobileCat && typeof fetchCategoriesForAdmin === 'function') {
-            console.log('[admin categories] Trying REST API fallback after error');
-            fetchCategoriesForAdmin(12000).then(function(categories) {
-                if (categories && categories.length > 0) {
-                    applyCategories(categories);
-                } else {
-                    renderCategoriesListNow();
-                }
-            }).catch(function() {
-                renderCategoriesListNow();
-            });
-        } else {
-            renderCategoriesListNow();
-        }
+        renderCategoriesListNow();
     });
 
-    // Derive menu-only category names from the shared items cache (no extra read
-    // when items are already loaded, e.g. after visiting Manage Items).
-    function applyMenuNamesFromItems(items) {
-        var names = {};
-        items.forEach(function (it) {
-            var c = it && it.category;
-            if (c) names[c] = true;
+    if (navigator.onLine) {
+        fetchCategoriesForAdmin(12000).then(function (cats) {
+            if (!cats || !cats.length) return;
+            var merged = mergeCategoryLists(cats, readCachedCategories());
+            safeSetItem('cachedCategories', JSON.stringify(merged));
+            renderCategoriesListNow();
+        }).catch(function (e) {
+            console.warn('[admin categories] REST fallback:', e.message || e);
         });
+    }
+
+    adminGetWithTimeout(db.collection('menuItems'), 8000).then(function (snap) {
+        var names = {};
+        snap.forEach(function (d) { var c = (d.data() || {}).category; if (c) names[c] = true; });
         localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(names)));
-        clearTimeout(catLoadTimer);
         renderCategoriesListNow();
-    }
-    if (MenuData.getItems().length) {
-        applyMenuNamesFromItems(MenuData.getItems());
-    } else {
-        MenuData.loadItems(8000, function (items) {
-            clearTimeout(catLoadTimer);
-            applyMenuNamesFromItems(items);
-        }, function () { clearTimeout(catLoadTimer); });
-    }
+    }).catch(function () {});
+
+    stopCategoriesListener();
+    categoriesUnsubscribe = db.collection('categories').orderBy('order', 'asc').onSnapshot(function (snap) {
+        if (snap.empty) {
+            if (isFirestoreCacheEmptySnap(snap)) {
+                renderCategoriesListNow();
+                return;
+            }
+            var merged = mergeCategoryLists([], readCachedCategories());
+            safeSetItem('cachedCategories', JSON.stringify(merged));
+            var haveEmpty = {};
+            merged.forEach(function (c) { haveEmpty[c.id] = true; });
+            renderCategoriesTable(mergeMenuCategories(merged, haveEmpty));
+            return;
+        }
+        var fromServer = [];
+        snap.forEach(function (doc) {
+            fromServer.push({ id: doc.id, data: doc.data() });
+        });
+        var merged = mergeCategoryLists(fromServer, readCachedCategories());
+        safeSetItem('cachedCategories', JSON.stringify(merged));
+        var have = {};
+        merged.forEach(function (c) { have[c.id] = true; });
+        renderCategoriesTable(mergeMenuCategories(merged, have));
+    }, function (e) {
+        console.error('Categories listener error, falling back to cache:', e);
+        renderCategoriesListNow();
+    });
 }
 
 function wireCategoryEvents() {
@@ -3522,13 +3242,13 @@ function syncCategoriesFromItems() {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     if (!confirm(S.syncCategoriesConfirm || 'Create editable category entries from the categories used by your menu items?')) return;
 
-    db.collection(MENU_COLLECTION).get().then(function (itemSnap) {
+    db.collection('menuItems').get().then(function (itemSnap) {
         var names = {};
         itemSnap.forEach(function (d) {
             var c = (d.data() || {}).category;
             if (c && c.toLowerCase().trim() !== 'water') names[c] = true;
         });
-        return db.collection(CAT_COLLECTION).orderBy('order', 'asc').get().then(function (catSnap) {
+        return db.collection('categories').orderBy('order', 'asc').get().then(function (catSnap) {
             var have = {};
             catSnap.forEach(function (d) { have[d.id] = true; });
 
@@ -3538,7 +3258,7 @@ function syncCategoriesFromItems() {
                 if (have[name]) return;
                 // Use the name as the document id so existing items (which
                 // reference the category by this value) keep matching.
-                var ref = db.collection(CAT_COLLECTION).doc(name);
+                var ref = db.collection('categories').doc(name);
                 batch.set(ref, {
                     name_ku: name, name_ar: name, name_en: name,
                     image: '',
@@ -3588,14 +3308,10 @@ function saveCategory() {
         updated_at: now
     };
 
-    var targetCat = getActiveCatCollection();
-    window.CAT_COLLECTION = targetCat;
-    CAT_COLLECTION = targetCat;
-
     var promise;
     var savedId = categoryId;
     if (categoryId) {
-        var catRef = db.collection(targetCat).doc(categoryId);
+        var catRef = db.collection('categories').doc(categoryId);
         if (isCreate) {
             plainData.created_at = now;
         }
@@ -3605,7 +3321,7 @@ function saveCategory() {
         });
         promise = catRef.set(writeData, { merge: true });
     } else {
-        var newRef = db.collection(targetCat).doc();
+        var newRef = db.collection('categories').doc();
         savedId = newRef.id;
         plainData.created_at = now;
         promise = newRef.set(Object.assign({}, plainData, {
@@ -3615,7 +3331,7 @@ function saveCategory() {
     }
 
     applyMenuCloudWrite({
-        collection: targetCat,
+        collection: 'categories',
         docId: savedId,
         isCreate: isCreate,
         sdkPromise: promise,
@@ -3655,7 +3371,7 @@ function openCategoryModalWith(categoryId, cat, isNew) {
 
 function editCategory(categoryId) {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-    db.collection(CAT_COLLECTION).doc(categoryId).get().then(function (doc) {
+    db.collection('categories').doc(categoryId).get().then(function (doc) {
         if (!doc.exists) {
             // A menu-derived (virtual) category: prefill from its name so saving
             // creates a real, editable category document with this id.
@@ -3686,17 +3402,13 @@ function deleteCategory(categoryId) {
         return;
     }
 
-    firestoreGetWithTimeout(db.collection(MENU_COLLECTION).get(), 8000).then(function (snap) {
-        var catLower = normalizeCategoryId(categoryId);
+    firestoreGetWithTimeout(db.collection('menuItems').where('category', '==', categoryId), 8000).then(function (snap) {
         var batch = db.batch();
         snap.forEach(function (doc) {
-            var data = doc.data() || {};
-            if (data.category && normalizeCategoryId(data.category) === catLower) {
-                batch.delete(doc.ref);
-            }
+            batch.delete(doc.ref);
         });
 
-        batch.delete(db.collection(CAT_COLLECTION).doc(categoryId));
+        batch.delete(db.collection('categories').doc(categoryId));
 
         applyWrite(batch.commit(), function () {
             removeCategoryFromCacheAndUi(categoryId);
@@ -3710,156 +3422,18 @@ function deleteCategory(categoryId) {
 }
 
 function removeCategoryFromCacheAndUi(categoryId) {
-    var idLower = normalizeCategoryId(categoryId);
-    var cats = readCachedCategories().filter(function (c) { return normalizeCategoryId(c.id) !== idLower; });
-    safeSetItem(getBranchKey('cachedCategories'), JSON.stringify(cats));
+    var cats = readCachedCategories().filter(function (c) { return c.id !== categoryId; });
+    safeSetItem('cachedCategories', JSON.stringify(cats));
 
     try {
-        var names = JSON.parse(localStorage.getItem(getBranchKey('cachedMenuCategoryNames')) || '[]');
-        var filtered = names.filter(function (n) { return normalizeCategoryId(n) !== idLower; });
-        localStorage.setItem(getBranchKey('cachedMenuCategoryNames'), JSON.stringify(filtered));
+        var names = JSON.parse(localStorage.getItem('cachedMenuCategoryNames') || '[]');
+        var filtered = names.filter(function (n) { return n !== categoryId; });
+        localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(filtered));
     } catch (e) {}
 
     renderCategoriesListNow();
     refreshItemCategoryDropdown();
     refreshCategoryFilterOptions();
-}
-
-/* ============ ONE-TIME CATEGORY CLEANUP ============ */
-/* Run once from admin.html?fixCategories=1 while logged in as admin.
-   Merges mixed-case duplicate category documents into a single lowercase
-   ID and rewrites every menu item's category field to lowercase. */
-
-function maybeRunCategoryCleanup() {
-    if (!window.location.search || !/[?&]fixCategories(?:=1)?(&|$)/.test(window.location.search)) return;
-    whenAdminReady(function () {
-        runCategoryCleanup();
-    });
-}
-
-function chunkBatchOps(ops) {
-    var limit = 450;
-    var i = 0;
-    function next() {
-        if (i >= ops.length) return Promise.resolve();
-        var slice = ops.slice(i, i + limit);
-        i += limit;
-        var b = db.batch();
-        slice.forEach(function (op) {
-            if (op.type === 'delete') b.delete(op.ref);
-            else if (op.type === 'set') b.set(op.ref, op.data);
-            else if (op.type === 'update') b.update(op.ref, op.data);
-        });
-        return b.commit().then(next);
-    }
-    return next();
-}
-
-function runCategoryCleanup() {
-    if (!window.db) {
-        alert('Firebase not ready. Try again.');
-        return;
-    }
-    if (!isAdminAuthenticated()) {
-        alert('Please log in as admin first, then reopen admin.html?fixCategories=1');
-        return;
-    }
-    if (!confirm('Normalize all category IDs to lowercase, merge duplicates, and fix item categories in Firestore?\n\nThis modifies the database. Make a backup first. Continue?')) {
-        return;
-    }
-
-    db.collection(CAT_COLLECTION).get().then(function (catSnap) {
-        var groups = {};
-        catSnap.forEach(function (doc) {
-            var lower = doc.id.toLowerCase();
-            if (!groups[lower]) groups[lower] = [];
-            groups[lower].push({ id: doc.id, data: doc.data() || {}, ref: doc.ref });
-        });
-
-        var catOps = [];
-        Object.keys(groups).forEach(function (lower) {
-            var variants = groups[lower];
-            var canonical = variants.slice().sort(function (a, b) {
-                var ao = (a.data && a.data.order != null) ? 1 : 0;
-                var bo = (b.data && b.data.order != null) ? 1 : 0;
-                return bo - ao;
-            })[0];
-            var canonicalId = lower;
-            variants.forEach(function (v) {
-                if (v.id !== canonicalId) {
-                    catOps.push({ type: 'delete', ref: v.ref });
-                }
-            });
-            if (canonical.id !== canonicalId) {
-                catOps.push({ type: 'set', ref: db.collection(CAT_COLLECTION).doc(canonicalId), data: canonical.data });
-            }
-        });
-
-        return chunkBatchOps(catOps).then(function () {
-            try { localStorage.removeItem(getBranchKey('cachedCategories')); } catch (e) {}
-            try { localStorage.removeItem(getBranchKey('cachedMenuCategoryNames')); } catch (e) {}
-            alert('Category cleanup complete. Reloading admin…');
-            window.location.href = (CURRENT_BRANCH === '2' ? 'admin.html?branch=2' : 'admin.html');
-        });
-    }).catch(function (e) {
-        alert('Cleanup failed: ' + (e && e.message ? e.message : e));
-    });
-}
-
-/* ============ ONE-TIME CATEGORY RENAME ============ */
-/* Run once from admin.html?renameCategory=old:new while logged in as admin.
-   Rewrites all menu items from the old category name to the new one,
-   deletes the old category doc(s), clears caches, and reloads. */
-
-function maybeRunCategoryRename() {
-    if (!window.location.search) return;
-    var m = window.location.search.match(/[?&]renameCategory=([^:]+):([^&]+)/);
-    if (!m) return;
-    var oldName = m[1];
-    var newName = m[2].trim();
-    if (!oldName || !newName || oldName.toLowerCase() === newName.toLowerCase()) return;
-    whenAdminReady(function () {
-        runCategoryRename(oldName, newName);
-    });
-}
-
-function runCategoryRename(oldName, newName) {
-    if (!window.db) {
-        alert('Firebase not ready. Try again.');
-        return;
-    }
-    if (!isAdminAuthenticated()) {
-        alert('Please log in as admin first, then reopen:\nadmin.html?renameCategory=' + encodeURIComponent(oldName + ':' + newName));
-        return;
-    }
-    if (!confirm('Rename category "' + oldName + '" to "' + newName + '"?\n\nThis updates all menu items in Firestore and removes the old category doc. Make a backup first. Continue?')) {
-        return;
-    }
-
-    var oldLower = oldName.toLowerCase();
-    db.collection(MENU_COLLECTION).get().then(function (itemSnap) {
-        var itemOps = [];
-        itemSnap.forEach(function (doc) {
-            var data = doc.data() || {};
-            var cat = data.category;
-            if (!cat || cat.toLowerCase() !== oldLower) return;
-            itemOps.push({ type: 'update', ref: doc.ref, data: { category: newName } });
-        });
-        return chunkBatchOps(itemOps).then(function () {
-            return Promise.all([
-                db.collection(CAT_COLLECTION).doc(oldLower).delete(),
-                oldLower !== oldName ? db.collection(CAT_COLLECTION).doc(oldName).delete() : Promise.resolve()
-            ]);
-        });
-    }).then(function () {
-        try { localStorage.removeItem(getBranchKey('cachedCategories')); } catch (e) {}
-        try { localStorage.removeItem(getBranchKey('cachedMenuCategoryNames')); } catch (e) {}
-        try { localStorage.removeItem(getBranchKey('cachedMenuItems')); } catch (e) {}
-        alert('Category renamed from "' + oldName + '" to "' + newName + '". Reloading…');
-        window.location.href = (CURRENT_BRANCH === '2' ? 'admin.html?branch=2' : 'admin.html');
-    }).catch(function (e) {
-        alert('Rename failed: ' + (e && e.message ? e.message : e));
-    });
 }
 
 /* ============ CASHIER ============ */
@@ -3872,7 +3446,7 @@ function stopCashierListener() {
 }
 
 function invalidateCashierCache() {
-    localStorage.removeItem(getBranchKey('cachedCashierItems'));
+    localStorage.removeItem('cachedCashierItems');
 }
 
 function normalizeCashierItemEntry(it) {
@@ -3892,7 +3466,7 @@ function normalizeCashierItemEntry(it) {
 function getCashierItemsFromLocalStorage() {
     var keys = ['cachedCashierItems', 'cachedMenuItems'];
     for (var i = 0; i < keys.length; i++) {
-        var raw = localStorage.getItem(getBranchKey(keys[i]));
+        var raw = localStorage.getItem(keys[i]);
         if (!raw) continue;
         try {
             var parsed = JSON.parse(raw);
@@ -4084,7 +3658,7 @@ function applyCashierItemsSnap(snap) {
         return;
     }
 var items = normalizeCashierItems(snap);
-safeSetItem(getBranchKey('cachedCashierItems'), JSON.stringify(items));
+safeSetItem('cachedCashierItems', JSON.stringify(items));
     var menuCache = [];
     snap.forEach(function (d) {
         menuCache.push(Object.assign({ id: d.id }, d.data()));
@@ -4116,7 +3690,7 @@ function loadCashierItems() {
 
     stopCashierListener();
 
-    adminGetWithTimeout(db.collection(MENU_COLLECTION), 8000).then(applyCashierItemsSnap).catch(function (e) {
+    adminGetWithTimeout(db.collection('menuItems'), 8000).then(applyCashierItemsSnap).catch(function (e) {
         console.warn('[cashier] get failed:', e.message);
         loadCashierItemsFromCache();
     });
@@ -4133,14 +3707,14 @@ function loadCashierItems() {
                 delete v.id;
                 return { id: id, v: v };
             });
-            safeSetItem(getBranchKey('cachedCashierItems'), JSON.stringify(items));
+            safeSetItem('cachedCashierItems', JSON.stringify(items));
             if (items.length > 0) renderCashierProducts(items);
         }).catch(function (e) {
             console.warn('[cashier] REST fallback:', e.message || e);
         });
     }
 
-    cashierUnsubscribe = db.collection(MENU_COLLECTION).onSnapshot(applyCashierItemsSnap, function (e) {
+    cashierUnsubscribe = db.collection('menuItems').onSnapshot(applyCashierItemsSnap, function (e) {
         console.error('Error loading cashier items:', e);
         loadCashierItemsFromCache();
     });
@@ -4575,7 +4149,7 @@ function populateTestData() {
     
     if (!confirm('This will add sample menu items for each category. Continue?')) return;
     
-    db.collection(CAT_COLLECTION).orderBy('order', 'asc').get().then(function (snap) {
+    db.collection('categories').orderBy('order', 'asc').get().then(function (snap) {
         if (snap.empty) {
             alert('No categories found. Please create categories first.');
             return;
@@ -4648,7 +4222,7 @@ function populateTestData() {
                 createdBy: getCurrentAdminEmail() || ''
             };
             
-            var promise = db.collection(MENU_COLLECTION).add(item).then(function () {
+            var promise = db.collection('menuItems').add(item).then(function () {
                 addedCount++;
                 console.log('Added item for category:', cat.data.name_en);
             }).catch(function (e) {
@@ -4942,257 +4516,235 @@ function setupCafeTimePickers(lang) {
 }
 
 function loadSettings() {
-    var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
-    var adminContent = document.getElementById('adminContent');
-    if (!adminContent) return;
+     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
+      var adminContent = document.getElementById('adminContent');
+      var themeLabels = {
+          ku: { title: 'ڕووکاری ڕەنگ', hint: 'ڕەنگێک هەڵبژێرە بۆ گۆڕینی ڕووکاری داشبۆرد', gold: 'زێڕین', emerald: 'زمروود', sapphire: 'یاقووتی شین', amethyst: 'بەنەوشەیی', ruby: 'یاقووت', sunset: 'خۆرئاوا', rose: 'گوڵی', graphite: 'خۆڵەمێشی', cyan: 'شینی ئاسمانی' },
+          ar: { title: 'سمة الألوان', hint: 'اختر لوناً لتغيير مظهر لوحة التحكم بالكامل', gold: 'ذهبي', emerald: 'زمردي', sapphire: 'أزرق ياقوتي', amethyst: 'بنفسجي', ruby: 'ياقوتي', sunset: 'برتقالي', rose: 'وردي', graphite: 'رمادي', cyan: 'سماوي' },
+          en: { title: 'Color Theme', hint: 'Pick a color to restyle the entire dashboard', gold: 'Gold', emerald: 'Emerald', sapphire: 'Sapphire', amethyst: 'Amethyst', ruby: 'Ruby', sunset: 'Sunset', rose: 'Rose', graphite: 'Graphite', cyan: 'Cyan' }
+      };
+      var TL = themeLabels[localStorage.getItem('selectedLang') || 'ku'] || themeLabels.en;
+      var themes = [
+          { id: 'sapphire', color: '#3B82F6', dark: '#1D4ED8' },
+          { id: 'gold', color: '#D4AF37', dark: '#B8910C' },
+          { id: 'emerald', color: '#10B981', dark: '#047857' },
+          { id: 'amethyst', color: '#8B5CF6', dark: '#6D28D9' },
+          { id: 'ruby', color: '#F43F5E', dark: '#BE123C' },
+          { id: 'sunset', color: '#F97316', dark: '#C2410C' },
+          { id: 'rose', color: '#EC4899', dark: '#BE185D' },
+          { id: 'cyan', color: '#06B6D4', dark: '#0E7490' },
+          { id: 'graphite', color: '#94A3B8', dark: '#475569' }
+      ];
+      var currentAccent = localStorage.getItem('adminAccent') || 'sapphire';
+      var swatchesHtml = themes.map(function (t) {
+          var glow = 'rgba(0,0,0,0.25)';
+          return '<button type="button" class="theme-swatch' + (t.id === currentAccent ? ' active' : '') + '" data-accent="' + t.id + '" ' +
+                 'style="--swatch:' + t.color + ';--swatch-dark:' + t.dark + ';--swatch-glow:' + glow + ';">' +
+                 '<span class="theme-swatch-check">✓</span>' +
+                 '<span class="theme-swatch-dot"></span>' +
+                 '<span class="theme-swatch-name">' + (TL[t.id] || t.id) + '</span>' +
+                 '</button>';
+      }).join('');
 
-    var settingsLoadId = (window._settingsLoadId = (window._settingsLoadId || 0) + 1);
+      var settingsLang = localStorage.getItem('selectedLang') || 'ku';
+      var openTimeStored = localStorage.getItem('cafeOpenTime') || '14:00';
+      var closeTimeStored = localStorage.getItem('cafeCloseTime') || '02:00';
 
-    var themeLabels = {
-        ku: { title: 'ڕووکاری ڕەنگ', hint: 'ڕەنگێک هەڵبژێرە بۆ گۆڕینی ڕووکاری داشبۆرد', gold: 'زێڕین', emerald: 'زمروود', sapphire: 'یاقووتی شین', amethyst: 'بەنەوشەیی', ruby: 'یاقووت', sunset: 'خۆرئاوا', rose: 'گوڵی', graphite: 'خۆڵەمێشی', cyan: 'شینی ئاسمانی' },
-        ar: { title: 'سمة الألوان', hint: 'اختر لوناً لتغيير مظهر لوحة التحكم بالكامل', gold: 'ذهبي', emerald: 'زمردي', sapphire: 'أزرق ياقوتي', amethyst: 'بنفسجي', ruby: 'ياقوتي', sunset: 'برتقالي', rose: 'وردي', graphite: 'رمادي', cyan: 'سماوي' },
-        en: { title: 'Color Theme', hint: 'Pick a color to restyle the entire dashboard', gold: 'Gold', emerald: 'Emerald', sapphire: 'Sapphire', amethyst: 'Amethyst', ruby: 'Ruby', sunset: 'Sunset', rose: 'Rose', graphite: 'Graphite', cyan: 'Cyan' }
-    };
-    var TL = themeLabels[localStorage.getItem('selectedLang') || 'ku'] || themeLabels.en;
-    var themes = [
-        { id: 'sapphire', color: '#3B82F6', dark: '#1D4ED8' },
-        { id: 'gold', color: '#D4AF37', dark: '#B8910C' },
-        { id: 'emerald', color: '#10B981', dark: '#047857' },
-        { id: 'amethyst', color: '#8B5CF6', dark: '#6D28D9' },
-        { id: 'ruby', color: '#F43F5E', dark: '#BE123C' },
-        { id: 'sunset', color: '#F97316', dark: '#C2410C' },
-        { id: 'rose', color: '#EC4899', dark: '#BE185D' },
-        { id: 'cyan', color: '#06B6D4', dark: '#0E7490' },
-        { id: 'graphite', color: '#94A3B8', dark: '#475569' }
-    ];
-    var currentAccent = localStorage.getItem('adminAccent') || 'sapphire';
-    var swatchesHtml = themes.map(function (t) {
-        var glow = 'rgba(0,0,0,0.25)';
-        return '<button type="button" class="theme-swatch' + (t.id === currentAccent ? ' active' : '') + '" data-accent="' + t.id + '" ' +
-               'style="--swatch:' + t.color + ';--swatch-dark:' + t.dark + ';--swatch-glow:' + glow + ';">' +
-               '<span class="theme-swatch-check">✓</span>' +
-               '<span class="theme-swatch-dot"></span>' +
-               '<span class="theme-swatch-name">' + escapeHtmlText(TL[t.id] || t.id) + '</span>' +
-               '</button>';
-    }).join('');
+      adminContent.innerHTML =
+          '<div class="card settings-contact-card">' +
+              '<h2>' + S.settings + '</h2>' +
+              '<div class="settings-social-field">' +
+                  '<span class="settings-social-icon settings-social-icon--cafe" aria-hidden="true"><i class="fa-solid fa-mug-hot"></i></span>' +
+                  '<div class="settings-social-input-wrap">' +
+                      '<label for="cafeName">' + S.cafeName + '</label>' +
+                      '<input type="text" id="cafeName" value="' + (localStorage.getItem('cafeName') || S.siteName) + '">' +
+                  '</div>' +
+              '</div>' +
+              '<div class="settings-social-field">' +
+                  '<span class="settings-social-icon settings-social-icon--contact" aria-hidden="true">' +
+                      '<i class="fa-solid fa-phone"></i>' +
+                      '<i class="fa-brands fa-whatsapp"></i>' +
+                  '</span>' +
+                  '<div class="settings-social-input-wrap">' +
+                      '<label for="whatsappPhone">' + S.callWhatsAppNumber + '</label>' +
+                      '<input type="tel" id="whatsappPhone" value="' + (localStorage.getItem('whatsappPhone') || '9647506454656') + '" placeholder="' + S.phonePlaceholder + '">' +
+                  '</div>' +
+              '</div>' +
+              '<div class="settings-social-field">' +
+                  '<span class="settings-social-icon settings-social-icon--maps" aria-hidden="true"><i class="fa-solid fa-map-location-dot"></i></span>' +
+                  '<div class="settings-social-input-wrap">' +
+                      '<label for="cafeLocationUrl">' + S.locationMapsUrl + '</label>' +
+                      '<input type="url" id="cafeLocationUrl" value="' + (localStorage.getItem('cafeLocationUrl') || 'https://maps.app.goo.gl/mmi5iv7mnGKxKZoq9?g_st=ic') + '" placeholder="https://maps.google.com/...">' +
+                  '</div>' +
+              '</div>' +
+              '<div class="settings-social-field">' +
+                  '<span class="settings-social-icon settings-social-icon--pin" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></span>' +
+                  '<div class="settings-social-input-wrap">' +
+                      '<label for="cafeLocationLabel">' + S.locationLabelField + '</label>' +
+                      '<input type="text" id="cafeLocationLabel" value="' + (localStorage.getItem('cafeLocationLabel') || 'بەحرکە-مجەمع') + '">' +
+                  '</div>' +
+              '</div>' +
+              '<div class="settings-social-field">' +
+                  '<span class="settings-social-icon settings-social-icon--currency" aria-hidden="true">' +
+                      '<i class="fa-solid fa-coins"></i>' +
+                  '</span>' +
+                  '<div class="settings-social-input-wrap">' +
+                      '<label for="cafeCurrency">' + S.currency + '</label>' +
+                      '<input type="text" id="cafeCurrency" value="IQD" readonly>' +
+                  '</div>' +
+              '</div>' +
+               '<div class="settings-social-field settings-hours-field">' +
+                   '<span class="settings-social-icon settings-social-icon--hours" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>' +
+                   '<div class="settings-social-input-wrap settings-hours-block">' +
+                       '<div class="settings-hours-row">' +
+                           '<div class="settings-hours-input">' +
+                               '<label>' + S.cafeOpenTimeLabel + '</label>' +
+                               '<input type="time" id="cafeOpenTime" class="cafe-time-input" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(openTimeStored, '14:00') : openTimeStored) + '">' +
+                           '</div>' +
+                           '<div class="settings-hours-input">' +
+                               '<label>' + S.cafeCloseTimeLabel + '</label>' +
+                               '<input type="time" id="cafeCloseTime" class="cafe-time-input" value="' + (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(closeTimeStored, '02:00') : closeTimeStored) + '">' +
+                           '</div>' +
+                       '</div>' +
+                   '</div>' +
+               '</div>' +
+          '</div>' +
+          '<div class="card settings-social-card" style="margin-top:20px;">' +
+              '<div class="settings-section-label"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> ' + S.socialLinks + '</div>' +
+              '<div class="settings-section-hint">' + S.socialLinksHint + '</div>' +
+              '<div class="settings-social-field">' +
+                  '<span class="settings-social-icon settings-social-icon--instagram" aria-hidden="true"><i class="fa-brands fa-instagram"></i></span>' +
+                  '<div class="settings-social-input-wrap">' +
+                      '<label for="cafeInstagram">' + S.instagramUrl + '</label>' +
+                      '<input type="url" id="cafeInstagram" value="' + (localStorage.getItem('cafeInstagram') || '') + '" placeholder="https://instagram.com/...">' +
+                  '</div>' +
+              '</div>' +
+              '<div class="settings-social-field">' +
+                  '<span class="settings-social-icon settings-social-icon--tiktok" aria-hidden="true"><i class="fa-brands fa-tiktok"></i></span>' +
+                  '<div class="settings-social-input-wrap">' +
+                      '<label for="cafeTiktok">' + S.tiktokUrl + '</label>' +
+                      '<input type="url" id="cafeTiktok" value="' + (localStorage.getItem('cafeTiktok') || '') + '" placeholder="https://tiktok.com/@...">' +
+                  '</div>' +
+              '</div>' +
+              '<div class="settings-social-field">' +
+                  '<span class="settings-social-icon settings-social-icon--snapchat" aria-hidden="true"><i class="fa-brands fa-snapchat"></i></span>' +
+                  '<div class="settings-social-input-wrap">' +
+                      '<label for="cafeSnapchat">' + S.snapchatUrl + '</label>' +
+                      '<input type="url" id="cafeSnapchat" value="' + (localStorage.getItem('cafeSnapchat') || '') + '" placeholder="https://snapchat.com/add/...">' +
+                  '</div>' +
+              '</div>' +
+              '<div class="settings-social-field">' +
+                  '<span class="settings-social-icon settings-social-icon--facebook" aria-hidden="true"><i class="fa-brands fa-facebook-f"></i></span>' +
+                  '<div class="settings-social-input-wrap">' +
+                      '<label for="cafeFacebook">' + S.facebookUrl + '</label>' +
+                      '<input type="url" id="cafeFacebook" value="' + (localStorage.getItem('cafeFacebook') || '') + '" placeholder="https://facebook.com/...">' +
+                  '</div>' +
+              '</div>' +
+'<button class="btn-primary" id="saveSettingsBtn" style="margin-top:8px;">' + S.saveSettings + '</button>' +
+            '</div>' +
+            '<div class="card" style="margin-top:20px;">' +
+                '<div class="settings-section-label">🎨 ' + TL.title + '</div>' +
+              '<div class="settings-section-hint">' + TL.hint + '</div>' +
+              '<div class="theme-picker" id="themePicker">' + swatchesHtml + '</div>' +
+           '</div>';
 
-    var openTimeStored = localStorage.getItem('cafeOpenTime') || '14:00';
-    var closeTimeStored = localStorage.getItem('cafeCloseTime') || '02:00';
-    var openTimeValue = typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(openTimeStored, '14:00') : openTimeStored;
-    var closeTimeValue = typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(closeTimeStored, '02:00') : closeTimeStored;
+       var themePicker = document.getElementById('themePicker');
+      if (themePicker) {
+          themePicker.addEventListener('click', function (e) {
+              var btn = e.target.closest('.theme-swatch');
+              if (!btn) return;
+              var accent = btn.getAttribute('data-accent');
+              applyAdminAccent(accent);
+              themePicker.querySelectorAll('.theme-swatch').forEach(function (s) {
+                  s.classList.toggle('active', s === btn);
+              });
+          });
+      }
 
-    function settingsVal(key, fallback) {
-        var raw = localStorage.getItem(key);
-        if (raw == null || String(raw).trim() === '') raw = fallback == null ? '' : fallback;
-        return escapeHtmlAttr(raw);
-    }
+      var saveBtn = document.getElementById('saveSettingsBtn');
+      if (saveBtn) {
+          saveBtn.addEventListener('click', function () {
+              var cafeName = document.getElementById('cafeName').value.trim();
+              var whatsappPhone = typeof normalizeWhatsAppPhone === 'function'
+                  ? normalizeWhatsAppPhone(document.getElementById('whatsappPhone').value.trim())
+                  : document.getElementById('whatsappPhone').value.trim();
+              var cafeLocationUrl = document.getElementById('cafeLocationUrl').value.trim();
+              var cafeLocationLabel = document.getElementById('cafeLocationLabel').value.trim();
+              var cafeInstagram = typeof normalizeSocialUrl === 'function'
+                  ? normalizeSocialUrl(document.getElementById('cafeInstagram').value.trim(), 'instagram')
+                  : document.getElementById('cafeInstagram').value.trim();
+              var cafeTiktok = typeof normalizeSocialUrl === 'function'
+                  ? normalizeSocialUrl(document.getElementById('cafeTiktok').value.trim(), 'tiktok')
+                  : document.getElementById('cafeTiktok').value.trim();
+              var cafeSnapchat = typeof normalizeSocialUrl === 'function'
+                  ? normalizeSocialUrl(document.getElementById('cafeSnapchat').value.trim(), 'snapchat')
+                  : document.getElementById('cafeSnapchat').value.trim();
+              var cafeFacebook = typeof normalizeSocialUrl === 'function'
+                  ? normalizeSocialUrl(document.getElementById('cafeFacebook').value.trim(), 'facebook')
+                  : document.getElementById('cafeFacebook').value.trim();
+              var openInput = document.getElementById('cafeOpenTime');
+              var closeInput = document.getElementById('cafeCloseTime');
+              var cafeOpenTime = openInput ? openInput.value.trim() : '';
+              var cafeCloseTime = closeInput ? closeInput.value.trim() : '';
+              if (!cafeOpenTime) cafeOpenTime = '14:00';
+              if (!cafeCloseTime) cafeCloseTime = '02:00';
+              if (typeof normalizeCafeTimeValue === 'function') {
+                  cafeOpenTime = normalizeCafeTimeValue(cafeOpenTime, '14:00');
+                  cafeCloseTime = normalizeCafeTimeValue(cafeCloseTime, '02:00');
+              }
 
-    adminContent.innerHTML =
-        '<div class="card settings-contact-card">' +
-            '<h2>' + escapeHtmlText(S.settings) + '</h2>' +
-            '<div class="settings-social-field">' +
-                '<span class="settings-social-icon settings-social-icon--cafe" aria-hidden="true"><i class="fa-solid fa-mug-hot"></i></span>' +
-                '<div class="settings-social-input-wrap">' +
-                    '<label for="cafeName">' + escapeHtmlText(S.cafeName) + '</label>' +
-                    '<input type="text" id="cafeName" value="' + settingsVal('cafeName', S.siteName) + '">' +
-                '</div>' +
-            '</div>' +
-            '<div class="settings-social-field">' +
-                '<span class="settings-social-icon settings-social-icon--contact" aria-hidden="true">' +
-                    '<i class="fa-solid fa-phone"></i>' +
-                    '<i class="fa-brands fa-whatsapp"></i>' +
-                '</span>' +
-                '<div class="settings-social-input-wrap">' +
-                    '<label for="whatsappPhone">' + escapeHtmlText(S.callWhatsAppNumber) + '</label>' +
-                    '<input type="tel" id="whatsappPhone" value="' + settingsVal('whatsappPhone', '9647506454656') + '" placeholder="' + escapeHtmlAttr(S.phonePlaceholder) + '">' +
-                '</div>' +
-            '</div>' +
-            '<div class="settings-social-field">' +
-                '<span class="settings-social-icon settings-social-icon--maps" aria-hidden="true"><i class="fa-solid fa-map-location-dot"></i></span>' +
-                '<div class="settings-social-input-wrap">' +
-                    '<label for="cafeLocationUrl">' + escapeHtmlText(S.locationMapsUrl) + '</label>' +
-                    '<input type="url" id="cafeLocationUrl" value="' + settingsVal('cafeLocationUrl', 'https://maps.app.goo.gl/mmi5iv7mnGKxKZoq9?g_st=ic') + '" placeholder="https://maps.google.com/...">' +
-                '</div>' +
-            '</div>' +
-            '<div class="settings-social-field">' +
-                '<span class="settings-social-icon settings-social-icon--pin" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></span>' +
-                '<div class="settings-social-input-wrap">' +
-                    '<label for="cafeLocationLabel">' + escapeHtmlText(S.locationLabelField) + '</label>' +
-                    '<input type="text" id="cafeLocationLabel" value="' + settingsVal('cafeLocationLabel', 'بەحرکە-مجەمع') + '">' +
-                '</div>' +
-            '</div>' +
-            '<div class="settings-social-field">' +
-                '<span class="settings-social-icon settings-social-icon--currency" aria-hidden="true">' +
-                    '<i class="fa-solid fa-coins"></i>' +
-                '</span>' +
-                '<div class="settings-social-input-wrap">' +
-                    '<label for="cafeCurrency">' + escapeHtmlText(S.currency) + '</label>' +
-                    '<input type="text" id="cafeCurrency" value="IQD" readonly>' +
-                '</div>' +
-            '</div>' +
-            '<div class="settings-social-field settings-hours-field">' +
-                '<span class="settings-social-icon settings-social-icon--hours" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>' +
-                '<div class="settings-social-input-wrap settings-hours-block">' +
-                    '<div class="settings-hours-row">' +
-                        '<div class="settings-hours-input">' +
-                            '<label for="cafeOpenTime">' + escapeHtmlText(S.cafeOpenTimeLabel) + '</label>' +
-                            '<input type="time" id="cafeOpenTime" class="cafe-time-input" value="' + escapeHtmlAttr(openTimeValue) + '">' +
-                        '</div>' +
-                        '<div class="settings-hours-input">' +
-                            '<label for="cafeCloseTime">' + escapeHtmlText(S.cafeCloseTimeLabel) + '</label>' +
-                            '<input type="time" id="cafeCloseTime" class="cafe-time-input" value="' + escapeHtmlAttr(closeTimeValue) + '">' +
-                        '</div>' +
-                    '</div>' +
-                '</div>' +
-            '</div>' +
-        '</div>' +
-        '<div class="card settings-social-card" style="margin-top:20px;">' +
-            '<div class="settings-section-label"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> ' + escapeHtmlText(S.socialLinks) + '</div>' +
-            '<div class="settings-section-hint">' + escapeHtmlText(S.socialLinksHint) + '</div>' +
-            '<div class="settings-social-field">' +
-                '<span class="settings-social-icon settings-social-icon--instagram" aria-hidden="true"><i class="fa-brands fa-instagram"></i></span>' +
-                '<div class="settings-social-input-wrap">' +
-                    '<label for="cafeInstagram">' + escapeHtmlText(S.instagramUrl) + '</label>' +
-                    '<input type="url" id="cafeInstagram" value="' + settingsVal('cafeInstagram', '') + '" placeholder="https://instagram.com/...">' +
-                '</div>' +
-            '</div>' +
-            '<div class="settings-social-field">' +
-                '<span class="settings-social-icon settings-social-icon--tiktok" aria-hidden="true"><i class="fa-brands fa-tiktok"></i></span>' +
-                '<div class="settings-social-input-wrap">' +
-                    '<label for="cafeTiktok">' + escapeHtmlText(S.tiktokUrl) + '</label>' +
-                    '<input type="url" id="cafeTiktok" value="' + settingsVal('cafeTiktok', '') + '" placeholder="https://tiktok.com/@...">' +
-                '</div>' +
-            '</div>' +
-            '<div class="settings-social-field">' +
-                '<span class="settings-social-icon settings-social-icon--snapchat" aria-hidden="true"><i class="fa-brands fa-snapchat"></i></span>' +
-                '<div class="settings-social-input-wrap">' +
-                    '<label for="cafeSnapchat">' + escapeHtmlText(S.snapchatUrl) + '</label>' +
-                    '<input type="url" id="cafeSnapchat" value="' + settingsVal('cafeSnapchat', '') + '" placeholder="https://snapchat.com/add/...">' +
-                '</div>' +
-            '</div>' +
-            '<div class="settings-social-field">' +
-                '<span class="settings-social-icon settings-social-icon--facebook" aria-hidden="true"><i class="fa-brands fa-facebook-f"></i></span>' +
-                '<div class="settings-social-input-wrap">' +
-                    '<label for="cafeFacebook">' + escapeHtmlText(S.facebookUrl) + '</label>' +
-                    '<input type="url" id="cafeFacebook" value="' + settingsVal('cafeFacebook', '') + '" placeholder="https://facebook.com/...">' +
-                '</div>' +
-            '</div>' +
-            '<button type="button" class="btn-primary" id="saveSettingsBtn" style="margin-top:8px;">' + escapeHtmlText(S.saveSettings) + '</button>' +
-        '</div>' +
-        '<div class="card" style="margin-top:20px;">' +
-            '<div class="settings-section-label">🎨 ' + escapeHtmlText(TL.title) + '</div>' +
-            '<div class="settings-section-hint">' + escapeHtmlText(TL.hint) + '</div>' +
-            '<div class="theme-picker" id="themePicker">' + swatchesHtml + '</div>' +
-        '</div>';
+              function storeSetting(key, value) {
+                  if (value == null || String(value).trim() === '') {
+                      localStorage.removeItem(key);
+                  } else {
+                      localStorage.setItem(key, String(value).trim());
+                  }
+              }
 
-    function markSettingsDirty(e) {
-        var el = e && e.target;
-        if (el && el.tagName === 'INPUT') el.setAttribute('data-dirty', '1');
-    }
-    adminContent.addEventListener('input', markSettingsDirty);
-    adminContent.addEventListener('change', markSettingsDirty);
-
-    var themePicker = document.getElementById('themePicker');
-    if (themePicker) {
-        themePicker.addEventListener('click', function (e) {
-            var btn = e.target.closest('.theme-swatch');
-            if (!btn) return;
-            var accent = btn.getAttribute('data-accent');
-            applyAdminAccent(accent);
-            themePicker.querySelectorAll('.theme-swatch').forEach(function (s) {
-                s.classList.toggle('active', s === btn);
-            });
-        });
-    }
-
-    function readInputValue(id) {
-        var el = document.getElementById(id);
-        return el ? String(el.value || '').trim() : '';
-    }
-
-    function setInputValue(id, value) {
-        var el = document.getElementById(id);
-        if (el) el.value = value == null ? '' : String(value);
-    }
-
-    var saveBtn = document.getElementById('saveSettingsBtn');
-    if (saveBtn) {
-        saveBtn.addEventListener('click', function () {
+               storeSetting('cafeName', cafeName);
+               storeSetting('whatsappPhone', whatsappPhone);
+               storeSetting('cafeLocationUrl', cafeLocationUrl);
+storeSetting('cafeLocationLabel', cafeLocationLabel);
+            storeSetting('cafeInstagram', cafeInstagram);
+            storeSetting('cafeTiktok', cafeTiktok);
+            storeSetting('cafeSnapchat', cafeSnapchat);
+            storeSetting('cafeFacebook', cafeFacebook);
+            storeSetting('cafeOpenTime', cafeOpenTime);
+            storeSetting('cafeCloseTime', cafeCloseTime);
             try {
-                var cafeName = readInputValue('cafeName');
-                var whatsappPhone = typeof normalizeWhatsAppPhone === 'function'
-                    ? normalizeWhatsAppPhone(readInputValue('whatsappPhone'))
-                    : readInputValue('whatsappPhone');
-                var cafeLocationUrl = readInputValue('cafeLocationUrl');
-                var cafeLocationLabel = readInputValue('cafeLocationLabel');
-                var cafeInstagram = typeof normalizeSocialUrl === 'function'
-                    ? normalizeSocialUrl(readInputValue('cafeInstagram'), 'instagram')
-                    : readInputValue('cafeInstagram');
-                var cafeTiktok = typeof normalizeSocialUrl === 'function'
-                    ? normalizeSocialUrl(readInputValue('cafeTiktok'), 'tiktok')
-                    : readInputValue('cafeTiktok');
-                var cafeSnapchat = typeof normalizeSocialUrl === 'function'
-                    ? normalizeSocialUrl(readInputValue('cafeSnapchat'), 'snapchat')
-                    : readInputValue('cafeSnapchat');
-                var cafeFacebook = typeof normalizeSocialUrl === 'function'
-                    ? normalizeSocialUrl(readInputValue('cafeFacebook'), 'facebook')
-                    : readInputValue('cafeFacebook');
-                var cafeOpenTime = readInputValue('cafeOpenTime') || '14:00';
-                var cafeCloseTime = readInputValue('cafeCloseTime') || '02:00';
-                if (typeof normalizeCafeTimeValue === 'function') {
-                    cafeOpenTime = normalizeCafeTimeValue(cafeOpenTime, '14:00');
-                    cafeCloseTime = normalizeCafeTimeValue(cafeCloseTime, '02:00');
-                }
+                   localStorage.setItem('cafeSettingsUpdatedAt', String(Date.now()));
+               } catch (e) {}
 
-                function storeSetting(key, value) {
-                    if (value == null || String(value).trim() === '') {
-                        localStorage.removeItem(key);
-                    } else {
-                        localStorage.setItem(key, String(value).trim());
-                    }
-                }
+              document.getElementById('whatsappPhone').value = whatsappPhone;
+              document.getElementById('cafeInstagram').value = cafeInstagram;
+              document.getElementById('cafeTiktok').value = cafeTiktok;
+              document.getElementById('cafeSnapchat').value = cafeSnapchat;
+              document.getElementById('cafeFacebook').value = cafeFacebook;
+              var selectedLang = localStorage.getItem('selectedLang') || 'ku';
+               var openHiddenSave = document.getElementById('cafeOpenTime');
+               var closeHiddenSave = document.getElementById('cafeCloseTime');
+               if (openHiddenSave) openHiddenSave.value = cafeOpenTime;
+               if (closeHiddenSave) closeHiddenSave.value = cafeCloseTime;
 
-                storeSetting('cafeName', cafeName);
-                storeSetting('whatsappPhone', whatsappPhone);
-                storeSetting('cafeLocationUrl', cafeLocationUrl);
-                storeSetting('cafeLocationLabel', cafeLocationLabel);
-                storeSetting('cafeInstagram', cafeInstagram);
-                storeSetting('cafeTiktok', cafeTiktok);
-                storeSetting('cafeSnapchat', cafeSnapchat);
-                storeSetting('cafeFacebook', cafeFacebook);
-                storeSetting('cafeOpenTime', cafeOpenTime);
-                storeSetting('cafeCloseTime', cafeCloseTime);
-                try {
-                    localStorage.setItem('cafeSettingsUpdatedAt', String(Date.now()));
-                } catch (e) {}
+              var settingsPayload = {
+                  cafeName: cafeName,
+                  whatsappPhone: whatsappPhone,
+                  cafeLocationUrl: cafeLocationUrl,
+                  cafeLocationLabel: cafeLocationLabel,
+                  cafeInstagram: cafeInstagram,
+                  cafeTiktok: cafeTiktok,
+                  cafeSnapchat: cafeSnapchat,
+                  cafeFacebook: cafeFacebook,
+                  cafeOpenTime: cafeOpenTime,
+                  cafeCloseTime: cafeCloseTime
+              };
 
-                setInputValue('whatsappPhone', whatsappPhone);
-                setInputValue('cafeInstagram', cafeInstagram);
-                setInputValue('cafeTiktok', cafeTiktok);
-                setInputValue('cafeSnapchat', cafeSnapchat);
-                setInputValue('cafeFacebook', cafeFacebook);
-                setInputValue('cafeOpenTime', cafeOpenTime);
-                setInputValue('cafeCloseTime', cafeCloseTime);
-
-                var settingsPayload = {
-                    cafeName: cafeName,
-                    whatsappPhone: whatsappPhone,
-                    cafeLocationUrl: cafeLocationUrl,
-                    cafeLocationLabel: cafeLocationLabel,
-                    cafeInstagram: cafeInstagram,
-                    cafeTiktok: cafeTiktok,
-                    cafeSnapchat: cafeSnapchat,
-                    cafeFacebook: cafeFacebook,
-                    cafeOpenTime: cafeOpenTime,
-                    cafeCloseTime: cafeCloseTime
-                };
-
-                if (typeof saveCafeSettingsToFirestore === 'function') {
+               if (typeof saveCafeSettingsToFirestore === 'function') {
                     saveCafeSettingsToFirestore(settingsPayload, function (err) {
                         if (err) {
                             var msg = (err && err.message ? String(err.message) : String(err)).toLowerCase();
                             if (msg.indexOf('permission') !== -1 || msg.indexOf('insufficient') !== -1 || msg.indexOf('denied') !== -1) {
-                                alert('⚠️ Settings saved locally only.\n\nFirestore WRITE was DENIED. Fix:\n1) In Firebase Console → project shawarma-demashq-menu → Firestore → Rules tab, paste the rules and click PUBLISH.\n2) Make sure you are logged in as admin.\n\n(' + (err && err.message ? err.message : err) + ')');
+                                 alert('⚠️ Settings saved locally only.\n\nFirestore WRITE was DENIED. Fix:\n1) In Firebase Console → project shawarma-demashq-menu → Firestore → Rules tab, paste the rules and click PUBLISH.\n2) Make sure you are logged in as admin.\n\n(' + (err && err.message ? err.message : err) + ')');
                             } else {
                                 alert('⚠️ ' + S.settingsSaved + '\n\nCloud sync failed: ' + (err && err.message ? err.message : err) + '\n\nChanges saved locally only.');
                             }
@@ -5203,54 +4755,37 @@ function loadSettings() {
                 } else {
                     alert(S.settingsSaved);
                 }
-            } catch (err) {
-                console.error('saveSettings error:', err);
-                alert((S.errorPrefix || 'Error:') + ' ' + (err && err.message ? err.message : err));
-            }
-        });
-    }
+          });
+      }
 
-    if (typeof loadCafeSettingsFromFirestore === 'function') {
-        loadCafeSettingsFromFirestore(function () {
-            if (settingsLoadId !== window._settingsLoadId) return;
-            if (!document.getElementById('saveSettingsBtn')) return;
+      if (typeof loadCafeSettingsFromFirestore === 'function') {
+          loadCafeSettingsFromFirestore(function () {
+              var fields = {
+                  cafeName: 'cafeName',
+                  whatsappPhone: 'whatsappPhone',
+                  cafeLocationUrl: 'cafeLocationUrl',
+                  cafeLocationLabel: 'cafeLocationLabel',
+                  cafeInstagram: 'cafeInstagram',
+                  cafeTiktok: 'cafeTiktok',
+                  cafeSnapchat: 'cafeSnapchat'
+              };
+              Object.keys(fields).forEach(function (storageKey) {
+                  var input = document.getElementById(fields[storageKey]);
+                  if (!input) return;
+                  var value = localStorage.getItem(storageKey) || input.value || '';
+                  if (storageKey === 'whatsappPhone' && typeof normalizeWhatsAppPhone === 'function') {
+                      value = normalizeWhatsAppPhone(value);
+                  }
+                  input.value = value;
+              });
+              var openLoaded = document.getElementById('cafeOpenTime');
+              var closeLoaded = document.getElementById('cafeCloseTime');
+              if (openLoaded) openLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeOpenTime') || '14:00', '14:00') : (localStorage.getItem('cafeOpenTime') || '14:00'));
+              if (closeLoaded) closeLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeCloseTime') || '02:00', '02:00') : (localStorage.getItem('cafeCloseTime') || '02:00'));
+          });
+      }
 
-            var fields = {
-                cafeName: 'cafeName',
-                whatsappPhone: 'whatsappPhone',
-                cafeLocationUrl: 'cafeLocationUrl',
-                cafeLocationLabel: 'cafeLocationLabel',
-                cafeInstagram: 'cafeInstagram',
-                cafeTiktok: 'cafeTiktok',
-                cafeSnapchat: 'cafeSnapchat',
-                cafeFacebook: 'cafeFacebook'
-            };
-            Object.keys(fields).forEach(function (storageKey) {
-                var input = document.getElementById(fields[storageKey]);
-                if (!input) return;
-                if (input.getAttribute('data-dirty') === '1') return;
-                if (document.activeElement === input) return;
-                var value = localStorage.getItem(storageKey) || '';
-                if (storageKey === 'whatsappPhone' && typeof normalizeWhatsAppPhone === 'function') {
-                    value = normalizeWhatsAppPhone(value || input.value || '');
-                }
-                if (value !== '') input.value = value;
-            });
-            var openLoaded = document.getElementById('cafeOpenTime');
-            var closeLoaded = document.getElementById('cafeCloseTime');
-            if (openLoaded && openLoaded.getAttribute('data-dirty') !== '1' && document.activeElement !== openLoaded) {
-                openLoaded.value = (typeof normalizeCafeTimeValue === 'function'
-                    ? normalizeCafeTimeValue(localStorage.getItem('cafeOpenTime') || '14:00', '14:00')
-                    : (localStorage.getItem('cafeOpenTime') || '14:00'));
-            }
-            if (closeLoaded && closeLoaded.getAttribute('data-dirty') !== '1' && document.activeElement !== closeLoaded) {
-                closeLoaded.value = (typeof normalizeCafeTimeValue === 'function'
-                    ? normalizeCafeTimeValue(localStorage.getItem('cafeCloseTime') || '02:00', '02:00')
-                    : (localStorage.getItem('cafeCloseTime') || '02:00'));
-            }
-        });
-    }
-}
+ }
 
 
  /* ============ EXPENSES ============ */
@@ -5520,9 +5055,7 @@ function loadSettings() {
          '<div id="expenseModal" class="modal-overlay">' +
              '<div class="modal expense-modal">' +
                  '<div class="modal-content">' +
-                     '<button class="modal-close" id="expenseModalClose" aria-label="Close">' +
-                         '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
-                     '</button>' +
+                     '<span class="modal-close" id="expenseModalClose">&times;</span>' +
                      '<h2 id="expenseModalTitle">' + S.addExpense + '</h2>' +
                      '<form id="expenseForm" novalidate>' +
                          '<div class="form-group">' +
@@ -5817,4 +5350,3 @@ function handleLogout() {
         window.location.href = 'login.html';
     }
 }
-
