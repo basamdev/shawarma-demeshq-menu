@@ -343,7 +343,7 @@ function backfillCreatedByForCurrentAdmin() {
 
 function getItemDocsFromLocalCache() {
     return readCachedMenuItemsFlat()
-        .filter(function (it) { return it && it.id && it.category && it.category.toLowerCase().trim() !== 'water'; })
+        .filter(function (it) { return it && it.id; })
         .map(function (it) {
             var data = Object.assign({}, it);
             var id = data.id;
@@ -518,10 +518,15 @@ function warmAdminOfflineCache(done) {
         });
         writeCachedMenuItemsFlat(menu);
     }).catch(function () { }));
-    tasks.push(db.collection(window.CAT_COLLECTION).orderBy('order', 'asc').get().then(function (snap) {
+    tasks.push(db.collection(window.CAT_COLLECTION).get().then(function (snap) {
         var categories = [];
         snap.forEach(function (d) {
             categories.push({ id: d.id, data: d.data() });
+        });
+        categories.sort(function (a, b) {
+            var ao = (a.data && a.data.order != null) ? a.data.order : 999999;
+            var bo = (b.data && b.data.order != null) ? b.data.order : 999999;
+            return ao - bo;
         });
         safeSetItem(CACHE_KEY_CATEGORIES, JSON.stringify(categories));
     }).catch(function () { }));
@@ -2075,8 +2080,6 @@ function stopItemsListener() {
 function collectItemDocsFromSnap(snap) {
     var docs = [];
     snap.forEach(function (d) {
-        var data = d.data();
-        if (data.category && data.category.toLowerCase().trim() === 'water') return;
         docs.push(d);
     });
     return docs;
@@ -2089,12 +2092,16 @@ function filterItemDocs(docs, searchTerm, cat) {
         var term = searchTerm.toLowerCase();
         filtered = filtered.filter(function (d) {
             var item = d.data();
-            var name = (item['name_' + lang] || item.name_en || '').toLowerCase();
+            var name = (item['name_' + lang] || item.name_ku || item.name_ar || item.name_en || '').toLowerCase();
             return name.indexOf(term) !== -1;
         });
     }
     if (cat && cat !== 'all') {
-        filtered = filtered.filter(function (d) { return d.data().category === cat; });
+        var catNorm = cat.toLowerCase().trim();
+        filtered = filtered.filter(function (d) {
+            var itemCat = (d.data().category || '').toLowerCase().trim();
+            return itemCat === catNorm;
+        });
     }
     return filtered;
 }
@@ -2161,6 +2168,11 @@ function startItemsListener() {
     }
 
     function applyItemsSnap(snap) {
+        if (snap && snap.docs) {
+            console.log(`[Firestore Items Total]: ${snap.docs.length}`);
+        } else if (snap && typeof snap.size === 'number') {
+            console.log(`[Firestore Items Total]: ${snap.size}`);
+        }
         if (snap.empty) {
             if (hydrateItemsUiFromCache()) return;
             if (isFirestoreCacheEmptySnap(snap)) return;
@@ -2183,7 +2195,7 @@ function startItemsListener() {
             cashierCache.push({ id: d.id, v: data });
             menuCache.push(Object.assign({ id: d.id }, data));
         });
-        safeSetItem('cachedCashierItems', JSON.stringify(cashierCache));
+        safeSetItem(CACHE_KEY_CASHIER_ITEMS, JSON.stringify(cashierCache));
         writeCachedMenuItemsFlat(menuCache);
 
         var catNames = {};
@@ -2234,18 +2246,20 @@ function startItemsListener() {
 function loadItemsList() {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     backfillCreatedByForCurrentAdmin();
-    if (hydrateItemsUiFromCache()) {
-        loadCategoryFilter();
-        return;
-    }
+    hydrateItemsUiFromCache();
+    loadCategoryFilter();
     if (!window.db) {
         var el = document.getElementById('itemsList');
-        if (el) el.innerHTML = '<p>' + S.noItemsFound + '</p>';
+        if (el && !_itemsSnapDocs.length) el.innerHTML = '<p>' + S.noItemsFound + '</p>';
         return;
     }
     adminGetWithTimeout(db.collection(window.MENU_COLLECTION), 8000).then(function (snap) {
-        var docs = [];
-        snap.forEach(function (d) { var data = d.data(); if (data.category && data.category.toLowerCase().trim() !== 'water') { docs.push(d); } });
+        if (snap && snap.docs) {
+            console.log(`[Firestore Items Total]: ${snap.docs.length}`);
+        } else if (snap && typeof snap.size === 'number') {
+            console.log(`[Firestore Items Total]: ${snap.size}`);
+        }
+        var docs = collectItemDocsFromSnap(snap);
         _itemsSnapDocs = docs;
         renderItemsList(docs);
         loadCategoryFilter();
@@ -2473,10 +2487,15 @@ function loadCategoryFilter() {
         return;
     }
 
-    adminGetWithTimeout(db.collection(window.CAT_COLLECTION).orderBy('order', 'asc'), 8000).then(function (snap) {
+    adminGetWithTimeout(db.collection(window.CAT_COLLECTION), 8000).then(function (snap) {
         var categories = [];
         snap.forEach(function (doc) {
             categories.push({ id: doc.id, data: doc.data() });
+        });
+        categories.sort(function (a, b) {
+            var ao = (a.data && a.data.order != null) ? a.data.order : 999999;
+            var bo = (b.data && b.data.order != null) ? b.data.order : 999999;
+            return ao - bo;
         });
         safeSetItem(CACHE_KEY_CATEGORIES, JSON.stringify(categories));
         refreshCategoryFilterOptions();
@@ -2487,6 +2506,7 @@ function loadCategoryFilter() {
 }
 
 function renderItemsList(items) {
+    console.log(`[Rendered Items Total]: ${items ? items.length : 0}`);
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     var list = document.getElementById('itemsList');
     if (!list) return;

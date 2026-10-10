@@ -990,10 +990,14 @@ let _menuUiReady = false;
    ======================================== */
 
 function parseMenuItemsFromSnapshot(snapshot) {
+    if (snapshot && snapshot.docs) {
+        console.log(`[Firestore Items Total]: ${snapshot.docs.length}`);
+    } else if (snapshot && typeof snapshot.size === 'number') {
+        console.log(`[Firestore Items Total]: ${snapshot.size}`);
+    }
     const items = [];
     snapshot.forEach(doc => {
         const data = { id: doc.id, ...doc.data() };
-        if (data.category && data.category.toLowerCase().trim() === 'water') return;
         items.push(data);
     });
     return items;
@@ -1009,9 +1013,7 @@ function normalizeMenuItemEntry(item) {
 
 function normalizeMenuItemsList(items) {
     if (!Array.isArray(items)) return [];
-    return items.map(normalizeMenuItemEntry).filter(function (item) {
-        return item && item.category && item.category.toLowerCase().trim() !== 'water';
-    });
+    return items.map(normalizeMenuItemEntry).filter(Boolean);
 }
 
 function waitForFirebaseDb(maxMs) {
@@ -1165,7 +1167,7 @@ function fetchMenuViaRest(timeoutMs) {
     }
     var baseUrl = getFirestoreRestBaseUrl();
     var url = baseUrl + encodeURIComponent(cfg.projectId) +
-        '/databases/(default)/documents/' + encodeURIComponent(window.MENU_COLLECTION) + '?key=' + encodeURIComponent(cfg.apiKey);
+        '/databases/(default)/documents/' + encodeURIComponent(window.MENU_COLLECTION) + '?key=' + encodeURIComponent(cfg.apiKey) + '&pageSize=300';
     var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
     var timer = null;
     var opts = { cache: 'no-store' };
@@ -1218,10 +1220,15 @@ async function loadCategoriesFromFirebase() {
     if (!window.db) return false;
     if (window._firestoreApiDisabled) return false;
     try {
-        const catSnap = await firestoreGetWithTimeout(window.db.collection(window.CAT_COLLECTION).orderBy('order', 'asc'), 8000);
+        const catSnap = await firestoreGetWithTimeout(window.db.collection(window.CAT_COLLECTION), 8000);
         const categories = [];
         catSnap.forEach(doc => {
             categories.push({ id: doc.id, data: doc.data() });
+        });
+        categories.sort(function (a, b) {
+            var ao = (a.data && a.data.order != null) ? a.data.order : 999999;
+            var bo = (b.data && b.data.order != null) ? b.data.order : 999999;
+            return ao - bo;
         });
         const sig = categories.map(function (c) { return c.id; }).join('|');
         const prev = localStorage.getItem(CACHE_KEY_CATEGORIES_SIG) || '';
@@ -1254,7 +1261,7 @@ function applyMenuItemsUpdate(items, options) {
 
     clearMenuLoadingSpinner();
 
-    if (!_menuUiReady || menuStillLoading()) {
+    if (!_menuUiReady || menuStillLoading() || options.force) {
         paintMenuFromItems(items, { autoSelect: true });
         return;
     }
@@ -1367,6 +1374,7 @@ async function loadMenuItems() {
 
     // REST fetch runs immediately — bypasses Firestore SDK when it hangs on mobile hosts.
     fetchMenuViaRest(10000).then(function (items) {
+        if (window._firestoreLiveSnapshotLoaded) return;
         if (loadMenuItems._loadTimer) {
             clearTimeout(loadMenuItems._loadTimer);
             loadMenuItems._loadTimer = null;
@@ -1417,7 +1425,9 @@ async function loadMenuItems() {
                     clearTimeout(loadMenuItems._loadTimer);
                     loadMenuItems._loadTimer = null;
                 }
-                applyMenuItemsUpdate(parseMenuItemsFromSnapshot(liveSnap));
+                window._firestoreLiveSnapshotLoaded = true;
+                console.log(`[Firestore Items Total]: ${liveSnap.docs.length}`);
+                applyMenuItemsUpdate(parseMenuItemsFromSnapshot(liveSnap), { force: true });
             },
             err => {
                 console.warn('[realtime] error:', err.message);
@@ -1426,10 +1436,15 @@ async function loadMenuItems() {
         );
 
         if (window._categoriesUnsubscribe) window._categoriesUnsubscribe();
-        window._categoriesUnsubscribe = window.db.collection(window.CAT_COLLECTION).orderBy('order', 'asc').onSnapshot(
+        window._categoriesUnsubscribe = window.db.collection(window.CAT_COLLECTION).onSnapshot(
             snap => {
                 const cats = [];
                 snap.forEach(doc => cats.push({ id: doc.id, data: doc.data() }));
+                cats.sort(function (a, b) {
+                    var ao = (a.data && a.data.order != null) ? a.data.order : 999999;
+                    var bo = (b.data && b.data.order != null) ? b.data.order : 999999;
+                    return ao - bo;
+                });
                 safeSetItem(CACHE_KEY_CATEGORIES, JSON.stringify(cats));
                 const sig = cats.map(c => c.id).join('|');
                 const prev = localStorage.getItem(CACHE_KEY_CATEGORIES_SIG) || '';
@@ -1488,7 +1503,7 @@ function showMenuLoadError(strings, error) {
 }
 
 function fetchMenuItemsFallback(strings, reason) {
-    if (window._firestoreApiDisabled) return;
+    if (window._firestoreApiDisabled || window._firestoreLiveSnapshotLoaded) return;
     if (_menuUiReady && !menuStillLoading()) return;
     fetchMenuViaRest(10000).then(function (items) {
         if (loadMenuItems._loadTimer) {
@@ -1563,17 +1578,12 @@ function buildAllCategoryButton(label) {
 }
 
 function filterItemsByCategory(items, category) {
-    if (category === ALL_CATEGORY_ID) return items;
-    var cachedCats = localStorage.getItem(CACHE_KEY_CATEGORIES);
-    if (cachedCats) {
-        try {
-            var categories = JSON.parse(cachedCats);
-            if (categories.some(function (c) { return c.id === category; })) {
-                return items.filter(function (i) { return i.category && i.category === category; });
-            }
-        } catch (e) {}
-    }
-    return items.filter(function (i) { return i.category && i.category === category; });
+    if (!category || category === ALL_CATEGORY_ID) return items || [];
+    var target = String(category).trim().toLowerCase();
+    return (items || []).filter(function (i) {
+        var cat = (i.category || '__uncategorized').trim().toLowerCase();
+        return cat === target;
+    });
 }
 
 function renderCategories(items, options) {
@@ -1598,11 +1608,13 @@ function renderCategories(items, options) {
 
        // Merge item categories into the menu category list so any category used by items
        // is shown even if there is no matching categories document or the IDs differ.
-        const existingIds = new Set(categories.map(function(c){ return c.id; }));
+        const existingIds = new Set(categories.map(function(c){ return (c.id || '').trim().toLowerCase(); }));
         items.forEach(item => {
             const cat = item.category;
-             if (!cat || cat === 'Water' || existingIds.has(cat)) return;
-            existingIds.add(cat);
+            if (!cat) return;
+            const catNorm = cat.trim().toLowerCase();
+            if (existingIds.has(catNorm)) return;
+            existingIds.add(catNorm);
             categories.push({
                 id: cat,
                 data: { name_ku: cat, name_ar: cat, name_en: cat, image: '' }
@@ -1893,6 +1905,10 @@ function createMenuCard(item, lang, strings) {
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
     card.setAttribute('data-item-id', item.id);
+    if (item.available === false) {
+        card.classList.add('menu-card-unavailable');
+        card.style.opacity = '0.75';
+    }
 
     const name = item[`name_${lang}`] || item.name_en || item.name_ar || item.name_ku || 'Unnamed Item';
     const description = item[`description_${lang}`] || item.description_en || item.description_ar || item.description_ku || '';
@@ -2008,12 +2024,16 @@ function renderMenuItems(items) {
 
     container.innerHTML = '';
 
-    if (!items || items.length === 0) {
+    const renderedItems = items || [];
+    console.log(`[Rendered Items Total]: ${renderedItems.length}`);
+
+    if (!renderedItems || renderedItems.length === 0) {
         container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">☕</div><p>${strings.noCategoryItems}</p></div>`;
         return;
     }
 
-     const availableItems = items.filter(item => item.available !== false);
+     // Render 100% of items without omitting documents where available === false
+     const availableItems = renderedItems;
 
      // Grouped "All" view: render items inside category sections
      if (_activeCategory === ALL_CATEGORY_ID && availableItems.length > 0) {
@@ -2165,6 +2185,11 @@ function getCategoryDisplayName(categoryId, lang) {
     lang = lang || localStorage.getItem('selectedLang') || 'ku';
     var strings = i18n[lang] || i18n.en;
     if (categoryId === ALL_CATEGORY_ID) return strings.allItems;
+    if (categoryId === '__uncategorized') {
+        if (lang === 'ku') return 'هەمەجۆر';
+        if (lang === 'ar') return 'أخرى';
+        return 'Other Items';
+    }
     var cachedCats = localStorage.getItem(CACHE_KEY_CATEGORIES);
     if (cachedCats) {
         try {
