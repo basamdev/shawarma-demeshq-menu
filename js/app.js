@@ -48,30 +48,13 @@ function preserveBranchInNavigation() {
         }
     }
 
-    // 2. Landing page branch badge indicator
+    // 2. Hide any legacy customer branch badges
     var indexBadge = document.getElementById('indexBranchBadge');
-    if (indexBadge) {
-        if (isBranch2) {
-            indexBadge.style.display = 'inline-flex';
-            indexBadge.textContent = '📍 لقی دووەم (Branch 2)';
-        } else {
-            indexBadge.style.display = 'none';
-        }
-    }
-
-    // 3. Menu page branch badge indicator
+    if (indexBadge) indexBadge.style.display = 'none';
     var menuBadge = document.getElementById('menuBranchBadge');
-    if (menuBadge) {
-        if (isBranch2) {
-            var lang = localStorage.getItem('selectedLang') || 'ku';
-            menuBadge.style.display = 'inline-flex';
-            menuBadge.textContent = (lang === 'ku') ? '📍 لقی ٢ (Branch 2)' : ((lang === 'ar') ? '📍 الفرع ٢ (Branch 2)' : '📍 Branch 2 (لقی ٢)');
-        } else {
-            menuBadge.style.display = 'none';
-        }
-    }
+    if (menuBadge) menuBadge.style.display = 'none';
 
-    // 4. Preserve branch in relative links
+    // 3. Preserve branch in relative links
     if (branch !== '1') {
         document.querySelectorAll('a[href]').forEach(function (link) {
             var href = link.getAttribute('href');

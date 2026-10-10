@@ -30,20 +30,20 @@ function getBranchBadgeInfo() {
         }
     } else {
         if (lang === 'ku') {
-            text = '📍 لقی ١ (Branch 1)';
+            text = '📍 بەحرکە (Bahirka)';
         } else if (lang === 'ar') {
-            text = '📍 الفرع ١ (Branch 1)';
+            text = '📍 بحركة (Bahirka)';
         } else {
-            text = '📍 Branch 1 (لقی ١)';
+            text = '📍 Bahirka (بەحرکە)';
         }
     }
     return {
         isBranch2: isBranch2,
         className: isBranch2 ? 'admin-branch-badge admin-branch-badge--branch2' : 'admin-branch-badge admin-branch-badge--branch1',
         text: text,
-        shortText: isBranch2 ? 'Branch 2' : 'Branch 1',
-        kurdishText: isBranch2 ? 'لقی ٢' : 'لقی ١',
-        tooltip: isBranch2 ? 'Active: Branch 2 (' + window.MENU_COLLECTION + ')' : 'Active: Branch 1 (' + window.MENU_COLLECTION + ')'
+        shortText: isBranch2 ? 'Branch 2' : 'Bahirka',
+        kurdishText: isBranch2 ? 'لقی ٢' : 'بەحرکە',
+        tooltip: isBranch2 ? 'Active: Branch 2 (' + window.MENU_COLLECTION + ')' : 'Active: Bahirka (' + window.MENU_COLLECTION + ')'
     };
 }
 window.getBranchBadgeInfo = getBranchBadgeInfo;
