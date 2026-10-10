@@ -37,7 +37,7 @@
         <div class="admin-sidebar" id="adminSidebar">
             <div class="sidebar-header">
                 <div class="sidebar-brand">
-                    <img src="assets/shawarma demeshq-logo.jpg?v=1" alt="Shawarma" class="sidebar-brand-icon" onclick="window.location.href='menu.html'" onerror="fallbackLogo(this)">
+                    <img src="assets/shawarma demeshq-logo.jpg?v=1" alt="Shawarma" class="sidebar-brand-icon" onclick="window.location.href='menu.html' + (window.BRANCH_ID && window.BRANCH_ID !== '1' ? '?branch=' + window.BRANCH_ID : '')" onerror="fallbackLogo(this)">
                     <span class="sidebar-brand-text">Shawarma</span>
                 </div>
                 <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">✕</button>
@@ -64,6 +64,7 @@
                         <span></span><span></span><span></span>
                     </button>
                     <h1 class="admin-title">Admin Panel</h1>
+                    <div id="adminBranchBadge" class="admin-branch-badge"></div>
                 </div>
                 <div class="admin-header-actions">
                     <div class="admin-lang-switcher">

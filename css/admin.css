@@ -3593,3 +3593,53 @@ html[dir="rtl"] .admin-header-left {
 html[dir="rtl"] .nav-item {
     text-align: right;
 }
+
+/* Branch Indicator Badge */
+.admin-branch-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 9999px;
+    white-space: nowrap;
+    line-height: 1.4;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    user-select: none;
+}
+
+/* Branch 2: Green badge style */
+.admin-branch-badge--branch2 {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.45);
+}
+
+body.light-mode .admin-branch-badge--branch2 {
+    background-color: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+}
+
+/* Branch 1 (Default): Blue badge style */
+.admin-branch-badge--branch1 {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(96, 165, 250, 0.45);
+}
+
+body.light-mode .admin-branch-badge--branch1 {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+@media (max-width: 640px) {
+    .admin-branch-badge {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+    }
+}
+
