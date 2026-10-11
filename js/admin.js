@@ -2681,21 +2681,45 @@ function loadCategoryFilter() {
     });
 }
 
-function moveItemTo(fromIdx, toIdx) {
+function compareItemDocs(a, b) {
+    var da = typeof a.data === 'function' ? a.data() : a;
+    var db = typeof b.data === 'function' ? b.data() : b;
+    var ao = (da && da.order != null && da.order !== '' && !isNaN(da.order)) ? Number(da.order) : 999999;
+    var bo = (db && db.order != null && db.order !== '' && !isNaN(db.order)) ? Number(db.order) : 999999;
+    if (ao !== bo) return ao - bo;
+    var idA = a.id || (da && da.id) || '';
+    var idB = b.id || (db && db.id) || '';
+    return idA.localeCompare(idB);
+}
+window.compareItemDocs = compareItemDocs;
+
+function moveItemTo(from, to) {
     var activeCat = itemsActiveCategory || 'all';
     var search = document.getElementById('itemSearch');
     var searchTerm = search ? search.value.trim() : '';
 
     var allDocs = _itemsSnapDocs.length > 0 ? _itemsSnapDocs.slice() : getItemDocsFromLocalCache();
     var list = filterItemDocs(allDocs, searchTerm, activeCat);
-    list.sort(function (a, b) {
-        var da = typeof a.data === 'function' ? a.data() : a;
-        var db = typeof b.data === 'function' ? b.data() : b;
-        var ao = (da && da.order != null && da.order !== '' && !isNaN(da.order)) ? Number(da.order) : 999999;
-        var bo = (db && db.order != null && db.order !== '' && !isNaN(db.order)) ? Number(db.order) : 999999;
-        if (ao !== bo) return ao - bo;
-        return 0;
-    });
+    list.sort(compareItemDocs);
+
+    var fromIdx = -1;
+    var toIdx = -1;
+
+    if (typeof from === 'string') {
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].id === from) { fromIdx = i; break; }
+        }
+    } else if (typeof from === 'number') {
+        fromIdx = from;
+    }
+
+    if (typeof to === 'string') {
+        for (var j = 0; j < list.length; j++) {
+            if (list[j].id === to) { toIdx = j; break; }
+        }
+    } else if (typeof to === 'number') {
+        toIdx = to;
+    }
 
     if (fromIdx < 0 || fromIdx >= list.length) return;
     if (toIdx < 0 || toIdx >= list.length) return;
@@ -2704,14 +2728,54 @@ function moveItemTo(fromIdx, toIdx) {
     var movedDoc = list.splice(fromIdx, 1)[0];
     list.splice(toIdx, 0, movedDoc);
 
-    // Assign sequential orders 1, 2, 3...
+    var updatedList = [];
+    var batchWrites = [];
+    var updatedDocsMap = {};
+
     list.forEach(function (doc, seq) {
-        var d = typeof doc.data === 'function' ? Object.assign({}, doc.data()) : Object.assign({}, doc);
-        d.order = seq + 1;
-        upsertCachedMenuItem(doc.id, d);
+        var newOrder = seq + 1;
+        var oldData = typeof doc.data === 'function' ? doc.data() : doc;
+        var newData = Object.assign({}, oldData, { order: newOrder });
+
+        var updatedDoc = {
+            id: doc.id,
+            exists: true,
+            data: function () { return newData; }
+        };
+        Object.assign(updatedDoc, newData);
+
+        updatedList.push(updatedDoc);
+        updatedDocsMap[doc.id] = updatedDoc;
+        batchWrites.push({ id: doc.id, order: newOrder, data: newData });
     });
 
-    renderItemsList(list);
+    // 1. Immediately update global _itemsSnapDocs
+    for (var k = 0; k < _itemsSnapDocs.length; k++) {
+        var existingId = _itemsSnapDocs[k].id;
+        if (updatedDocsMap[existingId]) {
+            _itemsSnapDocs[k] = updatedDocsMap[existingId];
+        }
+    }
+
+    // 2. Render updated list immediately
+    renderItemsList(updatedList);
+
+    // 3. Update local cache in a single mapped write
+    try {
+        var cachedItems = readCachedMenuItemsFlat();
+        var cacheMap = {};
+        batchWrites.forEach(function (bw) { cacheMap[bw.id] = bw.order; });
+        var newCached = cachedItems.map(function (it) {
+            if (cacheMap[it.id] != null) {
+                return Object.assign({}, it, { order: cacheMap[it.id] });
+            }
+            return it;
+        });
+        writeCachedMenuItemsFlat(newCached);
+    } catch (e) {
+        console.warn('[moveItemTo cache update error]:', e);
+    }
+
     showAdminToast(
         (localStorage.getItem('selectedLang') === 'ar' ? 'تم حفظ الترتيب' :
          localStorage.getItem('selectedLang') === 'en' ? 'Order saved' :
@@ -2719,17 +2783,19 @@ function moveItemTo(fromIdx, toIdx) {
         'success'
     );
 
+    // 4. Batch commit to Firestore
     if (window.db) {
         var batch = db.batch();
-        list.forEach(function (doc) {
-            var d = typeof doc.data === 'function' ? doc.data() : doc;
-            var ref = db.collection(window.MENU_COLLECTION).doc(doc.id);
+        batchWrites.forEach(function (entry) {
+            var ref = db.collection(window.MENU_COLLECTION).doc(entry.id);
             batch.set(ref, {
-                order: d.order,
+                order: entry.order,
                 updated_at: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
         });
-        batch.commit().catch(function (e) {
+        batch.commit().then(function () {
+            console.log('[moveItemTo] Saved new order for ' + batchWrites.length + ' items to Firestore');
+        }).catch(function (e) {
             console.warn('[moveItemTo batch error]:', e);
         });
     }
@@ -2743,25 +2809,21 @@ function moveItem(itemId, dir) {
 
     var allDocs = _itemsSnapDocs.length > 0 ? _itemsSnapDocs.slice() : getItemDocsFromLocalCache();
     var list = filterItemDocs(allDocs, searchTerm, activeCat);
-    list.sort(function (a, b) {
-        var da = typeof a.data === 'function' ? a.data() : a;
-        var db = typeof b.data === 'function' ? b.data() : b;
-        var ao = (da && da.order != null && da.order !== '' && !isNaN(da.order)) ? Number(da.order) : 999999;
-        var bo = (db && db.order != null && db.order !== '' && !isNaN(db.order)) ? Number(db.order) : 999999;
-        if (ao !== bo) return ao - bo;
-        return 0;
-    });
+    list.sort(compareItemDocs);
 
     var idx = -1;
     for (var i = 0; i < list.length; i++) {
         if (list[i].id === itemId) { idx = i; break; }
     }
     if (idx === -1) return;
-    moveItemTo(idx, idx + dir);
+    var targetIdx = idx + dir;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+    moveItemTo(idx, targetIdx);
 }
+window.moveItem = moveItem;
 
-function moveItemToTop(idx) {
-    moveItemTo(idx, 0);
+function moveItemToTop(target) {
+    moveItemTo(target, 0);
 }
 window.moveItemToTop = moveItemToTop;
 
@@ -2778,14 +2840,7 @@ function renderItemsList(items) {
 
     var lang = localStorage.getItem('selectedLang') || 'ku';
 
-    items.sort(function (a, b) {
-        var da = typeof a.data === 'function' ? a.data() : a;
-        var db = typeof b.data === 'function' ? b.data() : b;
-        var ao = (da && da.order != null && da.order !== '' && !isNaN(da.order)) ? Number(da.order) : 999999;
-        var bo = (db && db.order != null && db.order !== '' && !isNaN(db.order)) ? Number(db.order) : 999999;
-        if (ao !== bo) return ao - bo;
-        return 0;
-    });
+    items.sort(compareItemDocs);
 
     function paintRows(catMap) {
         var html = '<div class="table-responsive"><table class="admin-table"><thead><tr>' +
@@ -2805,7 +2860,7 @@ function renderItemsList(items) {
             var sortControls = '<div class="sort-controls">' +
                 '<button type="button" class="btn-drag-handle item-drag-handle" data-id="' + doc.id + '" data-index="' + idx + '" title="' + (S.dragToReorder || 'Drag or touch to reorder') + '">☰</button>' +
                 '<span class="order-badge">#' + displayOrder + '</span>' +
-                '<button type="button" class="btn-sort move-item-top" data-index="' + idx + '" title="' + (S.moveToTop || 'Top') + '"' + (isFirst ? ' disabled' : '') + '>🔝</button>' +
+                '<button type="button" class="btn-sort move-item-top" data-id="' + doc.id + '" data-index="' + idx + '" title="' + (S.moveToTop || 'Top') + '"' + (isFirst ? ' disabled' : '') + '>🔝</button>' +
                 '<button type="button" class="btn-sort move-item-up" data-id="' + doc.id + '" title="' + (S.moveUp || 'Move Up') + '"' + (isFirst ? ' disabled' : '') + '>⬆️</button>' +
                 '<button type="button" class="btn-sort move-item-down" data-id="' + doc.id + '" title="' + (S.moveDown || 'Move Down') + '"' + (isLast ? ' disabled' : '') + '>⬇️</button>' +
                 '</div>';
@@ -2832,13 +2887,24 @@ function renderItemsList(items) {
         }
 
         list.querySelectorAll('.move-item-top').forEach(function (btn) {
-            btn.addEventListener('click', function () { moveItemToTop(parseInt(this.getAttribute('data-index'), 10)); });
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var id = this.getAttribute('data-id');
+                var idx = parseInt(this.getAttribute('data-index'), 10);
+                moveItemToTop(id || idx);
+            });
         });
         list.querySelectorAll('.move-item-up').forEach(function (btn) {
-            btn.addEventListener('click', function () { moveItem(this.getAttribute('data-id'), -1); });
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                moveItem(this.getAttribute('data-id'), -1);
+            });
         });
         list.querySelectorAll('.move-item-down').forEach(function (btn) {
-            btn.addEventListener('click', function () { moveItem(this.getAttribute('data-id'), 1); });
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                moveItem(this.getAttribute('data-id'), 1);
+            });
         });
         list.querySelectorAll('.edit-item').forEach(function (btn) {
             btn.addEventListener('click', function () { editItem(this.getAttribute('data-id')); });
@@ -3052,7 +3118,11 @@ function applyItemFilter(searchTerm, cat) {
             });
         }
         if (cat && cat !== 'all') {
-            docs = docs.filter(function (d) { return d.data().category === cat; });
+            var catNorm = cat.toLowerCase().trim();
+            docs = docs.filter(function (d) { 
+                var c = (d.data().category || '').toLowerCase().trim();
+                return c === catNorm; 
+            });
         }
         renderItemsList(docs);
     });
@@ -3294,7 +3364,33 @@ function saveItem() {
         var itemId = document.getElementById('itemId').value;
         var orderEl = document.getElementById('itemOrder');
         var orderVal = orderEl ? orderEl.value.trim() : '';
-        var itemOrderNum = (orderVal !== '' && !isNaN(parseInt(orderVal, 10))) ? parseInt(orderVal, 10) : null;
+
+        var existingOrder = null;
+        if (itemId) {
+            var existingDoc = _itemsSnapDocs.find(function (d) { return d.id === itemId; });
+            if (existingDoc) {
+                var ed = typeof existingDoc.data === 'function' ? existingDoc.data() : existingDoc;
+                if (ed && ed.order != null && !isNaN(ed.order)) existingOrder = Number(ed.order);
+            }
+        }
+
+        var itemOrderNum = (orderVal !== '' && !isNaN(parseInt(orderVal, 10)))
+            ? parseInt(orderVal, 10)
+            : existingOrder;
+
+        if (itemOrderNum == null) {
+            var maxOrd = 0;
+            var catNorm = (category || '').toLowerCase().trim();
+            _itemsSnapDocs.forEach(function (d) {
+                var it = typeof d.data === 'function' ? d.data() : d;
+                if ((it.category || '').toLowerCase().trim() === catNorm) {
+                    var o = (it.order != null && !isNaN(it.order)) ? Number(it.order) : 0;
+                    if (o > maxOrd) maxOrd = o;
+                }
+            });
+            itemOrderNum = maxOrd + 1;
+        }
+
         var gKu = (document.getElementById('itemGroupKu') ? document.getElementById('itemGroupKu').value : '').trim();
         var gAr = (document.getElementById('itemGroupAr') ? document.getElementById('itemGroupAr').value : '').trim();
         var gEn = (document.getElementById('itemGroupEn') ? document.getElementById('itemGroupEn').value : '').trim();
@@ -3344,10 +3440,36 @@ function saveItem() {
                 saveBtn.disabled = false;
                 saveBtn.textContent = saveBtn.dataset.prevText || S.saveItem;
             }
-            upsertCachedMenuItem(docId, plainData);
             document.getElementById('itemModal').classList.remove('active');
             activeItemModal = null;
-            hydrateItemsUiFromCache();
+
+            var savedDocData = Object.assign({}, plainData);
+            var foundInSnap = false;
+            for (var i = 0; i < _itemsSnapDocs.length; i++) {
+                if (_itemsSnapDocs[i].id === docId) {
+                    _itemsSnapDocs[i] = fakeFirestoreDoc(docId, savedDocData);
+                    foundInSnap = true;
+                    break;
+                }
+            }
+            if (!foundInSnap) {
+                _itemsSnapDocs.push(fakeFirestoreDoc(docId, savedDocData));
+            }
+
+            try {
+                upsertCachedMenuItem(docId, savedDocData);
+            } catch (e) {
+                console.warn('[saveItem cache warning]:', e);
+            }
+
+            refreshCategoryFilterOptions();
+            refreshItemCategoryDropdown();
+
+            var searchEl = document.getElementById('itemSearch');
+            var searchTerm = searchEl ? searchEl.value : '';
+            renderItemsList(filterItemDocs(_itemsSnapDocs, searchTerm, itemsActiveCategory));
+            updateCategorySubheadingsBar(itemsActiveCategory);
+
             alert(offline ? S.itemSavedOffline : S.itemSavedCloud);
         }
 
@@ -3410,6 +3532,10 @@ function editItem(itemId) {
             document.getElementById('itemImageURL').value = item.image;
             var pr = document.getElementById('itemImagePreview');
             if (pr) { pr.src = item.image; pr.style.display = 'block'; }
+        } else {
+            document.getElementById('itemImageURL').value = '';
+            var prEmpty = document.getElementById('itemImagePreview');
+            if (prEmpty) { prEmpty.src = ''; prEmpty.style.display = 'none'; }
         }
         document.getElementById('modalTitle').textContent = S.editItem;
         var saveBtn = document.getElementById('saveItemBtn');
@@ -3426,22 +3552,26 @@ function editItem(itemId) {
         });
     }
 
-    var cached = getMenuItemFromLocalCache(itemId);
-    if (cached) openEditModal(cached);
+    var snapDoc = _itemsSnapDocs.find(function (d) { return d.id === itemId; });
+    var itemData = snapDoc ? (typeof snapDoc.data === 'function' ? snapDoc.data() : snapDoc) : getMenuItemFromLocalCache(itemId);
+    if (itemData) openEditModal(itemData);
 
     if (!window.db) {
-        if (!cached) alert(S.noItemsFound);
+        if (!itemData) alert(S.noItemsFound);
         return;
     }
 
     db.collection(window.MENU_COLLECTION).doc(itemId).get().then(function (doc) {
         if (!doc.exists) {
-            if (!cached) alert(S.noItemsFound);
+            if (!itemData) alert(S.noItemsFound);
             return;
         }
-        openEditModal(doc.data());
+        var currentModalId = document.getElementById('itemId') ? document.getElementById('itemId').value : '';
+        if (!itemData || currentModalId !== itemId) {
+            openEditModal(doc.data());
+        }
     }).catch(function (e) {
-        if (!cached) alert(S.errorPrefix + e.message);
+        if (!itemData) alert(S.errorPrefix + e.message);
     });
 }
 
@@ -3459,7 +3589,11 @@ function deleteItem(itemId) {
         sdkPromise: db.collection(window.MENU_COLLECTION).doc(itemId).delete(),
         onDone: function () {
             removeCachedMenuItem(itemId);
-            hydrateItemsUiFromCache();
+            _itemsSnapDocs = _itemsSnapDocs.filter(function (d) { return d.id !== itemId; });
+            var searchEl = document.getElementById('itemSearch');
+            var searchTerm = searchEl ? searchEl.value : '';
+            renderItemsList(filterItemDocs(_itemsSnapDocs, searchTerm, itemsActiveCategory));
+            updateCategorySubheadingsBar(itemsActiveCategory);
         },
         onError: function (err) {
             alert(S.itemSyncFailed + (err && err.message ? '\n' + err.message : ''));
@@ -3728,10 +3862,11 @@ window.attachSortableTouchEvents = attachSortableTouchEvents;
 
 function getCategorySubheadings(catId) {
     if (!catId) return [];
+    var catNorm = (catId || '').toLowerCase().trim();
     var allItems = _itemsSnapDocs.length > 0 ? _itemsSnapDocs.slice() : getItemDocsFromLocalCache();
     var catItems = allItems.filter(function (d) {
         var it = typeof d.data === 'function' ? d.data() : d;
-        return it.category === catId;
+        return (it.category || '').toLowerCase().trim() === catNorm;
     });
 
     var groupMap = {};
@@ -3781,7 +3916,9 @@ function getCategorySubheadings(catId) {
     var explicitOrder = [];
     try {
         var cachedCats = readCachedCategories();
-        var catDoc = cachedCats.find(function (c) { return c.id === catId; });
+        var catDoc = cachedCats.find(function (c) { 
+            return c && (c.id === catId || (c.id || '').toLowerCase().trim() === catNorm); 
+        });
         if (catDoc && catDoc.data && Array.isArray(catDoc.data.group_order)) {
             explicitOrder = catDoc.data.group_order;
         }
@@ -4007,13 +4144,10 @@ function openSubheadingsOrderModal(catId) {
             closeModal();
             if (success) {
                 showAdminToast((S.subHeadingOrderSaved || 'ڕیزبەندی بەشە ناوەکییەکان پاشەکەوت کرا.'), 'success');
-                if (itemsActiveCategory && itemsActiveCategory === catId) {
-                    var search = document.getElementById('itemSearch');
-                    applyItemFilter(search ? search.value : '', catId);
-                    updateCategorySubheadingsBar(catId);
-                } else {
-                    renderCategoriesListNow();
-                }
+                var search = document.getElementById('itemSearch');
+                applyItemFilter(search ? search.value : '', itemsActiveCategory);
+                updateCategorySubheadingsBar(itemsActiveCategory);
+                renderCategoriesListNow();
             } else {
                 showAdminToast('Error saving order', 'error');
             }
@@ -4036,18 +4170,21 @@ function saveSubheadingsOrder(catId, reorderedGroups, callback) {
         }
     });
 
+    var catNorm = (catId || '').toLowerCase().trim();
     var cats = readCachedCategories();
-    var catDoc = cats.find(function (c) { return c.id === catId; });
+    var catDoc = cats.find(function (c) { 
+        return c && (c.id === catId || (c.id || '').toLowerCase().trim() === catNorm); 
+    });
     if (catDoc) {
         if (!catDoc.data) catDoc.data = {};
         catDoc.data.group_order = groupOrderNames;
-        upsertCachedCategory(catId, catDoc.data);
+        upsertCachedCategory(catDoc.id || catId, catDoc.data);
     }
 
     var allItems = _itemsSnapDocs.length > 0 ? _itemsSnapDocs.slice() : getItemDocsFromLocalCache();
     var catItems = allItems.filter(function (d) {
         var it = typeof d.data === 'function' ? d.data() : d;
-        return it.category === catId;
+        return (it.category || '').toLowerCase().trim() === catNorm;
     });
 
     var itemsByGroup = {};
@@ -4078,13 +4215,7 @@ function saveSubheadingsOrder(catId, reorderedGroups, callback) {
     });
 
     var sortDocsByOrder = function (list) {
-        return list.slice().sort(function (a, b) {
-            var da = typeof a.data === 'function' ? a.data() : a;
-            var db = typeof b.data === 'function' ? b.data() : b;
-            var ao = (da && da.order != null && da.order !== '' && !isNaN(da.order)) ? Number(da.order) : 999999;
-            var bo = (db && db.order != null && db.order !== '' && !isNaN(db.order)) ? Number(db.order) : 999999;
-            return ao - bo;
-        });
+        return list.slice().sort(compareItemDocs);
     };
 
     var newSequentialItems = [];
@@ -4095,21 +4226,54 @@ function saveSubheadingsOrder(catId, reorderedGroups, callback) {
         groupItems.forEach(function (doc) {
             var it = typeof doc.data === 'function' ? Object.assign({}, doc.data()) : Object.assign({}, doc);
             it.order = currentSeq++;
-            upsertCachedMenuItem(doc.id, it);
-            newSequentialItems.push({ id: doc.id, order: it.order });
+            newSequentialItems.push({ id: doc.id, order: it.order, data: it });
         });
     });
 
     sortDocsByOrder(ungroupedItems).forEach(function (doc) {
         var it = typeof doc.data === 'function' ? Object.assign({}, doc.data()) : Object.assign({}, doc);
         it.order = currentSeq++;
-        upsertCachedMenuItem(doc.id, it);
-        newSequentialItems.push({ id: doc.id, order: it.order });
+        newSequentialItems.push({ id: doc.id, order: it.order, data: it });
     });
 
+    // 1. Immediately update in-memory _itemsSnapDocs
+    var updatedDocsMap = {};
+    newSequentialItems.forEach(function (entry) {
+        var updatedDoc = {
+            id: entry.id,
+            exists: true,
+            data: function () { return entry.data; }
+        };
+        Object.assign(updatedDoc, entry.data);
+        updatedDocsMap[entry.id] = updatedDoc;
+    });
+
+    for (var k = 0; k < _itemsSnapDocs.length; k++) {
+        var snapId = _itemsSnapDocs[k].id;
+        if (updatedDocsMap[snapId]) {
+            _itemsSnapDocs[k] = updatedDocsMap[snapId];
+        }
+    }
+
+    // 2. Update local cache
+    try {
+        var cachedItems = readCachedMenuItemsFlat();
+        var newCached = cachedItems.map(function (it) {
+            if (updatedDocsMap[it.id]) {
+                return Object.assign({}, it, { order: updatedDocsMap[it.id].order });
+            }
+            return it;
+        });
+        writeCachedMenuItemsFlat(newCached);
+    } catch (e) {
+        console.warn('[saveSubheadingsOrder cache error]:', e);
+    }
+
+    // 3. Batch commit to Firestore
     if (window.db) {
         var batch = db.batch();
-        var catRef = db.collection(window.CAT_COLLECTION).doc(catId);
+        var targetCatId = catDoc ? catDoc.id : catId;
+        var catRef = db.collection(window.CAT_COLLECTION).doc(targetCatId);
         batch.set(catRef, {
             group_order: groupOrderNames,
             updated_at: firebase.firestore.FieldValue.serverTimestamp()
