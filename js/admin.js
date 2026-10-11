@@ -2000,6 +2000,104 @@ function getCategoryLabel(categoryId, lang, catMap) {
     return categoryId;
 }
 
+var SUB_HEADING_PRESETS = [
+    { key: 'sandwiches', icon: '🥪', ku: 'سەندویچ', ar: 'ساندويش', en: 'Sandwiches' },
+    { key: 'shawarma_sandwiches', icon: '🌯', ku: 'سەندویچی شاوەرما', ar: 'ساندويش شاورما', en: 'Shawarma Sandwiches' },
+    { key: 'shawarma_meals', icon: '🍽️', ku: 'ژەمە شاوەرما', ar: 'وجبات شاورما', en: 'Shawarma Meals' },
+    { key: 'western_meals', icon: '🍔', ku: 'ژەمە ڕۆژئاواییەکان', ar: 'وجبات غربية', en: 'Western Meals' },
+    { key: 'broasted', icon: '🍗', ku: 'برۆستد', ar: 'بروستد', en: 'Broasted' },
+    { key: 'grilled', icon: '🥩', ku: 'برژاو', ar: 'مشاوي', en: 'Grilled' },
+    { key: 'cold_appetizers', icon: '🥗', ku: 'پێشخۆراکی سارد', ar: 'مقبلات باردة', en: 'Cold Appetizers' },
+    { key: 'hot_appetizers', icon: '🍲', ku: 'پێشخۆراکی گەرم', ar: 'مقبلات ساخنة', en: 'Hot Appetizers' },
+    { key: 'drinks', icon: '🥤', ku: 'خواردنەوەکان', ar: 'مشروبات', en: 'Drinks' },
+    { key: 'desserts', icon: '🍰', ku: 'شیرینی', ar: 'حلويات', en: 'Desserts' },
+    { key: 'extras', icon: '✨', ku: 'زیادکراوەکان', ar: 'إضافات', en: 'Extras' }
+];
+
+function renderSubHeadingPresets(catId) {
+    var container = document.getElementById('adminGroupChips');
+    if (!container) return;
+    container.innerHTML = '';
+    var lang = localStorage.getItem('selectedLang') || 'ku';
+
+    var existingCategoryGroups = [];
+    var seenGroups = {};
+    try {
+        var cachedItems = JSON.parse(localStorage.getItem(CACHE_KEY_MENU_ITEMS) || '[]');
+        cachedItems.forEach(function (ci) {
+            var item = ci.data || ci;
+            if (!catId || item.category === catId) {
+                var gKu = (item.group_ku || '').trim();
+                var gAr = (item.group_ar || '').trim();
+                var gEn = (item.group_en || '').trim();
+                var fallback = (item.group || '').trim();
+                if (!gKu && fallback) gKu = fallback;
+                if (!gAr && fallback) gAr = fallback;
+                if (!gEn && fallback) gEn = fallback;
+
+                var key = (gKu + '|' + gAr + '|' + gEn).toLowerCase();
+                if ((gKu || gAr || gEn) && !seenGroups[key]) {
+                    seenGroups[key] = true;
+                    existingCategoryGroups.push({
+                        isExisting: true,
+                        icon: '📂',
+                        ku: gKu,
+                        ar: gAr,
+                        en: gEn
+                    });
+                }
+            }
+        });
+    } catch (e) {}
+
+    var listToRender = [];
+    existingCategoryGroups.forEach(function (eg) {
+        listToRender.push(eg);
+    });
+
+    SUB_HEADING_PRESETS.forEach(function (preset) {
+        var pKey = (preset.ku + '|' + preset.ar + '|' + preset.en).toLowerCase();
+        if (!seenGroups[pKey]) {
+            listToRender.push(preset);
+        }
+    });
+
+    var curKu = ((document.getElementById('itemGroupKu') || {}).value || '').trim();
+    var curAr = ((document.getElementById('itemGroupAr') || {}).value || '').trim();
+    var curEn = ((document.getElementById('itemGroupEn') || {}).value || '').trim();
+
+    listToRender.forEach(function (item) {
+        var label = (lang === 'ar' ? item.ar : lang === 'en' ? item.en : item.ku) || item.ku || item.ar || item.en;
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'admin-chip-btn';
+        if (item.isExisting) {
+            btn.classList.add('existing-chip');
+            btn.title = (lang === 'ku' ? 'لەناو ئەم بەشەدا بەکارهاتووە' : lang === 'ar' ? 'مستخدم في هذه الفئة' : 'Used in this category');
+        }
+        var isMatch = (curKu && (curKu === item.ku || curKu === item.ar || curKu === item.en)) ||
+                      (curAr && (curAr === item.ar || curAr === item.ku || curAr === item.en)) ||
+                      (curEn && (curEn === item.en || curEn === item.ku || curEn === item.ar));
+        if (isMatch) btn.classList.add('active');
+
+        btn.innerHTML = '<span>' + item.icon + '</span> ' + escapeHtmlText(label);
+        btn.addEventListener('click', function () {
+            var gKuEl = document.getElementById('itemGroupKu');
+            var gArEl = document.getElementById('itemGroupAr');
+            var gEnEl = document.getElementById('itemGroupEn');
+            if (gKuEl) gKuEl.value = item.ku || '';
+            if (gArEl) gArEl.value = item.ar || '';
+            if (gEnEl) gEnEl.value = item.en || '';
+
+            container.querySelectorAll('.admin-chip-btn').forEach(function (c) {
+                c.classList.remove('active');
+            });
+            btn.classList.add('active');
+        });
+        container.appendChild(btn);
+    });
+}
+
 function loadManageItems() {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     itemsActiveCategory = 'all';
@@ -2049,10 +2147,29 @@ function loadManageItems() {
         '</select>' +
         '<button type="button" class="btn-primary" id="addNewCategoryBtn" style="padding:8px 12px;">+</button>' +
         '</div></div>' +
-        '<div class="form-group"><label>' + (S.group || 'Group') + '</label>' +
-        '<input type="text" id="itemGroupKu" placeholder="' + (S.kurdishName || 'Kurdish') + '">' +
-        '<input type="text" id="itemGroupAr" placeholder="' + (S.arabicName || 'Arabic') + '" style="margin-top:6px;">' +
-        '<input type="text" id="itemGroupEn" placeholder="' + (S.englishName || 'English') + '" style="margin-top:6px;">' +
+        '<div class="sub-heading-group-box">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+        '<label style="font-weight:700;margin:0;display:flex;align-items:center;gap:6px;">' +
+        '<span>🏷️</span> ' + (S.subHeadingTitle || 'Section Sub-heading (ناونیشانی جیاکەرەوە لەناو بەش / عنوان التقسيم)') +
+        '</label>' +
+        '<button type="button" id="clearGroupBtn" class="btn-sm" style="background:transparent;border:1px solid rgba(255,255,255,0.2);border-radius:6px;cursor:pointer;padding:2px 8px;font-size:0.75rem;color:var(--text-muted);">' +
+        (S.clearHeading || 'Clear / پاککردنەوە') +
+        '</button>' +
+        '</div>' +
+        '<p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 10px 0;line-height:1.4;">' +
+        (S.subHeadingHint || 'Optional: Groups items under sub-titles (e.g., Sandwiches, Meals, Broasted, Grilled, Appetizers)') +
+        '</p>' +
+        '<div style="margin-bottom:10px;">' +
+        '<span style="font-size:0.72rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px;">' +
+        (S.quickPresets || 'Quick Presets / هەڵبژاردەی ئامادەکراو:') +
+        '</span>' +
+        '<div id="adminGroupChips" class="admin-group-chips"></div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr;gap:6px;">' +
+        '<input type="text" id="itemGroupKu" placeholder="' + (S.kurdishName || 'Kurdish') + ' (وەک: سەندویچ، ژەم، برۆستد)">' +
+        '<input type="text" id="itemGroupAr" placeholder="' + (S.arabicName || 'Arabic') + ' (مثل: ساندويش، وجبات، بروستد)">' +
+        '<input type="text" id="itemGroupEn" placeholder="' + (S.englishName || 'English') + ' (e.g. Sandwiches, Meals, Broasted)">' +
+        '</div>' +
         '</div>' +
         '<div class="form-group"><label>' + (S.itemOrder || 'Display Order (ڕیزبەندی نمایش)') + '</label>' +
         '<input type="number" id="itemOrder" min="1" placeholder="1, 2, 3..."></div>' +
@@ -2603,14 +2720,15 @@ function renderItemsList(items) {
     function paintRows(catMap) {
         var html = '<div class="table-responsive"><table class="admin-table"><thead><tr>' +
             '<th>' + (S.order || (lang === 'ku' ? 'ڕیزبەندی' : lang === 'ar' ? 'الترتيب' : 'Order')) + '</th>' +
-            '<th>Image</th><th>Name</th><th>' + S.category + '</th><th>' + (S.group || 'Group') + '</th><th>' + S.price + '</th><th>' + S.available + '</th><th>Actions</th></tr></thead><tbody>';
+            '<th>Image</th><th>Name</th><th>' + S.category + '</th><th>' + (S.subHeadingTitle ? (lang === 'ku' ? 'جیاکەرەوە' : lang === 'ar' ? 'التقسيم' : 'Sub-heading') : (S.group || 'Group')) + '</th><th>' + S.price + '</th><th>' + S.available + '</th><th>Actions</th></tr></thead><tbody>';
         items.forEach(function (doc, idx) {
             var item = doc.data();
             var name = item['name_' + lang] || item.name_ku || item.name_ar || item.name_en || S.unnamed;
             var img = item.image || 'https://placehold.co/50x50?text=No+Image';
             var avail = item.available ? '<span style="color:#2E7D32;">' + S.yes + '</span>' : '<span style="color:#C62828;">' + S.no + '</span>';
             var catName = getCategoryLabel(item.category, lang, catMap);
-            var groupName = item.group_ku || item.group_ar || item.group_en || '';
+            var groupName = item['group_' + lang] || item.group_ku || item.group_ar || item.group_en || item.group || '';
+            var groupHtml = groupName ? '<span class="admin-group-badge">🏷️ ' + escapeHtmlText(groupName) + '</span>' : '<span style="opacity:0.35;">—</span>';
             var displayOrder = (item.order != null && !isNaN(item.order)) ? item.order : (idx + 1);
             var isFirst = idx === 0;
             var isLast = idx === items.length - 1;
@@ -2624,7 +2742,7 @@ function renderItemsList(items) {
                 '<td><img src="' + img + '" alt="' + name + '" width="48" height="48"></td>' +
                 '<td>' + name + '</td>' +
                 '<td>' + catName + '</td>' +
-                '<td>' + escapeHtmlText(groupName) + '</td>' +
+                '<td>' + groupHtml + '</td>' +
                 '<td>' + (item.price || 0) + ' IQD</td>' +
                 '<td>' + avail + '</td>' +
                 '<td><button class="btn-primary btn-sm edit-item" data-id="' + doc.id + '">' + S.edit + '</button> ' +
@@ -2688,7 +2806,9 @@ function wireItemEvents() {
             var modal = document.getElementById('itemModal');
             modal.classList.add('active');
             activeItemModal = modal;
-            loadCategoriesDropdown();
+            loadCategoriesDropdown().then(function () {
+                renderSubHeadingPresets(document.getElementById('itemCategory').value || '');
+            });
         });
     }
 
@@ -2747,6 +2867,31 @@ function wireItemEvents() {
     if (search) {
         search.addEventListener('input', function () {
             applyItemFilter(search.value, itemsActiveCategory);
+        });
+    }
+
+    var clearGrpBtn = document.getElementById('clearGroupBtn');
+    if (clearGrpBtn) {
+        clearGrpBtn.addEventListener('click', function () {
+            var gKuEl = document.getElementById('itemGroupKu');
+            var gArEl = document.getElementById('itemGroupAr');
+            var gEnEl = document.getElementById('itemGroupEn');
+            if (gKuEl) gKuEl.value = '';
+            if (gArEl) gArEl.value = '';
+            if (gEnEl) gEnEl.value = '';
+            var chips = document.getElementById('adminGroupChips');
+            if (chips) {
+                chips.querySelectorAll('.admin-chip-btn').forEach(function (c) {
+                    c.classList.remove('active');
+                });
+            }
+        });
+    }
+
+    var itemCatSelect = document.getElementById('itemCategory');
+    if (itemCatSelect) {
+        itemCatSelect.addEventListener('change', function () {
+            renderSubHeadingPresets(this.value);
         });
     }
 
@@ -3065,7 +3210,10 @@ function saveItem() {
         var orderEl = document.getElementById('itemOrder');
         var orderVal = orderEl ? orderEl.value.trim() : '';
         var itemOrderNum = (orderVal !== '' && !isNaN(parseInt(orderVal, 10))) ? parseInt(orderVal, 10) : null;
-        var now = new Date().toISOString();
+        var gKu = (document.getElementById('itemGroupKu') ? document.getElementById('itemGroupKu').value : '').trim();
+        var gAr = (document.getElementById('itemGroupAr') ? document.getElementById('itemGroupAr').value : '').trim();
+        var gEn = (document.getElementById('itemGroupEn') ? document.getElementById('itemGroupEn').value : '').trim();
+        var fallbackGroup = gKu || gAr || gEn || '';
         var plainData = {
             name_ku: nameKu, name_ar: nameAr, name_en: nameEn,
             description_ku: document.getElementById('itemDescKu').value.trim(),
@@ -3074,9 +3222,10 @@ function saveItem() {
             price: parseFloat(price) || 0,
             category: category,
             order: itemOrderNum,
-            group_ku: (document.getElementById('itemGroupKu') || {}).value || '',
-            group_ar: (document.getElementById('itemGroupAr') || {}).value || '',
-            group_en: (document.getElementById('itemGroupEn') || {}).value || '',
+            group_ku: gKu || fallbackGroup,
+            group_ar: gAr || fallbackGroup,
+            group_en: gEn || fallbackGroup,
+            group: fallbackGroup,
             image: finalImg,
             available: document.getElementById('itemAvailable').checked,
             updated_at: now,
@@ -3166,11 +3315,11 @@ function editItem(itemId) {
         var orderEl = document.getElementById('itemOrder');
         if (orderEl) orderEl.value = (item && item.order != null && !isNaN(item.order)) ? item.order : '';
         var groupEl = document.getElementById('itemGroupKu');
-        if (groupEl) groupEl.value = item.group_ku || '';
+        if (groupEl) groupEl.value = item.group_ku || item.group || '';
         groupEl = document.getElementById('itemGroupAr');
-        if (groupEl) groupEl.value = item.group_ar || '';
+        if (groupEl) groupEl.value = item.group_ar || item.group || '';
         groupEl = document.getElementById('itemGroupEn');
-        if (groupEl) groupEl.value = item.group_en || '';
+        if (groupEl) groupEl.value = item.group_en || item.group || '';
         if (item.image) {
             document.getElementById('itemImageURL').value = item.image;
             var pr = document.getElementById('itemImagePreview');
@@ -3187,6 +3336,7 @@ function editItem(itemId) {
         activeItemModal = modal;
         loadCategoriesDropdown().then(function () {
             document.getElementById('itemCategory').value = item.category || '';
+            renderSubHeadingPresets(item.category || '');
         });
     }
 

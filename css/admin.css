@@ -3885,5 +3885,116 @@ body.light-mode .btn-sort:hover:not(:disabled) {
     border-color: var(--admin-accent, #2563eb);
 }
 
+/* ========================================
+   SUB-HEADING & GROUPING CONTROLS
+   ======================================== */
+.sub-heading-group-box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+}
+
+body.light-mode .sub-heading-group-box {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+.admin-group-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.admin-chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    font-family: inherit;
+}
+
+.admin-chip-btn:hover {
+    color: #ffffff;
+    border-color: var(--admin-accent, #3B82F6);
+    background: rgba(59, 130, 246, 0.15);
+    transform: translateY(-1px);
+}
+
+.admin-chip-btn.active {
+    background: var(--admin-accent, #3B82F6);
+    color: #ffffff;
+    border-color: var(--admin-accent, #3B82F6);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+}
+
+body.light-mode .admin-chip-btn {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+body.light-mode .admin-chip-btn:hover {
+    color: var(--admin-accent, #2563eb);
+    border-color: var(--admin-accent, #2563eb);
+    background: #eff6ff;
+}
+
+body.light-mode .admin-chip-btn.active {
+    background: var(--admin-accent, #2563eb);
+    color: #ffffff;
+    border-color: var(--admin-accent, #2563eb);
+}
+
+.admin-group-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: rgba(229, 169, 60, 0.12);
+    color: #E5A93C;
+    border: 1px solid rgba(229, 169, 60, 0.28);
+    white-space: nowrap;
+}
+
+body.light-mode .admin-group-badge {
+    background: #fef3c7;
+    color: #b45309;
+    border-color: #fde68a;
+}
+
+#clearGroupBtn {
+    transition: all 0.2s ease;
+}
+
+#clearGroupBtn:hover {
+    color: #ef4444 !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+body.light-mode #clearGroupBtn {
+    border-color: #cbd5e1 !important;
+    color: #64748b !important;
+}
+
+.admin-chip-btn.existing-chip {
+    border-style: dashed;
+}
+
+
+
 
 

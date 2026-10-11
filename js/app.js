@@ -321,6 +321,14 @@ const i18n = {
         imageURL: 'بەستەری وێنە',
         price: 'نرخ (IQD)',
         category: 'بەش',
+        group: 'گرووپ / بەشی ناوەکی',
+        groupKu: 'کوردی',
+        groupAr: 'عەرەبی',
+        groupEn: 'ئینگلیزی',
+        subHeadingTitle: 'ناونیشانی جیاکەرەوە لەناو بەش (Sub-heading)',
+        subHeadingHint: 'ئارەزوومەندانە: بۆ دابەشکردنی خواردنەکان (وەک: سەندویچ، ژەم، برۆستد، پێشخۆراک)',
+        quickPresets: 'هەڵبژاردەی ئامادەکراو:',
+        clearHeading: 'پاککردنەوە',
         available: 'بەردەستە',
         notAvailable: 'بەردەست نییە',
         saveItem: 'پاشەکەوتکردن',
@@ -562,6 +570,14 @@ const i18n = {
         imageURL: 'رابط الصورة',
         price: 'السعر (IQD)',
         category: 'الفئة',
+        group: 'مجموعة / تقسيم داخلي',
+        groupKu: 'كردي',
+        groupAr: 'عربي',
+        groupEn: 'إنجليزي',
+        subHeadingTitle: 'عنوان التقسيم الداخلي (Sub-heading)',
+        subHeadingHint: 'اختياري: لتقسيم عناصر القسم (مثل: ساندويش، وجبات، بروستد، مقبلات)',
+        quickPresets: 'خيارات سريعة:',
+        clearHeading: 'مسح',
         available: 'متاح',
         notAvailable: 'غير متاح',
         saveItem: 'حفظ',
@@ -804,9 +820,13 @@ const i18n = {
         price: 'Price (IQD)',
         category: 'Category',
         group: 'Group',
-        groupKu: ' Kurdish',
+        groupKu: 'Kurdish',
         groupAr: 'Arabic',
         groupEn: 'English',
+        subHeadingTitle: 'Section Sub-heading (Divider)',
+        subHeadingHint: 'Optional: To group items (e.g. Sandwiches, Meals, Broasted, Grilled, Appetizers)',
+        quickPresets: 'Quick Presets:',
+        clearHeading: 'Clear',
         available: 'Available',
         notAvailable: 'Not available',
         saveItem: 'Save Item',
@@ -2189,7 +2209,7 @@ function renderMenuItems(items) {
 
             const itemsByGroup = {};
             const ungrouped = [];
-            groups[catId].forEach(item => {
+            sortMenuItemsByOrder(groups[catId]).forEach(item => {
                 const g = (item.group_ku || item.group_ar || item.group_en || item.group || '').trim();
                 if (!g) {
                     ungrouped.push(item);
@@ -2204,7 +2224,10 @@ function renderMenuItems(items) {
             groupOrder.forEach(g => {
                 const groupHeading = document.createElement('h4');
                 groupHeading.className = 'group-heading';
-                groupHeading.textContent = g;
+                const badge = document.createElement('span');
+                badge.className = 'group-heading-badge';
+                badge.textContent = g;
+                groupHeading.appendChild(badge);
                 section.appendChild(groupHeading);
                 sortMenuItemsByOrder(itemsByGroup[g]).forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
             });
@@ -2232,7 +2255,7 @@ function renderMenuItems(items) {
 
         const itemsByGroup = {};
         const ungrouped = [];
-        availableItems.forEach(item => {
+        sortMenuItemsByOrder(availableItems).forEach(item => {
             const g = (item.group_ku || item.group_ar || item.group_en || item.group || '').trim();
             if (!g) {
                 ungrouped.push(item);
@@ -2247,7 +2270,10 @@ function renderMenuItems(items) {
         groupOrder.forEach(g => {
             const groupHeading = document.createElement('h4');
             groupHeading.className = 'group-heading';
-            groupHeading.textContent = g;
+            const badge = document.createElement('span');
+            badge.className = 'group-heading-badge';
+            badge.textContent = g;
+            groupHeading.appendChild(badge);
             section.appendChild(groupHeading);
             sortMenuItemsByOrder(itemsByGroup[g]).forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
         });
