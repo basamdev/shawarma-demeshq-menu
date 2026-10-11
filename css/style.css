@@ -3868,7 +3868,7 @@ body.emenu-layout.light-mode .menu-fab .icon-sun { display: inline; }
     border-radius: 24px 24px 0 0;
     margin-top: 10px;
     min-height: 55vh;
-    padding: 18px 0 max(32px, env(safe-area-inset-bottom));
+    padding: 18px 0 max(90px, calc(env(safe-area-inset-bottom, 0px) + 70px));
     box-shadow: none;
 }
 
@@ -4319,7 +4319,7 @@ body.emenu-layout .menu-sheet {
     background: var(--emenu-bg, #FFFFFF);
     border-radius: 0;
     margin-top: 0;
-    padding: 8px 0 max(32px, env(safe-area-inset-bottom));
+    padding: 8px 0 max(90px, calc(env(safe-area-inset-bottom, 0px) + 70px));
 }
 
 body.emenu-layout .category-bar {
@@ -6620,9 +6620,58 @@ body.index-page .hero-center {
 }
 
 .smart-serve-footer.menu-footer {
-    margin-top: 2.8rem;
-    padding: 2.2rem 1rem max(3.5rem, calc(env(safe-area-inset-bottom) + 1.5rem));
-    width: 100%;
+    position: fixed !important;
+    bottom: max(14px, env(safe-area-inset-bottom, 14px)) !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 16px !important;
+    z-index: 450 !important;
+    pointer-events: none !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                visibility 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.smart-serve-footer.menu-footer .smart-serve-divider {
+    width: auto !important;
+    max-width: 100% !important;
+    gap: 0 !important;
+    justify-content: center !important;
+}
+
+.smart-serve-footer.menu-footer .smart-serve-line {
+    display: none !important;
+}
+
+.smart-serve-footer.menu-footer .smart-serve-badge {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    box-shadow:
+        0 8px 30px rgba(0, 0, 0, 0.55),
+        0 2px 10px rgba(0, 229, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+.smart-serve-footer.menu-footer .smart-serve-badge:active {
+    transform: translateY(0) scale(0.96) !important;
+}
+
+/* Hide fixed bottom Smart Serve footer when any modal or drawer is open */
+body.detail-open .smart-serve-footer.menu-footer,
+body.cart-open .smart-serve-footer.menu-footer,
+body.cafe-info-open .smart-serve-footer.menu-footer,
+body.fav-open .smart-serve-footer.menu-footer,
+body.install-tutorial-open .smart-serve-footer.menu-footer,
+body.order-modal-open .smart-serve-footer.menu-footer {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transform: translateY(28px) scale(0.92) !important;
 }
 
 .smart-serve-divider {
@@ -6881,8 +6930,8 @@ body.light-mode .smart-serve-line:last-child {
         font-size: 0.68rem;
     }
     .smart-serve-footer.menu-footer {
-        margin-top: 2rem;
-        padding-bottom: max(3rem, calc(env(safe-area-inset-bottom) + 1rem));
+        bottom: max(10px, env(safe-area-inset-bottom, 10px)) !important;
+        padding: 0 12px !important;
     }
 }
 

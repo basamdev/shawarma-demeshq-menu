@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css?v=137">
+    <link rel="stylesheet" href="css/style.css?v=138">
 </head>
 <body class="menu-page emenu-layout" data-menu-theme="gold">
 <script>
@@ -322,24 +322,24 @@
                 <div class="loading-menu" data-i18n="loadingMenu">Loading menu...</div>
             </div>
         </main>
-
-        <footer class="smart-serve-footer menu-footer">
-            <div class="smart-serve-divider">
-                <span class="smart-serve-line" aria-hidden="true"></span>
-                <div class="smart-serve-badge">
-                    <div class="smart-serve-logo-glow">
-                        <img src="assets/smart-serve-logo.jpg" alt="Smart Serve" class="smart-serve-logo-img" loading="lazy" onerror="this.onerror=null; this.src='images/smart-serve-logo.jpg';">
-                    </div>
-                    <div class="smart-serve-text-wrap">
-                        <span class="smart-serve-prefix" data-i18n="poweredBy">پەرەپێدراوە لەلایەن</span>
-                        <span class="smart-serve-brand">Smart Serve</span>
-                    </div>
-                    <span class="smart-serve-sparkle" aria-hidden="true">✦</span>
-                </div>
-                <span class="smart-serve-line" aria-hidden="true"></span>
-            </div>
-        </footer>
     </div>
+
+    <footer class="smart-serve-footer menu-footer" id="smartServeFooter" role="contentinfo" aria-label="Smart Serve">
+        <div class="smart-serve-divider">
+            <span class="smart-serve-line" aria-hidden="true"></span>
+            <div class="smart-serve-badge" id="smartServeBadge" role="button" tabindex="0" title="Smart Serve" aria-label="Smart Serve">
+                <div class="smart-serve-logo-glow">
+                    <img src="assets/smart-serve-logo.jpg" alt="Smart Serve" class="smart-serve-logo-img" loading="lazy" onerror="this.onerror=null; this.src='images/smart-serve-logo.jpg';">
+                </div>
+                <div class="smart-serve-text-wrap">
+                    <span class="smart-serve-prefix" data-i18n="poweredBy">پەرەپێدراوە لەلایەن</span>
+                    <span class="smart-serve-brand">Smart Serve</span>
+                </div>
+                <span class="smart-serve-sparkle" aria-hidden="true">✦</span>
+            </div>
+            <span class="smart-serve-line" aria-hidden="true"></span>
+        </div>
+    </footer>
 
     <div class="detail-overlay" id="detailOverlay">
         <div class="detail-backdrop" id="detailBackdrop"></div>
@@ -550,6 +550,20 @@
                 var branch = (window.BRANCH_ID && window.BRANCH_ID !== '1') ? window.BRANCH_ID : (new URLSearchParams(window.location.search).get('branch'));
                 window.location.href = 'index.html' + (branch && branch !== '1' ? '?branch=' + encodeURIComponent(branch) : '');
             });
+
+            var smartBadge = document.getElementById('smartServeBadge');
+            if (smartBadge) {
+                var scrollToTop = function () {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                };
+                smartBadge.addEventListener('click', scrollToTop);
+                smartBadge.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        scrollToTop();
+                    }
+                });
+            }
         })();
     </script>
 </body>

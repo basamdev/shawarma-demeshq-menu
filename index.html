@@ -94,23 +94,6 @@
                 </a>
             </div>
         </div>
-
-        <footer class="smart-serve-footer index-footer">
-            <div class="smart-serve-divider">
-                <span class="smart-serve-line" aria-hidden="true"></span>
-                <div class="smart-serve-badge">
-                    <div class="smart-serve-logo-glow">
-                        <img src="assets/smart-serve-logo.jpg" alt="Smart Serve" class="smart-serve-logo-img" loading="lazy" onerror="this.onerror=null; this.src='images/smart-serve-logo.jpg';">
-                    </div>
-                    <div class="smart-serve-text-wrap">
-                        <span class="smart-serve-prefix" data-i18n="poweredBy">پەرەپێدراوە لەلایەن</span>
-                        <span class="smart-serve-brand">Smart Serve</span>
-                    </div>
-                    <span class="smart-serve-sparkle" aria-hidden="true">✦</span>
-                </div>
-                <span class="smart-serve-line" aria-hidden="true"></span>
-            </div>
-        </footer>
     </section>
 
     <script src="js/app.js?v=95"></script>
@@ -131,27 +114,6 @@
             setupLogoClickActions(logo, function () {
                 replayLogoSplash(splash);
             });
-
-            // Interactive language hover preview for Smart Serve footer on index page
-            var langButtons = document.querySelectorAll('.lang-btn');
-            var prefixEl = document.querySelector('.smart-serve-prefix');
-            if (langButtons.length && prefixEl) {
-                var langMap = {
-                    ku: 'پەرەپێدراوە لەلایەن',
-                    ar: 'تم التطوير بواسطة',
-                    en: 'Powered by'
-                };
-                langButtons.forEach(function (btn) {
-                    btn.addEventListener('mouseenter', function () {
-                        var l = btn.getAttribute('data-lang');
-                        if (langMap[l]) prefixEl.textContent = langMap[l];
-                    });
-                    btn.addEventListener('mouseleave', function () {
-                        var cur = localStorage.getItem('selectedLang') || 'ku';
-                        if (langMap[cur]) prefixEl.textContent = langMap[cur];
-                    });
-                });
-            }
         })();
     </script>
 </body>
