@@ -6651,14 +6651,6 @@ body.index-page .hero-center {
 .smart-serve-footer.menu-footer .smart-serve-badge {
     pointer-events: auto !important;
     cursor: pointer !important;
-    box-shadow:
-        0 8px 30px rgba(0, 0, 0, 0.55),
-        0 2px 10px rgba(0, 229, 255, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-}
-
-.smart-serve-footer.menu-footer .smart-serve-badge:active {
-    transform: translateY(0) scale(0.96) !important;
 }
 
 /* Hide fixed bottom Smart Serve footer when any modal or drawer is open */
@@ -6678,7 +6670,7 @@ body.order-modal-open .smart-serve-footer.menu-footer {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 14px;
+    gap: 12px;
     width: 100%;
     max-width: 520px;
     position: relative;
@@ -6688,79 +6680,83 @@ body.order-modal-open .smart-serve-footer.menu-footer {
 .smart-serve-line {
     flex: 1;
     height: 1px;
-    min-width: 24px;
+    min-width: 20px;
     position: relative;
     border-radius: 999px;
-    background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.45));
+    background: linear-gradient(90deg, transparent, var(--emenu-border, rgba(212, 175, 55, 0.3)));
 }
 
 .smart-serve-line:first-child {
-    background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.45));
+    background: linear-gradient(90deg, transparent, var(--emenu-border, rgba(212, 175, 55, 0.3)));
 }
 
 .smart-serve-line:last-child {
-    background: linear-gradient(90deg, rgba(168, 85, 247, 0.5), transparent);
+    background: linear-gradient(90deg, var(--emenu-border, rgba(212, 175, 55, 0.3)), transparent);
 }
 
 [dir="rtl"] .smart-serve-line:first-child {
-    background: linear-gradient(270deg, transparent, rgba(0, 229, 255, 0.45));
+    background: linear-gradient(270deg, transparent, var(--emenu-border, rgba(212, 175, 55, 0.3)));
 }
 
 [dir="rtl"] .smart-serve-line:last-child {
-    background: linear-gradient(270deg, rgba(168, 85, 247, 0.5), transparent);
+    background: linear-gradient(270deg, var(--emenu-border, rgba(212, 175, 55, 0.3)), transparent);
 }
 
-.smart-serve-line::after {
-    content: '';
-    position: absolute;
-    inset: -1px 0;
-    background: inherit;
-    filter: blur(3px);
-    opacity: 0.65;
-    pointer-events: none;
-}
-
-/* Center Glassmorphic Floating Pill Badge */
+/* Floating Pill Badge — Merged Seamlessly With Menu Theme & Category Pills */
 .smart-serve-badge {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    padding: 7px 18px 7px 9px;
+    gap: 8px;
+    height: 34px;
+    min-height: 34px;
+    padding: 3px 13px 3px 6px;
     border-radius: 9999px;
-    background: rgba(14, 12, 22, 0.72);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(0, 229, 255, 0.28);
+    background: var(--emenu-pill-bg, rgba(38, 33, 27, 0.88));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--emenu-border, rgba(212, 175, 55, 0.22));
     box-shadow:
-        0 4px 20px rgba(0, 0, 0, 0.45),
-        0 0 16px rgba(0, 229, 255, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.14);
-    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        0 4px 16px rgba(0, 0, 0, 0.28),
+        0 1px 3px rgba(0, 0, 0, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                background-color 0.2s ease,
+                border-color 0.2s ease,
+                box-shadow 0.2s ease;
     text-decoration: none;
-    color: inherit;
-    cursor: default;
+    color: var(--emenu-text, inherit);
+    cursor: pointer;
     position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 [dir="rtl"] .smart-serve-badge {
-    padding: 7px 9px 7px 18px;
+    padding: 3px 6px 3px 13px;
 }
 
 .smart-serve-badge:hover {
-    transform: translateY(-2px) scale(1.02);
-    border-color: rgba(0, 229, 255, 0.6);
+    transform: translateY(-1px);
+    border-color: var(--emenu-accent, #D4AF37);
     box-shadow:
-        0 8px 28px rgba(0, 0, 0, 0.55),
-        0 0 25px rgba(0, 229, 255, 0.35),
-        0 0 35px rgba(168, 85, 247, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.22);
+        0 6px 20px rgba(0, 0, 0, 0.36),
+        0 0 12px var(--emenu-accent-glow, rgba(212, 175, 55, 0.2)),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-/* Smart Serve Circular Logo with Ambient Rotating Glow Ring */
+.smart-serve-badge:active {
+    transform: translateY(0) scale(0.97);
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Compact Logo Ring — Understated Theme Border */
 .smart-serve-logo-glow {
     position: relative;
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -6771,32 +6767,30 @@ body.order-modal-open .smart-serve-footer.menu-footer {
 .smart-serve-logo-glow::before {
     content: '';
     position: absolute;
-    inset: -2px;
+    inset: -1.5px;
     border-radius: 50%;
-    background: conic-gradient(from 0deg, #00e5ff, #8b5cf6, #ec4899, #00e5ff);
-    animation: smartServeSpin 6s linear infinite;
-    opacity: 0.9;
-    filter: blur(1px);
+    border: 1px solid var(--emenu-accent, rgba(212, 175, 55, 0.5));
+    opacity: 0.7;
+    box-shadow: 0 0 6px var(--emenu-accent-glow, rgba(212, 175, 55, 0.2));
 }
 
 .smart-serve-logo-img {
     position: relative;
     z-index: 1;
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     object-fit: cover;
     display: block;
     background: #000;
-    box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.6);
 }
 
-/* Typography */
+/* Typography — Refined, Soft, Not Too Bold */
 .smart-serve-text-wrap {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    line-height: 1.25;
+    line-height: 1.2;
     white-space: nowrap;
 }
 
@@ -6807,131 +6801,103 @@ body.order-modal-open .smart-serve-footer.menu-footer {
 }
 
 .smart-serve-prefix {
-    font-size: 0.82rem;
+    font-size: 0.74rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.76);
+    color: var(--emenu-text-muted, #C4B59D);
     letter-spacing: 0.01em;
-    transition: color 0.3s ease;
+    transition: color 0.2s ease;
 }
 
 .smart-serve-brand {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 0.92rem;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    background: linear-gradient(135deg, #00f0ff 0%, #60a5fa 45%, #c084fc 100%);
+    font-size: 0.80rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: var(--emenu-accent-gradient, linear-gradient(135deg, #F3E5AB 0%, #D4AF37 50%, #996515 100%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.35));
+    color: var(--emenu-accent, #D4AF37);
     display: inline-block;
 }
 
-/* Twinkling Accent Sparkle */
+/* Subtle Accent Sparkle */
 .smart-serve-sparkle {
-    font-size: 0.72rem;
-    color: #00e5ff;
-    filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.8));
-    animation: smartServePulse 2.8s ease-in-out infinite;
-    margin-inline-start: 2px;
+    font-size: 0.60rem;
+    color: var(--emenu-accent, #D4AF37);
+    opacity: 0.75;
+    animation: smartServePulse 3s ease-in-out infinite;
+    margin-inline-start: 1px;
     display: inline-block;
     user-select: none;
 }
 
-/* Keyframes */
-@keyframes smartServeSpin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
 @keyframes smartServePulse {
     0%, 100% {
-        opacity: 0.45;
-        transform: scale(0.9) rotate(0deg);
-        filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.5));
+        opacity: 0.5;
+        transform: scale(0.92);
     }
     50% {
-        opacity: 1;
-        transform: scale(1.2) rotate(15deg);
-        filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.9));
+        opacity: 0.95;
+        transform: scale(1.08);
     }
 }
 
 /* Light Mode Overrides */
 body.light-mode .smart-serve-badge {
-    background: rgba(255, 255, 255, 0.88);
-    border-color: rgba(0, 180, 216, 0.35);
+    background: var(--emenu-pill-bg, rgba(255, 255, 255, 0.94));
+    border-color: var(--emenu-border, rgba(60, 40, 20, 0.12));
     box-shadow:
-        0 4px 18px rgba(0, 0, 0, 0.06),
-        0 0 14px rgba(0, 180, 216, 0.16),
+        0 3px 12px rgba(60, 40, 20, 0.08),
+        0 1px 2px rgba(60, 40, 20, 0.04),
         inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 body.light-mode .smart-serve-badge:hover {
-    background: rgba(255, 255, 255, 0.98);
-    border-color: rgba(0, 180, 216, 0.6);
+    border-color: var(--emenu-accent, #B8910C);
     box-shadow:
-        0 8px 24px rgba(0, 0, 0, 0.1),
-        0 0 20px rgba(0, 180, 216, 0.28),
-        0 0 25px rgba(124, 58, 237, 0.2);
+        0 5px 16px rgba(60, 40, 20, 0.12),
+        0 0 10px var(--emenu-accent-glow, rgba(184, 145, 12, 0.2));
 }
 
 body.light-mode .smart-serve-prefix {
-    color: #334155;
+    color: var(--emenu-text-muted, #78604F);
 }
 
 body.light-mode .smart-serve-brand {
-    background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #7c3aed 100%);
+    background: var(--emenu-accent-gradient, linear-gradient(135deg, #B8910C 0%, #8C6D08 100%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 6px rgba(37, 99, 235, 0.25));
-}
-
-body.light-mode .smart-serve-line:first-child {
-    background: linear-gradient(90deg, transparent, rgba(2, 132, 199, 0.35));
-}
-body.light-mode .smart-serve-line:last-child {
-    background: linear-gradient(90deg, rgba(124, 58, 237, 0.35), transparent);
-}
-[dir="rtl"] body.light-mode .smart-serve-line:first-child {
-    background: linear-gradient(270deg, transparent, rgba(2, 132, 199, 0.35));
-}
-[dir="rtl"] body.light-mode .smart-serve-line:last-child {
-    background: linear-gradient(270deg, rgba(124, 58, 237, 0.35), transparent);
+    color: var(--emenu-accent, #8C6D08);
 }
 
 /* Responsive adjustments */
 @media (max-width: 480px) {
-    .smart-serve-divider {
-        gap: 10px;
-        max-width: 92%;
-    }
-    .smart-serve-line {
-        min-width: 14px;
-    }
-    .smart-serve-badge {
-        padding: 6px 14px 6px 8px;
-        gap: 8px;
-    }
-    [dir="rtl"] .smart-serve-badge {
-        padding: 6px 8px 6px 14px;
-    }
-    .smart-serve-logo-glow,
-    .smart-serve-logo-img {
-        width: 25px;
-        height: 25px;
-    }
-    .smart-serve-prefix {
-        font-size: 0.76rem;
-    }
-    .smart-serve-brand {
-        font-size: 0.86rem;
-    }
-    .smart-serve-sparkle {
-        font-size: 0.68rem;
-    }
     .smart-serve-footer.menu-footer {
         bottom: max(10px, env(safe-area-inset-bottom, 10px)) !important;
         padding: 0 12px !important;
+    }
+    .smart-serve-badge {
+        height: 32px;
+        min-height: 32px;
+        padding: 2px 11px 2px 5px;
+        gap: 7px;
+    }
+    [dir="rtl"] .smart-serve-badge {
+        padding: 2px 5px 2px 11px;
+    }
+    .smart-serve-logo-glow,
+    .smart-serve-logo-img {
+        width: 20px;
+        height: 20px;
+    }
+    .smart-serve-prefix {
+        font-size: 0.70rem;
+    }
+    .smart-serve-brand {
+        font-size: 0.76rem;
+    }
+    .smart-serve-sparkle {
+        font-size: 0.56rem;
     }
 }
 
