@@ -20,24 +20,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css?v=67">
 </head>
-<body class="menu-page emenu-layout light-mode" data-menu-theme="light">
+<body class="menu-page emenu-layout" data-menu-theme="gold">
 <script>
 (function () {
-    function emenuBrownRing(hex, alpha) {
-        alpha = alpha == null ? 0.22 : alpha;
-        if (!hex || hex.charAt(0) !== '#') return 'rgba(155,97,53,' + alpha + ')';
-        var h = hex.slice(1);
-        if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
-        var r = parseInt(h.slice(0, 2), 16);
-        var g = parseInt(h.slice(2, 4), 16);
-        var b = parseInt(h.slice(4, 6), 16);
-        return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
-    }
-
     function applyEmenuThemeCssVars(b, t) {
-        b.setAttribute('data-menu-theme', t.id || 'light');
+        if (!b || !t) return;
+        b.setAttribute('data-menu-theme', t.id || 'gold');
         if (t.light) b.classList.add('light-mode'); else b.classList.remove('light-mode');
-        b.style.setProperty('--emenu-brown', t.brown);
+        b.style.setProperty('--emenu-accent', t.accent);
+        b.style.setProperty('--emenu-accent-hover', t.accentHover || t.accent);
+        b.style.setProperty('--emenu-accent-glow', t.accentGlow);
+        b.style.setProperty('--emenu-accent-gradient', t.accentGradient || t.accent);
+        b.style.setProperty('--emenu-brown', t.accent);
+        b.style.setProperty('--heading-accent', t.accent);
+        b.style.setProperty('--heading-fg', t.accent);
         b.style.setProperty('--emenu-bg', t.bg);
         b.style.setProperty('--emenu-cat-bg', t.cat);
         b.style.setProperty('--emenu-card-bg', t.card);
@@ -45,31 +41,165 @@
         b.style.setProperty('--emenu-pill-bg', t.pill);
         b.style.setProperty('--emenu-fab-bg', t.fab);
         b.style.setProperty('--emenu-text', t.text);
+        b.style.setProperty('--emenu-text-muted', t.textMuted || '#9E9EA8');
         b.style.setProperty('--emenu-border', t.border);
         b.style.setProperty('--emenu-fab-text', t.fabText);
         b.style.setProperty('--emenu-curve', t.bg);
-        b.style.setProperty('--emenu-hero-accent', t.brown);
-        b.style.setProperty('--emenu-fab-accent', t.brown);
+        b.style.setProperty('--emenu-hero-accent', t.accent);
+        b.style.setProperty('--emenu-fab-accent', t.accent);
         b.style.setProperty('--emenu-fab-border', t.border);
-        b.style.setProperty('--emenu-fab-accent-ring', emenuBrownRing(t.brown, 0.22));
-        b.style.setProperty('--emenu-fab-accent-ring-strong', emenuBrownRing(t.brown, 0.38));
+        b.style.setProperty('--emenu-fab-accent-ring', t.accentGlow);
+        b.style.setProperty('--emenu-fab-accent-ring-strong', t.accent);
     }
 
     var themes = {
-        light:  { id: 'light',  light: true,  brown: '#9B6135', bg: '#FFFFFF', cat: '#F8F8F8', card: '#FFFFFF', surface: '#FFFFFF', pill: '#FFFFFF', fab: '#FFFFFF', text: '#1A1A1A', border: '#E8E8E8', fabText: '#5F6368' },
-        cream:  { id: 'cream',  light: true,  brown: '#8B6914', bg: '#FAF7F2', cat: '#F0E9DF', card: '#FFFFFF', surface: '#FFFFFF', pill: '#FFFFFF', fab: '#FFFFFF', text: '#2C2416', border: '#E8DFD2', fabText: '#6B5E54' },
-        coffee: { id: 'coffee', light: true,  brown: '#6F4E37', bg: '#F5EDE3', cat: '#EBE0D4', card: '#FFFCF8', surface: '#FFFCF8', pill: '#FFFCF8', fab: '#FFFFFF', text: '#2A2018', border: '#DDD0C4', fabText: '#6B5344' },
-        gold:   { id: 'gold',   light: true,  brown: '#B8910C', bg: '#FFFDF5', cat: '#FBF5E6', card: '#FFFFFF', surface: '#FFFFFF', pill: '#FFFFFF', fab: '#FFFFFF', text: '#1A1608', border: '#EDE4CC', fabText: '#6B6248' },
-        mocha:  { id: 'mocha',  light: true,  brown: '#5C4033', bg: '#F3EBE4', cat: '#E8DDD4', card: '#FAF6F2', surface: '#FAF6F2', pill: '#FAF6F2', fab: '#FFFFFF', text: '#261A14', border: '#D9CEC4', fabText: '#6B5A50' },
-        dark:   { id: 'dark',   light: false, brown: '#C4956A', bg: '#141414', cat: '#1E1E1E', card: '#2A2A2A', surface: '#2A2A2A', pill: '#2A2A2A', fab: '#333333', text: '#F0F0F0', border: '#444444', fabText: '#CFCFCF' }
+        gold: {
+            id: 'gold',
+            name: 'Royal Gold',
+            light: false,
+            meta: '#D4AF37',
+            accent: '#D4AF37',
+            accentHover: '#E5C158',
+            accentGlow: 'rgba(212, 175, 55, 0.45)',
+            accentGradient: 'linear-gradient(135deg, #F3E5AB 0%, #D4AF37 50%, #AA7C11 100%)',
+            bg: '#0D0D10',
+            cat: '#141419',
+            card: '#181820',
+            surface: '#181820',
+            pill: '#1E1E28',
+            fab: '#181820',
+            text: '#F5F5F7',
+            textMuted: '#9E9EA8',
+            border: 'rgba(212, 175, 55, 0.22)',
+            fabText: '#F5F5F7'
+        },
+        amber: {
+            id: 'amber',
+            name: 'Damascus Amber',
+            light: false,
+            meta: '#E58E26',
+            accent: '#E58E26',
+            accentHover: '#F39C12',
+            accentGlow: 'rgba(229, 142, 38, 0.45)',
+            accentGradient: 'linear-gradient(135deg, #FAD7A0 0%, #E58E26 50%, #B85C08 100%)',
+            bg: '#140D07',
+            cat: '#1C130B',
+            card: '#24180E',
+            surface: '#24180E',
+            pill: '#2D1E12',
+            fab: '#24180E',
+            text: '#FDF4EB',
+            textMuted: '#A89280',
+            border: 'rgba(229, 142, 38, 0.25)',
+            fabText: '#FDF4EB'
+        },
+        emerald: {
+            id: 'emerald',
+            name: 'Emerald Sultan',
+            light: false,
+            meta: '#10B981',
+            accent: '#10B981',
+            accentHover: '#34D399',
+            accentGlow: 'rgba(16, 185, 129, 0.45)',
+            accentGradient: 'linear-gradient(135deg, #A7F3D0 0%, #10B981 50%, #065F46 100%)',
+            bg: '#06130F',
+            cat: '#0B1D17',
+            card: '#102620',
+            surface: '#102620',
+            pill: '#16332B',
+            fab: '#102620',
+            text: '#F0FDF4',
+            textMuted: '#86A99A',
+            border: 'rgba(16, 185, 129, 0.25)',
+            fabText: '#F0FDF4'
+        },
+        ruby: {
+            id: 'ruby',
+            name: 'Ruby Royale',
+            light: false,
+            meta: '#E11D48',
+            accent: '#E11D48',
+            accentHover: '#FB7185',
+            accentGlow: 'rgba(225, 29, 72, 0.45)',
+            accentGradient: 'linear-gradient(135deg, #FECDD3 0%, #E11D48 50%, #881337 100%)',
+            bg: '#120508',
+            cat: '#1C0A10',
+            card: '#260F17',
+            surface: '#260F17',
+            pill: '#331520',
+            fab: '#260F17',
+            text: '#FFF1F2',
+            textMuted: '#B38E96',
+            border: 'rgba(225, 29, 72, 0.25)',
+            fabText: '#FFF1F2'
+        },
+        sapphire: {
+            id: 'sapphire',
+            name: 'Sapphire Night',
+            light: false,
+            meta: '#2563EB',
+            accent: '#38BDF8',
+            accentHover: '#60A5FA',
+            accentGlow: 'rgba(56, 189, 248, 0.45)',
+            accentGradient: 'linear-gradient(135deg, #BAE6FD 0%, #38BDF8 50%, #1D4ED8 100%)',
+            bg: '#080C14',
+            cat: '#0E1624',
+            card: '#141E30',
+            surface: '#141E30',
+            pill: '#1B2840',
+            fab: '#141E30',
+            text: '#F8FAFC',
+            textMuted: '#8898AA',
+            border: 'rgba(56, 189, 248, 0.25)',
+            fabText: '#F8FAFC'
+        },
+        ivory: {
+            id: 'ivory',
+            name: 'Ivory Palace',
+            light: true,
+            meta: '#8E5D28',
+            accent: '#8E5D28',
+            accentHover: '#A87034',
+            accentGlow: 'rgba(142, 93, 40, 0.35)',
+            accentGradient: 'linear-gradient(135deg, #D5AB7B 0%, #8E5D28 50%, #5E3911 100%)',
+            bg: '#FAF8F5',
+            cat: '#F0EBE3',
+            card: '#FFFFFF',
+            surface: '#FFFFFF',
+            pill: '#FFFFFF',
+            fab: '#FFFFFF',
+            text: '#1C160E',
+            textMuted: '#7A6E60',
+            border: 'rgba(142, 93, 40, 0.2)',
+            fabText: '#5A4E42'
+        },
+        amethyst: {
+            id: 'amethyst',
+            name: 'Amethyst Velvet',
+            light: false,
+            meta: '#A855F7',
+            accent: '#C084FC',
+            accentHover: '#D8B4FE',
+            accentGlow: 'rgba(192, 132, 252, 0.45)',
+            accentGradient: 'linear-gradient(135deg, #E9D5FF 0%, #C084FC 50%, #6B21A8 100%)',
+            bg: '#0D0714',
+            cat: '#150C20',
+            card: '#1E122C',
+            surface: '#1E122C',
+            pill: '#291A3B',
+            fab: '#1E122C',
+            text: '#FAF5FF',
+            textMuted: '#9F8CB5',
+            border: 'rgba(192, 132, 252, 0.25)',
+            fabText: '#FAF5FF'
+        }
     };
 
-    var id = localStorage.getItem('menuTheme') || 'light';
-    if (!themes[id]) id = 'light';
+    var id = localStorage.getItem('menuTheme') || 'gold';
+    if (!themes[id]) id = 'gold';
     applyEmenuThemeCssVars(document.body, themes[id]);
     window.MENU_THEMES = themes;
     window.applyEmenuThemeCssVars = applyEmenuThemeCssVars;
-    window.emenuBrownRing = emenuBrownRing;
 })();
 </script>
 
@@ -124,29 +254,33 @@
                 </svg>
             </button>
             <div class="theme-dropdown-menu fab-theme-menu" id="themeDropdownMenu">
-                <button type="button" class="theme-option active" data-theme="light">
-                    <span class="theme-swatch theme-swatch-light"></span>
-                    <span class="theme-name" data-i18n="themeWhite">White</span>
-                </button>
-                <button type="button" class="theme-option" data-theme="cream">
-                    <span class="theme-swatch theme-swatch-cream"></span>
-                    <span class="theme-name" data-i18n="themeCream">Cream</span>
-                </button>
-                <button type="button" class="theme-option" data-theme="coffee">
-                    <span class="theme-swatch theme-swatch-coffee"></span>
-                    <span class="theme-name" data-i18n="themeCoffee">Coffee</span>
-                </button>
-                <button type="button" class="theme-option" data-theme="gold">
+                <button type="button" class="theme-option active" data-theme="gold">
                     <span class="theme-swatch theme-swatch-gold"></span>
-                    <span class="theme-name" data-i18n="themeGold">Gold</span>
+                    <span class="theme-name" data-i18n="themeRoyalGold">Royal Gold</span>
                 </button>
-                <button type="button" class="theme-option" data-theme="mocha">
-                    <span class="theme-swatch theme-swatch-mocha"></span>
-                    <span class="theme-name" data-i18n="themeMocha">Mocha</span>
+                <button type="button" class="theme-option" data-theme="amber">
+                    <span class="theme-swatch theme-swatch-amber"></span>
+                    <span class="theme-name" data-i18n="themeDamascusAmber">Damascus Amber</span>
                 </button>
-                <button type="button" class="theme-option" data-theme="dark">
-                    <span class="theme-swatch theme-swatch-dark"></span>
-                    <span class="theme-name" data-i18n="themeDark">Dark</span>
+                <button type="button" class="theme-option" data-theme="emerald">
+                    <span class="theme-swatch theme-swatch-emerald"></span>
+                    <span class="theme-name" data-i18n="themeEmeraldSultan">Emerald Sultan</span>
+                </button>
+                <button type="button" class="theme-option" data-theme="ruby">
+                    <span class="theme-swatch theme-swatch-ruby"></span>
+                    <span class="theme-name" data-i18n="themeRubyRoyale">Ruby Royale</span>
+                </button>
+                <button type="button" class="theme-option" data-theme="sapphire">
+                    <span class="theme-swatch theme-swatch-sapphire"></span>
+                    <span class="theme-name" data-i18n="themeSapphireNight">Sapphire Night</span>
+                </button>
+                <button type="button" class="theme-option" data-theme="ivory">
+                    <span class="theme-swatch theme-swatch-ivory"></span>
+                    <span class="theme-name" data-i18n="themeIvoryPalace">Ivory Palace</span>
+                </button>
+                <button type="button" class="theme-option" data-theme="amethyst">
+                    <span class="theme-swatch theme-swatch-amethyst"></span>
+                    <span class="theme-name" data-i18n="themeAmethystVelvet">Amethyst Velvet</span>
                 </button>
             </div>
         </div>

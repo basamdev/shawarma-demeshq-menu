@@ -424,12 +424,13 @@ const i18n = {
         phonePlaceholder: '٩٦٤٧٧٠١٢٣٤٥٦٧',
         orderSent: 'داواکاری نێردرا!',
         quantity: 'ژمارە',
-        themeWhite: 'سپی',
-        themeCream: 'کرێم',
-        themeCoffee: 'قاوە',
-        themeGold: 'زێڕین',
-        themeMocha: 'موکا',
-        themeDark: 'تاریک',
+        themeRoyalGold: 'زێڕی شاهانە',
+        themeDamascusAmber: 'عەنبەری دیمەشق',
+        themeEmeraldSultan: 'سولتانی زمڕود',
+        themeRubyRoyale: 'یاقووتی شاهانە',
+        themeSapphireNight: 'شینی نیلی',
+        themeIvoryPalace: 'کۆشکی عاج',
+        themeAmethystVelvet: 'مۆری شاهانە',
         cafeOpen: 'ئێستا کراوەیە',
         cafeClosed: 'ئێستا داخراوە',
         cafeContact: 'پەیوەندی',
@@ -646,12 +647,13 @@ const i18n = {
         phonePlaceholder: '٩٦٤٧٧٠١٢٣٤٥٦٧',
         orderSent: 'تم إرسال الطلب!',
         quantity: 'الكمية',
-        themeWhite: 'أبيض',
-        themeCream: 'كريمي',
-        themeCoffee: 'قهوة',
-        themeGold: 'ذهبي',
-        themeMocha: 'موكا',
-        themeDark: 'داكن',
+        themeRoyalGold: 'ذهبي ملكي',
+        themeDamascusAmber: 'عنبر دمشقي',
+        themeEmeraldSultan: 'زمرد سلطاني',
+        themeRubyRoyale: 'ياقوت ملكي',
+        themeSapphireNight: 'ياقوت أزرق',
+        themeIvoryPalace: 'قصر عاجي',
+        themeAmethystVelvet: 'بنفسجي ملكي',
         cafeOpen: 'مفتوح الآن',
         cafeClosed: 'مغلق الآن',
         cafeContact: 'تواصل',
@@ -889,12 +891,13 @@ const i18n = {
         phonePlaceholder: '+9647701234567',
         orderSent: 'Order sent!',
         quantity: 'Qty',
-        themeWhite: 'White',
-        themeCream: 'Cream',
-        themeCoffee: 'Coffee',
-        themeGold: 'Gold',
-        themeMocha: 'Mocha',
-        themeDark: 'Dark',
+        themeRoyalGold: 'Royal Gold',
+        themeDamascusAmber: 'Damascus Amber',
+        themeEmeraldSultan: 'Emerald Sultan',
+        themeRubyRoyale: 'Ruby Royale',
+        themeSapphireNight: 'Sapphire Night',
+        themeIvoryPalace: 'Ivory Palace',
+        themeAmethystVelvet: 'Amethyst Velvet',
         cafeOpen: 'Open now',
         cafeClosed: 'Closed now',
         cafeContact: 'Contact',
@@ -2659,28 +2662,150 @@ function setupThemeToggle() {
 }
 
 var MENU_THEMES = window.MENU_THEMES || {
-    light:  { id: 'light',  light: true,  meta: '#9B6135', brown: '#9B6135', bg: '#FFFFFF', cat: '#F8F8F8', card: '#FFFFFF', surface: '#FFFFFF', pill: '#FFFFFF', fab: '#FFFFFF', text: '#1A1A1A', border: '#E8E8E8', fabText: '#5F6368' },
-    cream:  { id: 'cream',  light: true,  meta: '#8B6914', brown: '#8B6914', bg: '#FAF7F2', cat: '#F0E9DF', card: '#FFFFFF', surface: '#FFFFFF', pill: '#FFFFFF', fab: '#FFFFFF', text: '#2C2416', border: '#E8DFD2', fabText: '#6B5E54' },
-    coffee: { id: 'coffee', light: true,  meta: '#6F4E37', brown: '#6F4E37', bg: '#F5EDE3', cat: '#EBE0D4', card: '#FFFCF8', surface: '#FFFCF8', pill: '#FFFCF8', fab: '#FFFFFF', text: '#2A2018', border: '#DDD0C4', fabText: '#6B5344' },
-    gold:   { id: 'gold',   light: true,  meta: '#B8910C', brown: '#B8910C', bg: '#FFFDF5', cat: '#FBF5E6', card: '#FFFFFF', surface: '#FFFFFF', pill: '#FFFFFF', fab: '#FFFFFF', text: '#1A1608', border: '#EDE4CC', fabText: '#6B6248' },
-    mocha:  { id: 'mocha',  light: true,  meta: '#5C4033', brown: '#5C4033', bg: '#F3EBE4', cat: '#E8DDD4', card: '#FAF6F2', surface: '#FAF6F2', pill: '#FAF6F2', fab: '#FFFFFF', text: '#261A14', border: '#D9CEC4', fabText: '#6B5A50' },
-    dark:   { id: 'dark',   light: false, meta: '#1A1A1A', brown: '#C4956A', bg: '#141414', cat: '#1E1E1E', card: '#2A2A2A', surface: '#2A2A2A', pill: '#2A2A2A', fab: '#333333', text: '#F0F0F0', border: '#444444', fabText: '#CFCFCF' }
+    gold: {
+        id: 'gold',
+        name: 'Royal Gold',
+        light: false,
+        meta: '#D4AF37',
+        accent: '#D4AF37',
+        accentHover: '#E5C158',
+        accentGlow: 'rgba(212, 175, 55, 0.45)',
+        accentGradient: 'linear-gradient(135deg, #F3E5AB 0%, #D4AF37 50%, #AA7C11 100%)',
+        bg: '#0D0D10',
+        cat: '#141419',
+        card: '#181820',
+        surface: '#181820',
+        pill: '#1E1E28',
+        fab: '#181820',
+        text: '#F5F5F7',
+        textMuted: '#9E9EA8',
+        border: 'rgba(212, 175, 55, 0.22)',
+        fabText: '#F5F5F7'
+    },
+    amber: {
+        id: 'amber',
+        name: 'Damascus Amber',
+        light: false,
+        meta: '#E58E26',
+        accent: '#E58E26',
+        accentHover: '#F39C12',
+        accentGlow: 'rgba(229, 142, 38, 0.45)',
+        accentGradient: 'linear-gradient(135deg, #FAD7A0 0%, #E58E26 50%, #B85C08 100%)',
+        bg: '#140D07',
+        cat: '#1C130B',
+        card: '#24180E',
+        surface: '#24180E',
+        pill: '#2D1E12',
+        fab: '#24180E',
+        text: '#FDF4EB',
+        textMuted: '#A89280',
+        border: 'rgba(229, 142, 38, 0.25)',
+        fabText: '#FDF4EB'
+    },
+    emerald: {
+        id: 'emerald',
+        name: 'Emerald Sultan',
+        light: false,
+        meta: '#10B981',
+        accent: '#10B981',
+        accentHover: '#34D399',
+        accentGlow: 'rgba(16, 185, 129, 0.45)',
+        accentGradient: 'linear-gradient(135deg, #A7F3D0 0%, #10B981 50%, #065F46 100%)',
+        bg: '#06130F',
+        cat: '#0B1D17',
+        card: '#102620',
+        surface: '#102620',
+        pill: '#16332B',
+        fab: '#102620',
+        text: '#F0FDF4',
+        textMuted: '#86A99A',
+        border: 'rgba(16, 185, 129, 0.25)',
+        fabText: '#F0FDF4'
+    },
+    ruby: {
+        id: 'ruby',
+        name: 'Ruby Royale',
+        light: false,
+        meta: '#E11D48',
+        accent: '#E11D48',
+        accentHover: '#FB7185',
+        accentGlow: 'rgba(225, 29, 72, 0.45)',
+        accentGradient: 'linear-gradient(135deg, #FECDD3 0%, #E11D48 50%, #881337 100%)',
+        bg: '#120508',
+        cat: '#1C0A10',
+        card: '#260F17',
+        surface: '#260F17',
+        pill: '#331520',
+        fab: '#260F17',
+        text: '#FFF1F2',
+        textMuted: '#B38E96',
+        border: 'rgba(225, 29, 72, 0.25)',
+        fabText: '#FFF1F2'
+    },
+    sapphire: {
+        id: 'sapphire',
+        name: 'Sapphire Night',
+        light: false,
+        meta: '#2563EB',
+        accent: '#38BDF8',
+        accentHover: '#60A5FA',
+        accentGlow: 'rgba(56, 189, 248, 0.45)',
+        accentGradient: 'linear-gradient(135deg, #BAE6FD 0%, #38BDF8 50%, #1D4ED8 100%)',
+        bg: '#080C14',
+        cat: '#0E1624',
+        card: '#141E30',
+        surface: '#141E30',
+        pill: '#1B2840',
+        fab: '#141E30',
+        text: '#F8FAFC',
+        textMuted: '#8898AA',
+        border: 'rgba(56, 189, 248, 0.25)',
+        fabText: '#F8FAFC'
+    },
+    ivory: {
+        id: 'ivory',
+        name: 'Ivory Palace',
+        light: true,
+        meta: '#8E5D28',
+        accent: '#8E5D28',
+        accentHover: '#A87034',
+        accentGlow: 'rgba(142, 93, 40, 0.35)',
+        accentGradient: 'linear-gradient(135deg, #D5AB7B 0%, #8E5D28 50%, #5E3911 100%)',
+        bg: '#FAF8F5',
+        cat: '#F0EBE3',
+        card: '#FFFFFF',
+        surface: '#FFFFFF',
+        pill: '#FFFFFF',
+        fab: '#FFFFFF',
+        text: '#1C160E',
+        textMuted: '#7A6E60',
+        border: 'rgba(142, 93, 40, 0.2)',
+        fabText: '#5A4E42'
+    },
+    amethyst: {
+        id: 'amethyst',
+        name: 'Amethyst Velvet',
+        light: false,
+        meta: '#A855F7',
+        accent: '#C084FC',
+        accentHover: '#D8B4FE',
+        accentGlow: 'rgba(192, 132, 252, 0.45)',
+        accentGradient: 'linear-gradient(135deg, #E9D5FF 0%, #C084FC 50%, #6B21A8 100%)',
+        bg: '#0D0714',
+        cat: '#150C20',
+        card: '#1E122C',
+        surface: '#1E122C',
+        pill: '#291A3B',
+        fab: '#1E122C',
+        text: '#FAF5FF',
+        textMuted: '#9F8CB5',
+        border: 'rgba(192, 132, 252, 0.25)',
+        fabText: '#FAF5FF'
+    }
 };
 
-function emenuBrownRing(hex, alpha) {
-    if (window.emenuBrownRing) return window.emenuBrownRing(hex, alpha);
-    alpha = alpha == null ? 0.22 : alpha;
-    if (!hex || hex.charAt(0) !== '#') return 'rgba(155,97,53,' + alpha + ')';
-    var h = hex.slice(1);
-    if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
-    var r = parseInt(h.slice(0, 2), 16);
-    var g = parseInt(h.slice(2, 4), 16);
-    var b = parseInt(h.slice(4, 6), 16);
-    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
-}
-
 function applyMenuTheme(themeId) {
-    if (!MENU_THEMES[themeId]) themeId = 'light';
+    if (!MENU_THEMES[themeId]) themeId = 'gold';
     var theme = MENU_THEMES[themeId];
     theme.id = themeId;
     var body = document.body;
@@ -2689,10 +2814,14 @@ function applyMenuTheme(themeId) {
         window.applyEmenuThemeCssVars(body, theme);
     } else {
         body.setAttribute('data-menu-theme', themeId);
-        body.classList.toggle('light-mode', theme.light);
-        body.style.setProperty('--emenu-brown', theme.brown);
-        body.style.setProperty('--heading-accent', theme.brown);
-        body.style.setProperty('--heading-fg', theme.brown);
+        body.classList.toggle('light-mode', !!theme.light);
+        body.style.setProperty('--emenu-accent', theme.accent);
+        body.style.setProperty('--emenu-accent-hover', theme.accentHover || theme.accent);
+        body.style.setProperty('--emenu-accent-glow', theme.accentGlow);
+        body.style.setProperty('--emenu-accent-gradient', theme.accentGradient || theme.accent);
+        body.style.setProperty('--emenu-brown', theme.accent);
+        body.style.setProperty('--heading-accent', theme.accent);
+        body.style.setProperty('--heading-fg', theme.accent);
         body.style.setProperty('--emenu-bg', theme.bg);
         body.style.setProperty('--emenu-cat-bg', theme.cat);
         body.style.setProperty('--emenu-card-bg', theme.card);
@@ -2700,14 +2829,15 @@ function applyMenuTheme(themeId) {
         body.style.setProperty('--emenu-pill-bg', theme.pill);
         body.style.setProperty('--emenu-fab-bg', theme.fab);
         body.style.setProperty('--emenu-text', theme.text);
+        body.style.setProperty('--emenu-text-muted', theme.textMuted || '#9E9EA8');
         body.style.setProperty('--emenu-border', theme.border);
         body.style.setProperty('--emenu-fab-text', theme.fabText);
         body.style.setProperty('--emenu-curve', theme.bg);
-        body.style.setProperty('--emenu-hero-accent', theme.brown);
-        body.style.setProperty('--emenu-fab-accent', theme.brown);
+        body.style.setProperty('--emenu-hero-accent', theme.accent);
+        body.style.setProperty('--emenu-fab-accent', theme.accent);
         body.style.setProperty('--emenu-fab-border', theme.border);
-        body.style.setProperty('--emenu-fab-accent-ring', emenuBrownRing(theme.brown, 0.22));
-        body.style.setProperty('--emenu-fab-accent-ring-strong', emenuBrownRing(theme.brown, 0.38));
+        body.style.setProperty('--emenu-fab-accent-ring', theme.accentGlow);
+        body.style.setProperty('--emenu-fab-accent-ring-strong', theme.accent);
     }
 
     var heroBrand = document.getElementById('menuHeroBrand');
@@ -2721,7 +2851,7 @@ function applyMenuTheme(themeId) {
     }
 
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', theme.meta);
+    if (meta) meta.setAttribute('content', theme.meta || theme.accent);
 
     document.querySelectorAll('.theme-option').forEach(function (btn) {
         btn.classList.toggle('active', btn.getAttribute('data-theme') === themeId);
@@ -2732,7 +2862,8 @@ function applyMenuTheme(themeId) {
 
 function setupMenuThemePicker() {
     var saved = localStorage.getItem('menuTheme');
-    if (!saved || !MENU_THEMES[saved]) saved = 'light';
+    if (!saved || !MENU_THEMES[saved]) saved = 'gold';
+    applyMenuTheme(saved);
     applyMenuTheme(saved);
 
     var themeDropdown = document.getElementById('themeDropdown');
