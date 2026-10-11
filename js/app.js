@@ -80,21 +80,61 @@ if (document.readyState === 'loading') {
     preserveBranchInNavigation();
 }
 
+function stripHeavyFieldsFromJSON(valStr) {
+    if (typeof valStr !== 'string' || valStr.length < 300) return valStr;
+    try {
+        var parsed = JSON.parse(valStr);
+        if (Array.isArray(parsed)) {
+            var changed = false;
+            parsed.forEach(function (entry) {
+                var target = entry && entry.v ? entry.v : (entry && entry.data ? entry.data : entry);
+                if (target && target.image && typeof target.image === 'string' && (target.image.startsWith('data:image') || target.image.length > 400)) {
+                    delete target.image;
+                    changed = true;
+                }
+            });
+            if (changed) return JSON.stringify(parsed);
+        }
+    } catch (e) {}
+    return valStr;
+}
+
 function safeSetItem(key, value) {
+    if (!key) return;
+    if (typeof value === 'string' && (key.startsWith('cachedCashier') || key.startsWith('cachedMenu'))) {
+        value = stripHeavyFieldsFromJSON(value);
+    }
     try {
         localStorage.setItem(key, value);
     } catch (e) {
         if (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(e.message || '')) {
-            // Make room by evicting only NON-essential cache keys. Never evict
-            // `cachedCategories` (the menu needs it to render with images/order)
-            // and never evict the key we are currently trying to write.
-            evictNonEssentialCacheKeys();
+            evictNonEssentialCacheKeys(key);
+            var stripped = stripHeavyFieldsFromJSON(value);
             try {
-                localStorage.setItem(key, value);
+                localStorage.setItem(key, stripped);
+                return;
             } catch (e2) {
-                // Data is larger than the remaining quota — skip caching and let
-                // the app run from memory / live Firestore. Do NOT wipe categories.
-                console.warn('[storage] setItem still failed after cleanup for', key, ':', e2.message);
+                try {
+                    var parsed = JSON.parse(stripped);
+                    if (Array.isArray(parsed)) {
+                        var minified = parsed.map(function (it) {
+                            var t = it && it.v ? it.v : it;
+                            var min = {
+                                name_ku: t.name_ku || '',
+                                name_ar: t.name_ar || '',
+                                name_en: t.name_en || '',
+                                price: t.price || 0,
+                                category: t.category || '',
+                                order: t.order != null ? t.order : null,
+                                available: t.available !== false
+                            };
+                            return it && it.v ? { id: it.id, v: min } : Object.assign({ id: it.id }, min);
+                        });
+                        localStorage.setItem(key, JSON.stringify(minified));
+                        return;
+                    }
+                } catch (e3) {}
+                console.info('[storage] Cache quota exceeded for ' + key + ' — continuing in-memory.');
             }
         } else {
             console.warn('[storage] setItem failed for', key, ':', e.message);
@@ -107,19 +147,40 @@ function safeSetItem(key, value) {
 // and correct order, so wiping it would break the UI.
 var NON_ESSENTIAL_CACHE_KEYS = [
     'cachedMenuItems',
+    'cachedMenuItems_branch2',
     'cachedMenuItemsSig',
     'cachedCashierItems',
+    'cachedCashierItems_branch2',
     'cachedMenuCategoryNames',
+    'cachedMenuCategoryNames_branch2',
     'cachedSales',
     'cachedExpenses',
     'cachedFavorites',
     'menu_ratings'
 ];
 
-function evictNonEssentialCacheKeys() {
+function evictNonEssentialCacheKeys(keepKey) {
     NON_ESSENTIAL_CACHE_KEYS.forEach(function (k) {
-        try { localStorage.removeItem(k); } catch (e) {}
+        if (k !== keepKey) {
+            try { localStorage.removeItem(k); } catch (e) {}
+        }
     });
+    try {
+        var toRemove = [];
+        for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (!k || k === keepKey) continue;
+            if (k === 'selectedLang' || k === 'adminAuthToken' || k === 'adminUser' || k === 'adminAccent' || k === 'theme' || k.startsWith('cachedCategories')) {
+                continue;
+            }
+            if (k.startsWith('cachedMenu') || k.startsWith('cachedCashier') || k.startsWith('cachedSales') || k.startsWith('cachedExpenses')) {
+                toRemove.push(k);
+            }
+        }
+        toRemove.forEach(function (k) {
+            try { localStorage.removeItem(k); } catch (e) {}
+        });
+    } catch (e) {}
 }
 
 // Use local API instead of Firebase

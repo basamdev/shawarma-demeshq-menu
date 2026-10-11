@@ -201,75 +201,94 @@ function writeCachedMenuItemsFlat(key, items) {
 
     let lightweightItems = [];
     try {
-        // Strip heavy base64 image strings before caching
         lightweightItems = items.map(item => {
-            const copy = { ...item };
-            if (copy.image && typeof copy.image === 'string' && (copy.image.startsWith('data:image') || copy.image.length > 500)) {
+            const copy = Object.assign({}, item);
+            if (copy.image && typeof copy.image === 'string' && (copy.image.startsWith('data:image') || copy.image.length > 400)) {
                 delete copy.image;
             }
             return copy;
         });
-        localStorage.setItem(key, JSON.stringify(lightweightItems));
+        safeSetItem(key, JSON.stringify(lightweightItems));
         syncCashierCacheFromMenuFlat(lightweightItems);
     } catch (e) {
-        if (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(e.message || '')) {
-            console.warn(`[Cache] Storage quota exceeded for ${key}. Clearing stale caches...`);
-            // Clear other branch caches to free space
-            try {
-                const keysToInspect = [];
-                if (typeof localStorage.length === 'number') {
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const k = localStorage.key(i);
-                        if (k) keysToInspect.push(k);
-                    }
-                }
-                Object.keys(localStorage).forEach(k => {
-                    if (!keysToInspect.includes(k)) keysToInspect.push(k);
-                });
-                keysToInspect.forEach(k => {
-                    if (k.startsWith('cachedMenu') && k !== key) {
-                        localStorage.removeItem(k);
-                    }
-                });
-            } catch (clearErr) { }
-            try {
-                localStorage.setItem(key, JSON.stringify(lightweightItems));
-                syncCashierCacheFromMenuFlat(lightweightItems);
-            } catch (retryErr) {
-                console.warn(`[Cache] Unable to cache ${key}; continuing in-memory only.`);
-            }
-        } else {
-            console.warn(`[Cache] Could not write menu cache for ${key}:`, e);
-        }
+        console.warn(`[Cache] Could not write menu cache for ${key}:`, e);
     }
+}
+
+function stripHeavyFieldsFromJSON(valStr) {
+    if (typeof valStr !== 'string' || valStr.length < 300) return valStr;
+    try {
+        var parsed = JSON.parse(valStr);
+        if (Array.isArray(parsed)) {
+            var changed = false;
+            parsed.forEach(function (entry) {
+                var target = entry && entry.v ? entry.v : (entry && entry.data ? entry.data : entry);
+                if (target && target.image && typeof target.image === 'string' && (target.image.startsWith('data:image') || target.image.length > 400)) {
+                    delete target.image;
+                    changed = true;
+                }
+            });
+            if (changed) return JSON.stringify(parsed);
+        }
+    } catch (e) {}
+    return valStr;
+}
+
+function sanitizeCashierPayload(data) {
+    if (!data) return {};
+    var v = Object.assign({}, data);
+    delete v.id;
+    if (v.image && typeof v.image === 'string' && (v.image.startsWith('data:image') || v.image.length > 400)) {
+        delete v.image;
+    }
+    return v;
 }
 
 function syncCashierCacheFromMenuFlat(items) {
     var cashier = [];
     (items || []).forEach(function (it) {
         if (!it || !it.id || (it.category && it.category.toLowerCase().trim() === 'water') || it.available === false) return;
-        var v = Object.assign({}, it);
-        delete v.id;
-        if (v.image && typeof v.image === 'string' && (v.image.startsWith('data:image') || v.image.length > 500)) {
-            delete v.image;
-        }
-        cashier.push({ id: it.id, v: v });
+        cashier.push({ id: it.id, v: sanitizeCashierPayload(it) });
     });
-    try {
-        localStorage.setItem(CACHE_KEY_CASHIER_ITEMS, JSON.stringify(cashier));
-    } catch (e) { }
+    safeSetItem(CACHE_KEY_CASHIER_ITEMS, JSON.stringify(cashier));
 }
 
 function safeSetItem(key, value) {
+    if (!key) return;
+    if (typeof value === 'string' && (key.startsWith('cachedCashier') || key.startsWith('cachedMenu'))) {
+        value = stripHeavyFieldsFromJSON(value);
+    }
     try {
         localStorage.setItem(key, value);
     } catch (e) {
         if (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(e.message || '')) {
-            evictNonEssentialCacheKeys();
+            evictNonEssentialCacheKeys(key);
+            var stripped = stripHeavyFieldsFromJSON(value);
             try {
-                localStorage.setItem(key, value);
+                localStorage.setItem(key, stripped);
+                return;
             } catch (e2) {
-                console.warn('[storage] setItem still failed after cleanup for', key, ':', e2.message);
+                try {
+                    var parsed = JSON.parse(stripped);
+                    if (Array.isArray(parsed)) {
+                        var minified = parsed.map(function (it) {
+                            var t = it && it.v ? it.v : it;
+                            var min = {
+                                name_ku: t.name_ku || '',
+                                name_ar: t.name_ar || '',
+                                name_en: t.name_en || '',
+                                price: t.price || 0,
+                                category: t.category || '',
+                                order: t.order != null ? t.order : null,
+                                available: t.available !== false
+                            };
+                            return it && it.v ? { id: it.id, v: min } : Object.assign({ id: it.id }, min);
+                        });
+                        localStorage.setItem(key, JSON.stringify(minified));
+                        return;
+                    }
+                } catch (e3) {}
+                console.info('[storage] Cache quota exceeded for ' + key + ' — continuing in-memory.');
             }
         } else {
             console.warn('[storage] setItem failed for', key, ':', e.message);
@@ -291,10 +310,28 @@ var NON_ESSENTIAL_CACHE_KEYS = [
     'cachedExpenses'
 ];
 
-function evictNonEssentialCacheKeys() {
+function evictNonEssentialCacheKeys(keepKey) {
     NON_ESSENTIAL_CACHE_KEYS.forEach(function (k) {
-        try { localStorage.removeItem(k); } catch (e) { }
+        if (k !== keepKey) {
+            try { localStorage.removeItem(k); } catch (e) { }
+        }
     });
+    try {
+        var toRemove = [];
+        for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (!k || k === keepKey) continue;
+            if (k === 'selectedLang' || k === 'adminAuthToken' || k === 'adminUser' || k === 'adminAccent' || k === 'theme' || k.startsWith('cachedCategories')) {
+                continue;
+            }
+            if (k.startsWith('cachedMenu') || k.startsWith('cachedCashier') || k.startsWith('cachedSales') || k.startsWith('cachedExpenses')) {
+                toRemove.push(k);
+            }
+        }
+        toRemove.forEach(function (k) {
+            try { localStorage.removeItem(k); } catch (e) {}
+        });
+    } catch (e) {}
 }
 
 function serializableFirestoreData(data) {
@@ -409,7 +446,8 @@ function readCachedSales() {
 
 function writeCachedSales(items) {
     try {
-        localStorage.setItem('cachedSales', JSON.stringify(items));
+        var slice = Array.isArray(items) ? items.slice(0, 100) : [];
+        safeSetItem('cachedSales', JSON.stringify(slice));
         syncSalesLiveFromCache();
     } catch (e) { }
 }
@@ -2275,7 +2313,7 @@ function startItemsListener() {
             var menuCache = [];
             _itemsSnapDocs.forEach(function (d) {
                 var data = d.data();
-                cashierCache.push({ id: d.id, v: data });
+                cashierCache.push({ id: d.id, v: sanitizeCashierPayload(data) });
                 menuCache.push(Object.assign({ id: d.id }, data));
             });
             safeSetItem(CACHE_KEY_CASHIER_ITEMS, JSON.stringify(cashierCache));
@@ -2328,7 +2366,7 @@ function startItemsListener() {
         var menuCache = [];
         snap.forEach(function (d) {
             var data = d.data();
-            cashierCache.push({ id: d.id, v: data });
+            cashierCache.push({ id: d.id, v: sanitizeCashierPayload(data) });
             menuCache.push(Object.assign({ id: d.id }, data));
         });
         safeSetItem(CACHE_KEY_CASHIER_ITEMS, JSON.stringify(cashierCache));
@@ -4029,7 +4067,7 @@ function normalizeCashierItems(snapshot) {
         var data = d.data();
         if (data.available === false) return;
         if (data.category && data.category.toLowerCase().trim() === 'water') return;
-        items.push({ id: d.id, v: data });
+        items.push({ id: d.id, v: sanitizeCashierPayload(data) });
     });
     return items;
 }
@@ -4193,7 +4231,7 @@ function applyCashierItemsSnap(snap) {
         return;
     }
     var items = normalizeCashierItems(snap);
-    safeSetItem('cachedCashierItems', JSON.stringify(items));
+    safeSetItem(CACHE_KEY_CASHIER_ITEMS, JSON.stringify(items));
     var menuCache = [];
     snap.forEach(function (d) {
         menuCache.push(Object.assign({ id: d.id }, d.data()));
@@ -4237,10 +4275,8 @@ function loadCashierItems() {
             var items = flatItems.filter(function (it) {
                 return it && it.available !== false && !(it.category && it.category.toLowerCase().trim() === 'water');
             }).map(function (it) {
-                var v = Object.assign({}, it);
-                var id = v.id;
-                delete v.id;
-                return { id: id, v: v };
+                var v = sanitizeCashierPayload(it);
+                return { id: it.id, v: v };
             });
             safeSetItem(CACHE_KEY_CASHIER_ITEMS, JSON.stringify(items));
             if (items.length > 0) renderCashierProducts(items);
