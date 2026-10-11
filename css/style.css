@@ -5790,3 +5790,348 @@ body.emenu-layout .menu-hero-brand.hero-theme-pulse .menu-hero-logo-ring {
     box-shadow: 0 4px 16px rgba(247, 216, 125, 0.25);
 }
 
+/* ============================================================
+   LUXURY FAVORITES SYSTEM
+   ============================================================ */
+
+/* 1. Header FAB Fav Button & Counter Badge */
+.menu-fab-fav {
+    position: relative;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease, color 0.22s ease, background 0.22s ease;
+}
+
+.menu-fab-fav svg {
+    display: block;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.2s ease, fill 0.2s ease;
+}
+
+.menu-fab-fav:hover {
+    color: #f43f5e !important;
+    border-color: rgba(244, 63, 94, 0.45) !important;
+    box-shadow: 0 4px 16px rgba(244, 63, 94, 0.3) !important;
+    transform: translateY(-2px);
+}
+
+.menu-fab-fav:hover svg {
+    transform: scale(1.12);
+}
+
+.menu-fab-fav.active {
+    background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%) !important;
+    border-color: rgba(244, 63, 94, 0.85) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 20px rgba(244, 63, 94, 0.55), 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+    transform: translateY(-2px);
+}
+
+.menu-fab-fav.active svg {
+    stroke: #ffffff;
+    fill: #ffffff;
+    animation: favHeartPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.menu-fab-fav .fav-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%);
+    color: #ffffff;
+    font-size: 0.64rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--emenu-fab-bg, #ffffff);
+    box-shadow: 0 2px 8px rgba(244, 63, 94, 0.45);
+    transform: scale(0);
+    opacity: 0;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.menu-fab-fav .fav-badge.has-items {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.menu-fab-fav .fav-badge.pop {
+    animation: favBadgeBounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes favBadgeBounce {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+}
+
+/* 2. Menu Item Card Luxury Floating Favorite Button */
+.menu-card-fav {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(18, 16, 14, 0.68);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    z-index: 6;
+    padding: 0;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.menu-card-fav svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), fill 0.2s ease, stroke 0.2s ease;
+}
+
+.menu-card-fav:hover {
+    transform: scale(1.16);
+    background: rgba(30, 24, 22, 0.88);
+    color: #f43f5e;
+    border-color: rgba(244, 63, 94, 0.55);
+    box-shadow: 0 4px 16px rgba(244, 63, 94, 0.4);
+}
+
+.menu-card-fav:active {
+    transform: scale(0.92);
+}
+
+.menu-card-fav.active {
+    background: rgba(244, 63, 94, 0.22);
+    border-color: rgba(244, 63, 94, 0.7);
+    color: #f43f5e;
+    box-shadow: 0 0 14px rgba(244, 63, 94, 0.45);
+}
+
+.menu-card-fav.active svg {
+    fill: #f43f5e;
+    stroke: #f43f5e;
+}
+
+.menu-card-fav.heart-pop svg,
+.detail-fav-btn.heart-pop svg {
+    animation: favHeartPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes favHeartPop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.45) rotate(-8deg); }
+    70% { transform: scale(0.9) rotate(4deg); }
+    100% { transform: scale(1) rotate(0); }
+}
+
+/* Light mode support for menu-card-fav */
+body.light-mode .menu-card-fav {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #5A534C;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+body.light-mode .menu-card-fav:hover {
+    background: #ffffff;
+    color: #f43f5e;
+    border-color: rgba(244, 63, 94, 0.4);
+}
+
+body.light-mode .menu-card-fav.active {
+    background: rgba(244, 63, 94, 0.12);
+    border-color: rgba(244, 63, 94, 0.5);
+    color: #f43f5e;
+}
+
+/* 3. Product Detail Modal Favorite Button */
+.detail-fav-btn {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(18, 16, 14, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    cursor: pointer;
+    z-index: 10;
+    padding: 0;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.detail-fav-btn svg {
+    display: block;
+    stroke: currentColor;
+    fill: none;
+    transition: fill 0.2s ease, stroke 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.detail-fav-btn:hover {
+    transform: scale(1.14);
+    color: #f43f5e;
+    border-color: rgba(244, 63, 94, 0.55);
+    box-shadow: 0 4px 18px rgba(244, 63, 94, 0.4);
+}
+
+.detail-fav-btn.active {
+    background: rgba(244, 63, 94, 0.25);
+    border-color: rgba(244, 63, 94, 0.75);
+    color: #f43f5e;
+    box-shadow: 0 0 16px rgba(244, 63, 94, 0.5);
+}
+
+.detail-fav-btn.active svg {
+    fill: #f43f5e;
+    stroke: #f43f5e;
+}
+
+/* 4. Luxury Empty Favorites State */
+.fav-empty-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 56px 24px;
+    background: var(--emenu-card-bg, rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--emenu-border, rgba(212, 175, 55, 0.2));
+    border-radius: 22px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    margin: 20px auto;
+    max-width: 480px;
+    width: 100%;
+    animation: favFadeIn 0.4s ease;
+}
+
+@keyframes favFadeIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fav-empty-icon-wrap {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+}
+
+.fav-empty-icon {
+    font-size: 2.6rem;
+    position: relative;
+    z-index: 2;
+    filter: drop-shadow(0 0 14px rgba(244, 63, 94, 0.55));
+    animation: favHeartPulse 1.8s ease-in-out infinite;
+}
+
+.fav-empty-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(244, 63, 94, 0.28) 0%, transparent 70%);
+    animation: favRingPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes favHeartPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+@keyframes favRingPulse {
+    0%, 100% { transform: scale(0.9); opacity: 0.5; }
+    50% { transform: scale(1.35); opacity: 0.85; }
+}
+
+.fav-empty-title {
+    margin: 0 0 8px;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--emenu-text, #ffffff);
+    font-family: var(--font-heading, inherit);
+}
+
+.fav-empty-desc {
+    margin: 0 0 24px;
+    font-size: 0.94rem;
+    color: var(--emenu-text-muted, #a1a1aa);
+    line-height: 1.55;
+    max-width: 320px;
+}
+
+.fav-empty-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 26px;
+    border-radius: 24px;
+    background: var(--emenu-accent-gradient, linear-gradient(135deg, #d4af37, #996515));
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.92rem;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 18px var(--emenu-accent-glow, rgba(212, 175, 55, 0.35));
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fav-empty-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px var(--emenu-accent-glow, rgba(212, 175, 55, 0.55));
+}
+
+.fav-title-icon {
+    display: inline-block;
+    margin-inline-end: 6px;
+    animation: favHeartPulse 2s ease-in-out infinite;
+}
+
+@media (max-width: 480px) {
+    body.emenu-layout .menu-fab-row {
+        gap: clamp(6px, 2vw, 12px);
+        padding: 0 8px;
+    }
+    body.emenu-layout .menu-fab {
+        width: 40px;
+        height: 40px;
+    }
+    body.emenu-layout .menu-fab svg {
+        width: 16px;
+        height: 16px;
+    }
+    .menu-card-fav {
+        width: 28px;
+        height: 28px;
+        top: 6px;
+        left: 6px;
+    }
+    .menu-card-fav svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+

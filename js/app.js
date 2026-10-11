@@ -241,6 +241,12 @@ function useCurrentLocation() {
 const i18n = {
     ku: {
         menuTitle: 'مێنووی ئێمە',
+        favorites: 'دڵخوازەکان',
+        favAdded: 'زیادکرا بۆ دڵخوازەکان ❤️',
+        favRemoved: 'لە دڵخوازەکان سڕایەوە',
+        noFavorites: 'هیچ دڵخوازێک زیاد نەکراوە',
+        noFavoritesDesc: 'کرتە لەسەر ❤️ بکە لەسەر هەر ئایتمێک بۆ زیادکردنی بۆ دڵخوازەکانت!',
+        exploreMenu: 'گەڕان لە مێنوو',
         loadingMenu: 'داگرتنی مێنوو...',
         noItems: 'هیچ شتێک نییە لە مێنوودا.',
         noCategoryItems: 'هیچ شتێک نییە لەم بەشەدا.',
@@ -464,6 +470,12 @@ const i18n = {
     },
     ar: {
         menuTitle: 'قائمتنا',
+        favorites: 'المفضلة',
+        favAdded: 'تمت الإضافة إلى المفضلة ❤️',
+        favRemoved: 'تمت الإزالة من المفضلة',
+        noFavorites: 'لا توجد أطباق مفضلة',
+        noFavoritesDesc: 'اضغط على ❤️ على أي وجبة لإضافتها إلى قائمتك المفضلة!',
+        exploreMenu: 'استعراض المنيو',
         loadingMenu: 'جارٍ تحميل القائمة...',
         noItems: 'لا توجد عناصر في القائمة.',
         noCategoryItems: 'لا توجد عناصر في هذا القسم.',
@@ -687,6 +699,12 @@ const i18n = {
     },
     en: {
         menuTitle: 'Our Menu',
+        favorites: 'Favorites',
+        favAdded: 'Added to favorites ❤️',
+        favRemoved: 'Removed from favorites',
+        noFavorites: 'No favorites yet',
+        noFavoritesDesc: 'Tap the ❤️ icon on any dish to add it to your personal favorites!',
+        exploreMenu: 'Explore Menu',
         loadingMenu: 'Loading menu items...',
         noItems: 'No menu items found.',
         noCategoryItems: 'No items in this category.',
@@ -1735,6 +1753,11 @@ function autoSelectCategoryAfterRender(forceFirst) {
 
 function clearCategorySelection() {
     _activeCategory = null;
+    if (_showingFavorites) {
+        _showingFavorites = false;
+        var favBtn = document.getElementById('favBtn');
+        if (favBtn) favBtn.classList.remove('active');
+    }
     document.body.classList.remove('category-selected');
     document.body.classList.remove('category-all-active');
 
@@ -1769,6 +1792,11 @@ function clearCategorySelection() {
 
 function switchCategory(category, options) {
     options = options || {};
+    if (_showingFavorites) {
+        _showingFavorites = false;
+        var favBtn = document.getElementById('favBtn');
+        if (favBtn) favBtn.classList.remove('active');
+    }
     if (_activeCategory === category) {
         if (options.silent || options.immediate || menuStillLoading()) {
             renderMenuItems(filterItemsByCategory(cachedMenuItems, category));
@@ -1932,12 +1960,25 @@ function createMenuCard(item, lang, strings) {
         ? (item.price ? item.price.toLocaleString() : '0') + ' د.ع'
         : (item.price ? item.price.toLocaleString() : '0') + ' IQD';
 
+    const isFav = (typeof FavoriteManager !== 'undefined' && FavoriteManager.isFav(item.id));
+    const favSvg = `
+        <svg class="fav-heart-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+        </svg>
+    `;
+    const favBtnHtml = `
+        <button class="menu-card-fav ${isFav ? 'active' : ''}" data-item-id="${item.id}" type="button" aria-label="Favorite" title="${strings.favorites || 'Favorite'}">
+            ${favSvg}
+        </button>
+    `;
+
     if (isEmenu) {
         card.innerHTML = `
             <div class="menu-card-img-wrapper">
                 <img src="${imageUrl}" alt="${name}" class="menu-card-img" loading="lazy"
                      onerror="this.onerror=null;this.src='${fallbackImage}';">
                 <span class="menu-card-price-badge">${priceText}</span>
+                ${favBtnHtml}
             </div>
             <div class="menu-card-foot">
                 <span class="menu-card-foot-title">${name}</span>
@@ -1956,6 +1997,7 @@ function createMenuCard(item, lang, strings) {
                 <img src="${imageUrl}" alt="${name}" class="menu-card-img" loading="lazy"
                      onerror="this.onerror=null;this.src='${fallbackImage}';">
                 <div class="menu-card-badge">${categoryName}</div>
+                ${favBtnHtml}
             </div>
             <div class="menu-card-body">
                 <h2 class="menu-card-title">${name}</h2>
@@ -1980,6 +2022,24 @@ function createMenuCard(item, lang, strings) {
     const openDetail = () => openProductDetail(item);
     card.addEventListener('click', openDetail);
     card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(); } });
+
+    const favBtn = card.querySelector('.menu-card-fav');
+    if (favBtn) {
+        favBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (typeof FavoriteManager !== 'undefined') {
+                const nowFav = FavoriteManager.toggleFav(item.id);
+                if (_showingFavorites && !nowFav) {
+                    card.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.85)';
+                    setTimeout(() => {
+                        renderFavoritesList();
+                    }, 260);
+                }
+            }
+        });
+    }
 
     const cartBtn = card.querySelector('.menu-card-cart');
     if (cartBtn) {
@@ -2222,6 +2282,20 @@ function openProductDetail(item) {
     const priceEl = document.getElementById('detailPrice');
     if (priceEl) priceEl.textContent = item.price ? item.price.toLocaleString() : '0';
 
+    // Detail Fav button
+    const detailFavBtn = document.getElementById('detailFavBtn');
+    if (detailFavBtn) {
+        detailFavBtn.setAttribute('data-item-id', item.id);
+        const isFav = typeof FavoriteManager !== 'undefined' && FavoriteManager.isFav(item.id);
+        detailFavBtn.classList.toggle('active', isFav);
+        detailFavBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (typeof FavoriteManager !== 'undefined') {
+                FavoriteManager.toggleFav(item.id);
+            }
+        };
+    }
+
     // Video button
     const videoBtn = document.getElementById('videoPlayBtn');
     if (videoBtn) {
@@ -2285,9 +2359,21 @@ function closeVideoModal() {
    ======================================== */
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Initialize cart
+    // Initialize cart & favorites
     loadCart();
     updateCartBadge();
+    if (typeof FavoriteManager !== 'undefined') {
+        FavoriteManager.updateFavBadge();
+    }
+
+    // Fav button
+    var favBtn = document.getElementById('favBtn');
+    if (favBtn) {
+        favBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            toggleFavoritesView();
+        });
+    }
 
     // Initialize language dropdown
     var currentLang = localStorage.getItem('selectedLang') || 'ku';
@@ -2431,7 +2517,13 @@ function applyLanguageUI(lang) {
 
     if (cachedMenuItems.length > 0) {
         renderCategories(cachedMenuItems, { forceRebuild: true, autoSelect: false });
-        if (_activeCategory) {
+        if (_showingFavorites) {
+            var titleEl = document.getElementById('activeCategoryTitle');
+            if (titleEl) {
+                titleEl.innerHTML = '<span class="fav-title-icon">❤️</span> ' + (strings.favorites || 'Favorites');
+            }
+            renderFavoritesList();
+        } else if (_activeCategory) {
             switchCategory(_activeCategory, { silent: true });
         } else {
             autoSelectCategoryAfterRender();
@@ -4034,32 +4126,188 @@ function renderCartItems() {
 }
 
 /* ========================================
-    Menu Features: Favorites & Ratings (DISABLED)
+    Menu Features: Luxury Favorites System
     ======================================== */
 
-var MENU_FEATURES = {
-    getFavorites() {
-        try { return JSON.parse(localStorage.getItem('menu_favorites') || '[]'); } catch(e) { return []; }
+var _showingFavorites = false;
+
+var FavoriteManager = {
+    getStorageKey: function () {
+        var branch = (window.BRANCH_ID && window.BRANCH_ID !== '1') ? ('_branch' + window.BRANCH_ID) : '';
+        return 'menu_favorites' + branch;
     },
-    toggleFav(id) {
-        var favs = this.getFavorites();
+    getFavorites: function () {
+        try {
+            var key = this.getStorageKey();
+            var favs = JSON.parse(localStorage.getItem(key) || 'null');
+            if (!favs || !Array.isArray(favs)) {
+                favs = JSON.parse(localStorage.getItem('menu_favorites') || '[]');
+            }
+            return Array.isArray(favs) ? favs : [];
+        } catch (e) {
+            return [];
+        }
+    },
+    isFav: function (id) {
+        if (!id) return false;
+        return this.getFavorites().indexOf(String(id)) !== -1;
+    },
+    toggleFav: function (id) {
+        if (!id) return false;
+        id = String(id);
+        var favs = this.getFavorites().slice();
         var idx = favs.indexOf(id);
-        if (idx > -1) { favs.splice(idx, 1); } else { favs.push(id); }
-        localStorage.setItem('menu_favorites', JSON.stringify(favs));
-        return idx === -1;
+        var isAdded = false;
+        if (idx !== -1) {
+            favs.splice(idx, 1);
+            isAdded = false;
+        } else {
+            favs.unshift(id);
+            isAdded = true;
+        }
+        try {
+            var key = this.getStorageKey();
+            localStorage.setItem(key, JSON.stringify(favs));
+            if (!window.BRANCH_ID || window.BRANCH_ID === '1') {
+                localStorage.setItem('menu_favorites', JSON.stringify(favs));
+            }
+        } catch (e) {}
+        this.updateFavBadge();
+        this.syncCardButtons(id, isAdded);
+        return isAdded;
     },
-    isFav(id) { return this.getFavorites().indexOf(id) > -1; },
-    getRating(itemId) {
+    getFavCount: function () {
+        return this.getFavorites().length;
+    },
+    updateFavBadge: function () {
+        var count = this.getFavCount();
+        var badges = document.querySelectorAll('#favBadge, .fav-badge');
+        badges.forEach(function (badge) {
+            badge.textContent = count;
+            badge.classList.toggle('has-items', count > 0);
+            if (count > 0) {
+                badge.classList.add('pop');
+                setTimeout(function () { badge.classList.remove('pop'); }, 300);
+            }
+        });
+        var favBtn = document.getElementById('favBtn');
+        if (favBtn) {
+            favBtn.classList.toggle('has-favs', count > 0);
+        }
+    },
+    syncCardButtons: function (id, isAdded) {
+        var buttons = document.querySelectorAll('.menu-card-fav[data-item-id="' + id + '"]');
+        buttons.forEach(function (btn) {
+            btn.classList.toggle('active', isAdded);
+            btn.setAttribute('aria-pressed', isAdded ? 'true' : 'false');
+            if (isAdded) {
+                btn.classList.add('heart-pop');
+                setTimeout(function () { btn.classList.remove('heart-pop'); }, 500);
+            }
+        });
+        var modalFav = document.getElementById('detailFavBtn');
+        if (modalFav && typeof modalFav.getAttribute === 'function' && modalFav.getAttribute('data-item-id') === String(id)) {
+            modalFav.classList.toggle('active', isAdded);
+            if (isAdded) {
+                modalFav.classList.add('heart-pop');
+                setTimeout(function () { modalFav.classList.remove('heart-pop'); }, 500);
+            }
+        }
+    }
+};
+window.FavoriteManager = FavoriteManager;
+
+function toggleFavoritesView() {
+    _showingFavorites = !_showingFavorites;
+    var favBtn = document.getElementById('favBtn');
+    if (favBtn) favBtn.classList.toggle('active', _showingFavorites);
+
+    var lang = localStorage.getItem('selectedLang') || 'ku';
+    var strings = i18n[lang] || i18n.en;
+    var titleEl = document.getElementById('activeCategoryTitle');
+
+    if (_showingFavorites) {
+        document.querySelectorAll('.category-btn').forEach(function (btn) {
+            btn.classList.remove('active');
+        });
+        if (titleEl) {
+            titleEl.innerHTML = '<span class="fav-title-icon">❤️</span> ' + (strings.favorites || 'Favorites');
+        }
+        renderFavoritesList();
+        var grid = document.getElementById('menuGrid');
+        if (grid) {
+            var gridTop = grid.getBoundingClientRect().top + window.scrollY - 100;
+            window.scrollTo({ top: gridTop, behavior: 'smooth' });
+        }
+    } else {
+        if (titleEl) {
+            titleEl.textContent = getCategoryDisplayName(_activeCategory || ALL_CATEGORY_ID, lang);
+        }
+        switchCategory(_activeCategory || ALL_CATEGORY_ID, { immediate: true });
+    }
+}
+window.toggleFavoritesView = toggleFavoritesView;
+
+function renderFavoritesList() {
+    var container = document.getElementById('menuGrid');
+    if (!container) return;
+
+    var lang = localStorage.getItem('selectedLang') || 'ku';
+    var strings = i18n[lang] || i18n.en;
+    var favIds = FavoriteManager.getFavorites();
+    var allItems = (typeof cachedMenuItems !== 'undefined' && Array.isArray(cachedMenuItems)) ? cachedMenuItems : [];
+
+    var favItems = allItems.filter(function (it) {
+        return it && it.id && favIds.indexOf(String(it.id)) !== -1;
+    });
+
+    container.innerHTML = '';
+
+    if (!favItems.length) {
+        container.innerHTML =
+            '<div class="fav-empty-state">' +
+                '<div class="fav-empty-icon-wrap">' +
+                    '<span class="fav-empty-icon">❤️</span>' +
+                    '<span class="fav-empty-ring"></span>' +
+                '</div>' +
+                '<h3 class="fav-empty-title">' + (strings.noFavorites || 'No favorites yet') + '</h3>' +
+                '<p class="fav-empty-desc">' + (strings.noFavoritesDesc || 'Tap the ❤️ icon on any dish to add it to your personal favorites!') + '</p>' +
+                '<button type="button" class="fav-empty-btn" id="favExploreBtn">' +
+                    '<span>🍽️ ' + (strings.exploreMenu || 'Explore Menu') + '</span>' +
+                '</button>' +
+            '</div>';
+
+        var exploreBtn = document.getElementById('favExploreBtn');
+        if (exploreBtn) {
+            exploreBtn.addEventListener('click', function () {
+                toggleFavoritesView();
+            });
+        }
+        return;
+    }
+
+    favItems.forEach(function (item) {
+        container.appendChild(createMenuCard(item, lang, strings));
+    });
+}
+window.renderFavoritesList = renderFavoritesList;
+
+var MENU_FEATURES = {
+    getFavorites: function () { return FavoriteManager.getFavorites(); },
+    toggleFav: function (id) { return FavoriteManager.toggleFav(id); },
+    isFav: function (id) { return FavoriteManager.isFav(id); },
+    getRating: function (itemId) {
         try { var r = JSON.parse(localStorage.getItem('menu_ratings') || '{}'); return r[itemId] || 0; } catch(e) { return 0; }
     },
-    setRating(itemId, stars) {
+    setRating: function (itemId, stars) {
         try { var r = JSON.parse(localStorage.getItem('menu_ratings') || '{}'); r[itemId] = stars; localStorage.setItem('menu_ratings', JSON.stringify(r)); } catch(e) {}
     }
 };
 
 function renderMenuCardsWithFeatures() {
-    // Favorites and ratings are disabled - cart is now used instead
-    // This function is kept for compatibility but does nothing
+    if (typeof FavoriteManager !== 'undefined') {
+        FavoriteManager.updateFavBadge();
+    }
 }
 
 /* ========================================
