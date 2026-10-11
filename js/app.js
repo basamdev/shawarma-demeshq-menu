@@ -390,6 +390,13 @@ const i18n = {
         subHeadingHint: 'ئارەزوومەندانە: بۆ دابەشکردنی خواردنەکان (وەک: سەندویچ، ژەم، برۆستد، پێشخۆراک)',
         quickPresets: 'هەڵبژاردەی ئامادەکراو:',
         clearHeading: 'پاککردنەوە',
+        sortSubHeadings: 'ڕیزبەندی بەشە ناوەکییەکان',
+        subHeadingsOrder: 'ڕیزبەندی ناونیشانەکان',
+        dragToReorder: 'ڕابکێشە بۆ گۆڕینی ڕیزبەندی',
+        moveToTop: 'سەرەتا',
+        saveOrder: 'پاشەکەوتکردنی ڕیزبەندی',
+        subHeadingOrderSaved: 'ڕیزبەندی بەشە ناوەکییەکان بە سەرکەوتوویی پاشەکەوت کرا.',
+        noSubheadings: 'هیچ ناونیشانێکی ناوەکی نییە لەم بەشەدا.',
         available: 'بەردەستە',
         notAvailable: 'بەردەست نییە',
         saveItem: 'پاشەکەوتکردن',
@@ -639,6 +646,13 @@ const i18n = {
         subHeadingHint: 'اختياري: لتقسيم عناصر القسم (مثل: ساندويش، وجبات، بروستد، مقبلات)',
         quickPresets: 'خيارات سريعة:',
         clearHeading: 'مسح',
+        sortSubHeadings: 'ترتيب التقسيمات الداخلية',
+        subHeadingsOrder: 'ترتيب العناوين',
+        dragToReorder: 'اسحب لإعادة الترتيب',
+        moveToTop: 'الأول',
+        saveOrder: 'حفظ الترتيب',
+        subHeadingOrderSaved: 'تم حفظ ترتيب التقسيمات الداخلية بنجاح.',
+        noSubheadings: 'لا توجد تقسيمات داخلية في هذه الفئة.',
         available: 'متاح',
         notAvailable: 'غير متاح',
         saveItem: 'حفظ',
@@ -888,6 +902,13 @@ const i18n = {
         subHeadingHint: 'Optional: To group items (e.g. Sandwiches, Meals, Broasted, Grilled, Appetizers)',
         quickPresets: 'Quick Presets:',
         clearHeading: 'Clear',
+        sortSubHeadings: 'Sort Sub-headings',
+        subHeadingsOrder: 'Sub-headings Order',
+        dragToReorder: 'Drag to reorder',
+        moveToTop: 'Top',
+        saveOrder: 'Save Order',
+        subHeadingOrderSaved: 'Sub-heading order saved successfully.',
+        noSubheadings: 'No sub-headings found in this category.',
         available: 'Available',
         notAvailable: 'Not available',
         saveItem: 'Save Item',
@@ -2197,6 +2218,49 @@ function sortMenuItemsByOrder(list) {
 }
 window.sortMenuItemsByOrder = sortMenuItemsByOrder;
 
+function sortGroupsByConfigOrOrder(groupsMap, catId) {
+    if (!groupsMap) return [];
+    let catGroupOrder = [];
+    try {
+        const cachedCats = JSON.parse(localStorage.getItem(CACHE_KEY_CATEGORIES) || '[]');
+        const currentCatDoc = cachedCats.find(c => c.id === catId);
+        if (currentCatDoc && currentCatDoc.data && Array.isArray(currentCatDoc.data.group_order)) {
+            catGroupOrder = currentCatDoc.data.group_order;
+        }
+    } catch (e) {}
+
+    const groupOrder = Object.keys(groupsMap);
+    groupOrder.sort((ga, gb) => {
+        if (catGroupOrder.length > 0) {
+            const findIdx = (gName) => {
+                const lowerG = (gName || '').toLowerCase().trim();
+                for (let i = 0; i < catGroupOrder.length; i++) {
+                    const orderEntry = catGroupOrder[i];
+                    if (typeof orderEntry === 'string') {
+                        if (orderEntry.toLowerCase().trim() === lowerG) return i;
+                    } else if (orderEntry && typeof orderEntry === 'object') {
+                        if ((orderEntry.ku && orderEntry.ku.toLowerCase().trim() === lowerG) ||
+                            (orderEntry.ar && orderEntry.ar.toLowerCase().trim() === lowerG) ||
+                            (orderEntry.en && orderEntry.en.toLowerCase().trim() === lowerG) ||
+                            (orderEntry.key && orderEntry.key.toLowerCase().trim() === lowerG)) {
+                            return i;
+                        }
+                    }
+                }
+                return 9999;
+            };
+            const idxA = findIdx(ga);
+            const idxB = findIdx(gb);
+            if (idxA !== idxB) return idxA - idxB;
+        }
+        const minOrderA = Math.min(...(groupsMap[ga] || []).map(it => (it.order != null && it.order !== '' && !isNaN(it.order)) ? Number(it.order) : 999999));
+        const minOrderB = Math.min(...(groupsMap[gb] || []).map(it => (it.order != null && it.order !== '' && !isNaN(it.order)) ? Number(it.order) : 999999));
+        return minOrderA - minOrderB;
+    });
+    return groupOrder;
+}
+window.sortGroupsByConfigOrOrder = sortGroupsByConfigOrOrder;
+
 function renderMenuItems(items) {
     const container = document.getElementById('menuGrid');
     if (!container) return;
@@ -2281,7 +2345,7 @@ function renderMenuItems(items) {
                 itemsByGroup[key].push(item);
             });
 
-            const groupOrder = Object.keys(itemsByGroup);
+            const groupOrder = sortGroupsByConfigOrOrder(itemsByGroup, catId);
             groupOrder.forEach(g => {
                 const groupHeading = document.createElement('h4');
                 groupHeading.className = 'group-heading';
@@ -2327,7 +2391,7 @@ function renderMenuItems(items) {
             itemsByGroup[key].push(item);
         });
 
-        const groupOrder = Object.keys(itemsByGroup);
+        const groupOrder = sortGroupsByConfigOrOrder(itemsByGroup, _activeCategory);
         groupOrder.forEach(g => {
             const groupHeading = document.createElement('h4');
             groupHeading.className = 'group-heading';
