@@ -3252,6 +3252,7 @@ function saveItem() {
         var gAr = (document.getElementById('itemGroupAr') ? document.getElementById('itemGroupAr').value : '').trim();
         var gEn = (document.getElementById('itemGroupEn') ? document.getElementById('itemGroupEn').value : '').trim();
         var fallbackGroup = gKu || gAr || gEn || '';
+        var now = new Date().toISOString();
         var plainData = {
             name_ku: nameKu, name_ar: nameAr, name_en: nameEn,
             description_ku: document.getElementById('itemDescKu').value.trim(),
