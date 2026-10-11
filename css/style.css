@@ -5795,39 +5795,56 @@ body.emenu-layout .menu-hero-brand.hero-theme-pulse .menu-hero-logo-ring {
    ============================================================ */
 
 /* 1. Header FAB Fav Button & Counter Badge */
-.menu-fab-fav {
+body.emenu-layout .menu-fab.menu-fab-fav,
+.menu-fab.menu-fab-fav {
     position: relative;
+    color: #f43f5e !important;
+    border-color: rgba(244, 63, 94, 0.4) !important;
+    background: var(--emenu-fab-bg, #FFFFFF) !important;
+    box-shadow: 0 3px 12px rgba(244, 63, 94, 0.18), 0 2px 8px rgba(0, 0, 0, 0.12) !important;
     transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease, color 0.22s ease, background 0.22s ease;
 }
 
-.menu-fab-fav svg {
+body.emenu-layout .menu-fab.menu-fab-fav svg,
+.menu-fab.menu-fab-fav svg {
     display: block;
+    width: 20px;
+    height: 20px;
+    stroke: #f43f5e !important;
+    fill: rgba(244, 63, 94, 0.18) !important;
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.2s ease, fill 0.2s ease;
 }
 
-.menu-fab-fav:hover {
-    color: #f43f5e !important;
-    border-color: rgba(244, 63, 94, 0.45) !important;
-    box-shadow: 0 4px 16px rgba(244, 63, 94, 0.3) !important;
-    transform: translateY(-2px);
-}
-
-.menu-fab-fav:hover svg {
-    transform: scale(1.12);
-}
-
-.menu-fab-fav.active {
-    background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%) !important;
-    border-color: rgba(244, 63, 94, 0.85) !important;
+body.emenu-layout .menu-fab.menu-fab-fav:hover,
+.menu-fab.menu-fab-fav:hover {
     color: #ffffff !important;
-    box-shadow: 0 0 20px rgba(244, 63, 94, 0.55), 0 4px 14px rgba(0, 0, 0, 0.35) !important;
-    transform: translateY(-2px);
+    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
+    border-color: #f43f5e !important;
+    box-shadow: 0 4px 18px rgba(244, 63, 94, 0.48) !important;
+    transform: translateY(-2px) scale(1.06);
 }
 
-.menu-fab-fav.active svg {
-    stroke: #ffffff;
-    fill: #ffffff;
-    animation: favHeartPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+body.emenu-layout .menu-fab.menu-fab-fav:hover svg,
+.menu-fab.menu-fab-fav:hover svg {
+    stroke: #ffffff !important;
+    fill: #ffffff !important;
+    transform: scale(1.15);
+}
+
+body.emenu-layout .menu-fab.menu-fab-fav.active,
+.menu-fab.menu-fab-fav.active {
+    background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%) !important;
+    border-color: rgba(244, 63, 94, 0.95) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 22px rgba(244, 63, 94, 0.65), 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+    transform: translateY(-2px) scale(1.06);
+}
+
+body.emenu-layout .menu-fab.menu-fab-fav.active svg,
+.menu-fab.menu-fab-fav.active svg {
+    stroke: #ffffff !important;
+    fill: #ffffff !important;
+    animation: favHeartPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .menu-fab-fav .fav-badge {
@@ -5870,59 +5887,70 @@ body.emenu-layout .menu-hero-brand.hero-theme-pulse .menu-hero-logo-ring {
 }
 
 /* 2. Menu Item Card Luxury Floating Favorite Button */
+body.emenu-layout .menu-card-fav,
 .menu-card-fav {
     position: absolute;
     top: 8px;
     left: 8px;
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    background: rgba(18, 16, 14, 0.68);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    background: rgba(18, 16, 14, 0.72) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: rgba(255, 255, 255, 0.85);
+    color: #ffffff !important;
     cursor: pointer;
-    z-index: 6;
+    z-index: 10 !important;
     padding: 0;
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
+body.emenu-layout .menu-card-fav svg,
 .menu-card-fav svg {
     display: block;
-    width: 16px;
-    height: 16px;
-    stroke: currentColor;
-    fill: none;
+    width: 17px;
+    height: 17px;
+    stroke: #ffffff;
+    fill: rgba(255, 255, 255, 0.18);
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), fill 0.2s ease, stroke 0.2s ease;
 }
 
+body.emenu-layout .menu-card-fav:hover,
 .menu-card-fav:hover {
-    transform: scale(1.16);
-    background: rgba(30, 24, 22, 0.88);
-    color: #f43f5e;
-    border-color: rgba(244, 63, 94, 0.55);
-    box-shadow: 0 4px 16px rgba(244, 63, 94, 0.4);
+    transform: scale(1.18);
+    background: rgba(244, 63, 94, 0.3) !important;
+    border-color: #f43f5e !important;
+    box-shadow: 0 4px 18px rgba(244, 63, 94, 0.5) !important;
 }
 
+body.emenu-layout .menu-card-fav:hover svg,
+.menu-card-fav:hover svg {
+    stroke: #f43f5e;
+    fill: #f43f5e;
+}
+
+body.emenu-layout .menu-card-fav:active,
 .menu-card-fav:active {
     transform: scale(0.92);
 }
 
+body.emenu-layout .menu-card-fav.active,
 .menu-card-fav.active {
-    background: rgba(244, 63, 94, 0.22);
-    border-color: rgba(244, 63, 94, 0.7);
-    color: #f43f5e;
-    box-shadow: 0 0 14px rgba(244, 63, 94, 0.45);
+    background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%) !important;
+    border-color: #f43f5e !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 16px rgba(244, 63, 94, 0.65), 0 4px 12px rgba(0, 0, 0, 0.3) !important;
 }
 
+body.emenu-layout .menu-card-fav.active svg,
 .menu-card-fav.active svg {
-    fill: #f43f5e;
-    stroke: #f43f5e;
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
 }
 
 .menu-card-fav.heart-pop svg,
@@ -5939,71 +5967,94 @@ body.emenu-layout .menu-hero-brand.hero-theme-pulse .menu-hero-logo-ring {
 
 /* Light mode support for menu-card-fav */
 body.light-mode .menu-card-fav {
-    background: rgba(255, 255, 255, 0.85);
-    border-color: rgba(0, 0, 0, 0.1);
-    color: #5A534C;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    background: rgba(255, 255, 255, 0.88) !important;
+    border-color: rgba(0, 0, 0, 0.12) !important;
+    color: #5A534C !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14) !important;
+}
+
+body.light-mode .menu-card-fav svg {
+    stroke: #e11d48;
+    fill: rgba(225, 29, 72, 0.12);
 }
 
 body.light-mode .menu-card-fav:hover {
-    background: #ffffff;
-    color: #f43f5e;
-    border-color: rgba(244, 63, 94, 0.4);
+    background: #ffffff !important;
+    color: #f43f5e !important;
+    border-color: rgba(244, 63, 94, 0.45) !important;
 }
 
 body.light-mode .menu-card-fav.active {
-    background: rgba(244, 63, 94, 0.12);
-    border-color: rgba(244, 63, 94, 0.5);
-    color: #f43f5e;
+    background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%) !important;
+    border-color: rgba(244, 63, 94, 0.7) !important;
+    color: #ffffff !important;
+}
+
+body.light-mode .menu-card-fav.active svg {
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
 }
 
 /* 3. Product Detail Modal Favorite Button */
+body.emenu-layout .detail-fav-btn,
 .detail-fav-btn {
     position: absolute;
     top: 14px;
     left: 14px;
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    background: rgba(18, 16, 14, 0.72);
+    background: rgba(18, 16, 14, 0.75) !important;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #ffffff;
+    color: #ffffff !important;
     cursor: pointer;
-    z-index: 10;
+    z-index: 15 !important;
     padding: 0;
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
 }
 
+body.emenu-layout .detail-fav-btn svg,
 .detail-fav-btn svg {
     display: block;
-    stroke: currentColor;
-    fill: none;
+    width: 20px;
+    height: 20px;
+    stroke: #ffffff;
+    fill: rgba(255, 255, 255, 0.15);
     transition: fill 0.2s ease, stroke 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+body.emenu-layout .detail-fav-btn:hover,
 .detail-fav-btn:hover {
     transform: scale(1.14);
-    color: #f43f5e;
-    border-color: rgba(244, 63, 94, 0.55);
-    box-shadow: 0 4px 18px rgba(244, 63, 94, 0.4);
+    color: #f43f5e !important;
+    border-color: rgba(244, 63, 94, 0.6) !important;
+    box-shadow: 0 4px 20px rgba(244, 63, 94, 0.45) !important;
 }
 
-.detail-fav-btn.active {
-    background: rgba(244, 63, 94, 0.25);
-    border-color: rgba(244, 63, 94, 0.75);
-    color: #f43f5e;
-    box-shadow: 0 0 16px rgba(244, 63, 94, 0.5);
-}
-
-.detail-fav-btn.active svg {
-    fill: #f43f5e;
+body.emenu-layout .detail-fav-btn:hover svg,
+.detail-fav-btn:hover svg {
     stroke: #f43f5e;
+    fill: #f43f5e;
+}
+
+body.emenu-layout .detail-fav-btn.active,
+.detail-fav-btn.active {
+    background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%) !important;
+    border-color: rgba(244, 63, 94, 0.85) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 18px rgba(244, 63, 94, 0.6) !important;
+}
+
+body.emenu-layout .detail-fav-btn.active svg,
+.detail-fav-btn.active svg {
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
 }
 
 /* 4. Luxury Empty Favorites State */
