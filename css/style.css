@@ -4862,13 +4862,13 @@ body.emenu-layout .video-play-btn {
     transform: scale(1.15);
 }
 
-.theme-swatch-gold      { background: linear-gradient(135deg, #F3E5AB 0%, #D4AF37 50%, #996515 100%); border: 1px solid #D4AF37; box-shadow: 0 0 8px rgba(212, 175, 55, 0.45); }
-.theme-swatch-amber     { background: linear-gradient(135deg, #FAD7A0 0%, #E58E26 50%, #A04000 100%); border: 1px solid #E58E26; box-shadow: 0 0 8px rgba(229, 142, 38, 0.45); }
-.theme-swatch-emerald   { background: linear-gradient(135deg, #A7F3D0 0%, #10B981 50%, #064E3B 100%); border: 1px solid #10B981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.45); }
-.theme-swatch-ruby      { background: linear-gradient(135deg, #FECDD3 0%, #E11D48 50%, #881337 100%); border: 1px solid #E11D48; box-shadow: 0 0 8px rgba(225, 29, 72, 0.45); }
-.theme-swatch-sapphire  { background: linear-gradient(135deg, #BAE6FD 0%, #38BDF8 50%, #1E3A8A 100%); border: 1px solid #38BDF8; box-shadow: 0 0 8px rgba(56, 189, 248, 0.45); }
-.theme-swatch-ivory     { background: linear-gradient(135deg, #FFFFFF 0%, #FAF8F5 50%, #C4A47C 100%); border: 1px solid #C4A47C; box-shadow: 0 0 8px rgba(196, 164, 124, 0.45); }
-.theme-swatch-amethyst  { background: linear-gradient(135deg, #E9D5FF 0%, #C084FC 50%, #581C87 100%); border: 1px solid #C084FC; box-shadow: 0 0 8px rgba(192, 132, 252, 0.45); }
+.theme-swatch-gold      { background: linear-gradient(135deg, #161513 0%, #292520 45%, #D4AF37 50%, #F3E5AB 100%); border: 1.5px solid #D4AF37; box-shadow: 0 0 8px rgba(212, 175, 55, 0.45); }
+.theme-swatch-amber     { background: linear-gradient(135deg, #2E1809 0%, #4A2912 45%, #FB923C 50%, #FED7AA 100%); border: 1.5px solid #FB923C; box-shadow: 0 0 8px rgba(251, 146, 60, 0.45); }
+.theme-swatch-emerald   { background: linear-gradient(135deg, #09281C 0%, #144A34 45%, #34D399 50%, #A7F3D0 100%); border: 1.5px solid #34D399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.45); }
+.theme-swatch-ruby      { background: linear-gradient(135deg, #2C0B14 0%, #4D1625 45%, #FB7185 50%, #FECDD3 100%); border: 1.5px solid #FB7185; box-shadow: 0 0 8px rgba(251, 113, 133, 0.45); }
+.theme-swatch-sapphire  { background: linear-gradient(135deg, #0F1D38 0%, #1B325F 45%, #38BDF8 50%, #BAE6FD 100%); border: 1.5px solid #38BDF8; box-shadow: 0 0 8px rgba(56, 189, 248, 0.45); }
+.theme-swatch-ivory     { background: linear-gradient(135deg, #F7F2EA 0%, #FFFFFF 45%, #A76535 50%, #E2C09A 100%); border: 1.5px solid #A76535; box-shadow: 0 0 8px rgba(167, 101, 53, 0.45); }
+.theme-swatch-amethyst  { background: linear-gradient(135deg, #1E0E2E 0%, #391B56 45%, #C084FC 50%, #E9D5FF 100%); border: 1.5px solid #C084FC; box-shadow: 0 0 8px rgba(192, 132, 252, 0.45); }
 
 body.emenu-layout .menu-hero-brand {
     position: absolute;
