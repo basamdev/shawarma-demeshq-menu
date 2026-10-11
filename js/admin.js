@@ -6,10 +6,13 @@ window.BRANCH_SUFFIX = (window.BRANCH_ID !== '1') ? `_branch${window.BRANCH_ID}`
 
 window.MENU_COLLECTION = `menuItems${window.BRANCH_SUFFIX}`;
 window.CAT_COLLECTION = `categories${window.BRANCH_SUFFIX}`;
+window.SETTINGS_COLLECTION = `settings${window.BRANCH_SUFFIX}`;
+window.SETTINGS_DOC = (window.BRANCH_ID !== '1') ? `cafe${window.BRANCH_SUFFIX}` : 'cafe';
 window.CURRENT_BRANCH = window.BRANCH_ID;
 
 var MENU_COLLECTION = window.MENU_COLLECTION;
 var CAT_COLLECTION = window.CAT_COLLECTION;
+var SETTINGS_COLLECTION = window.SETTINGS_COLLECTION;
 
 var CACHE_KEY_MENU_ITEMS = (window.BRANCH_ID !== '1' ? `cachedMenuItems${window.BRANCH_SUFFIX}` : 'cachedMenuItems');
 var CACHE_KEY_CATEGORIES = (window.BRANCH_ID !== '1' ? `cachedCategories${window.BRANCH_SUFFIX}` : 'cachedCategories');
@@ -4219,8 +4222,12 @@ function printReceipt(itemsOverride) {
     var labels = receiptLabels[lang] || receiptLabels.ku;
     var total = items.reduce(function (s, i) { return s + i.price * i.quantity; }, 0);
     var receiptNo = String(now.getTime()).slice(-6);
-    var phone = formatReceiptPhone(localStorage.getItem('whatsappPhone') || '9647506454656');
-    var location = localStorage.getItem('cafeLocationLabel') || 'بەحرکە-مجەمع';
+    var isBranch2 = String(window.BRANCH_ID) === '2';
+    var phoneKey = (window.BRANCH_ID !== '1') ? ('whatsappPhone' + window.BRANCH_SUFFIX) : 'whatsappPhone';
+    var locKey = (window.BRANCH_ID !== '1') ? ('cafeLocationLabel' + window.BRANCH_SUFFIX) : 'cafeLocationLabel';
+    var defaultReceiptLoc = isBranch2 ? 'هەولێر - هەڤاڵان' : 'بەحرکە-مجەمع';
+    var phone = formatReceiptPhone(localStorage.getItem(phoneKey) || (isBranch2 ? localStorage.getItem('whatsappPhone') : null) || '9647506454656');
+    var location = localStorage.getItem(locKey) || defaultReceiptLoc;
 
     var logoUrl = new URL('assets/shawarma demeshq-logo.jpg', window.location.href).href;
 
@@ -4726,18 +4733,43 @@ function loadSettings() {
             '</button>';
     }).join('');
 
+    function getAdminCafeStorageKey(key) {
+        if (window.BRANCH_ID && window.BRANCH_ID !== '1') {
+            return key + window.BRANCH_SUFFIX;
+        }
+        return key;
+    }
+
+    function getAdminCafeSetting(key, fallback) {
+        var storageKey = getAdminCafeStorageKey(key);
+        var val = localStorage.getItem(storageKey);
+        if (val != null && String(val).trim() !== '') return String(val).trim();
+        return fallback != null ? fallback : '';
+    }
+
+    var isBranch2 = String(window.BRANCH_ID) === '2';
+    var branchBadgeTitle = isBranch2 ? '📍 لقی ٢ - هەڤاڵان (Havalan)' : '📍 لقی ١ - بەحرکە (Bahirka)';
+    var defaultCafeName = isBranch2 ? 'شاورما دیمەشق - هەڤاڵان' : S.siteName;
+    var defaultCafeLocUrl = isBranch2 ? 'https://maps.google.com' : 'https://maps.app.goo.gl/mmi5iv7mnGKxKZoq9?g_st=ic';
+    var defaultCafeLocLabel = isBranch2 ? 'هەولێر - هەڤاڵان' : 'بەحرکە-مجەمع';
+
     var settingsLang = localStorage.getItem('selectedLang') || 'ku';
-    var openTimeStored = localStorage.getItem('cafeOpenTime') || '14:00';
-    var closeTimeStored = localStorage.getItem('cafeCloseTime') || '02:00';
+    var openTimeStored = getAdminCafeSetting('cafeOpenTime', '14:00');
+    var closeTimeStored = getAdminCafeSetting('cafeCloseTime', '02:00');
 
     adminContent.innerHTML =
         '<div class="card settings-contact-card">' +
-        '<h2>' + S.settings + '</h2>' +
+        '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">' +
+        '<h2 style="margin:0;">' + S.settings + '</h2>' +
+        '<div class="admin-branch-badge" style="display:inline-flex; align-items:center; gap:6px; padding:6px 14px; background:rgba(217,119,6,0.15); border:1px solid rgba(217,119,6,0.35); border-radius:20px; font-weight:700; font-size:13px; color:var(--primary);">' +
+        branchBadgeTitle +
+        '</div>' +
+        '</div>' +
         '<div class="settings-social-field">' +
         '<span class="settings-social-icon settings-social-icon--cafe" aria-hidden="true"><i class="fa-solid fa-mug-hot"></i></span>' +
         '<div class="settings-social-input-wrap">' +
         '<label for="cafeName">' + S.cafeName + '</label>' +
-        '<input type="text" id="cafeName" value="' + (localStorage.getItem('cafeName') || S.siteName) + '">' +
+        '<input type="text" id="cafeName" value="' + getAdminCafeSetting('cafeName', defaultCafeName) + '">' +
         '</div>' +
         '</div>' +
         '<div class="settings-social-field">' +
@@ -4747,21 +4779,21 @@ function loadSettings() {
         '</span>' +
         '<div class="settings-social-input-wrap">' +
         '<label for="whatsappPhone">' + S.callWhatsAppNumber + '</label>' +
-        '<input type="tel" id="whatsappPhone" value="' + (localStorage.getItem('whatsappPhone') || '9647506454656') + '" placeholder="' + S.phonePlaceholder + '">' +
+        '<input type="tel" id="whatsappPhone" value="' + getAdminCafeSetting('whatsappPhone', '9647506454656') + '" placeholder="' + S.phonePlaceholder + '">' +
         '</div>' +
         '</div>' +
         '<div class="settings-social-field">' +
         '<span class="settings-social-icon settings-social-icon--maps" aria-hidden="true"><i class="fa-solid fa-map-location-dot"></i></span>' +
         '<div class="settings-social-input-wrap">' +
         '<label for="cafeLocationUrl">' + S.locationMapsUrl + '</label>' +
-        '<input type="url" id="cafeLocationUrl" value="' + (localStorage.getItem('cafeLocationUrl') || 'https://maps.app.goo.gl/mmi5iv7mnGKxKZoq9?g_st=ic') + '" placeholder="https://maps.google.com/...">' +
+        '<input type="url" id="cafeLocationUrl" value="' + getAdminCafeSetting('cafeLocationUrl', defaultCafeLocUrl) + '" placeholder="https://maps.google.com/...">' +
         '</div>' +
         '</div>' +
         '<div class="settings-social-field">' +
         '<span class="settings-social-icon settings-social-icon--pin" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></span>' +
         '<div class="settings-social-input-wrap">' +
         '<label for="cafeLocationLabel">' + S.locationLabelField + '</label>' +
-        '<input type="text" id="cafeLocationLabel" value="' + (localStorage.getItem('cafeLocationLabel') || 'بەحرکە-مجەمع') + '">' +
+        '<input type="text" id="cafeLocationLabel" value="' + getAdminCafeSetting('cafeLocationLabel', defaultCafeLocLabel) + '">' +
         '</div>' +
         '</div>' +
         '<div class="settings-social-field">' +
@@ -4796,28 +4828,28 @@ function loadSettings() {
         '<span class="settings-social-icon settings-social-icon--instagram" aria-hidden="true"><i class="fa-brands fa-instagram"></i></span>' +
         '<div class="settings-social-input-wrap">' +
         '<label for="cafeInstagram">' + S.instagramUrl + '</label>' +
-        '<input type="url" id="cafeInstagram" value="' + (localStorage.getItem('cafeInstagram') || '') + '" placeholder="https://instagram.com/...">' +
+        '<input type="url" id="cafeInstagram" value="' + getAdminCafeSetting('cafeInstagram', '') + '" placeholder="https://instagram.com/...">' +
         '</div>' +
         '</div>' +
         '<div class="settings-social-field">' +
         '<span class="settings-social-icon settings-social-icon--tiktok" aria-hidden="true"><i class="fa-brands fa-tiktok"></i></span>' +
         '<div class="settings-social-input-wrap">' +
         '<label for="cafeTiktok">' + S.tiktokUrl + '</label>' +
-        '<input type="url" id="cafeTiktok" value="' + (localStorage.getItem('cafeTiktok') || '') + '" placeholder="https://tiktok.com/@...">' +
+        '<input type="url" id="cafeTiktok" value="' + getAdminCafeSetting('cafeTiktok', '') + '" placeholder="https://tiktok.com/@...">' +
         '</div>' +
         '</div>' +
         '<div class="settings-social-field">' +
         '<span class="settings-social-icon settings-social-icon--snapchat" aria-hidden="true"><i class="fa-brands fa-snapchat"></i></span>' +
         '<div class="settings-social-input-wrap">' +
         '<label for="cafeSnapchat">' + S.snapchatUrl + '</label>' +
-        '<input type="url" id="cafeSnapchat" value="' + (localStorage.getItem('cafeSnapchat') || '') + '" placeholder="https://snapchat.com/add/...">' +
+        '<input type="url" id="cafeSnapchat" value="' + getAdminCafeSetting('cafeSnapchat', '') + '" placeholder="https://snapchat.com/add/...">' +
         '</div>' +
         '</div>' +
         '<div class="settings-social-field">' +
         '<span class="settings-social-icon settings-social-icon--facebook" aria-hidden="true"><i class="fa-brands fa-facebook-f"></i></span>' +
         '<div class="settings-social-input-wrap">' +
         '<label for="cafeFacebook">' + S.facebookUrl + '</label>' +
-        '<input type="url" id="cafeFacebook" value="' + (localStorage.getItem('cafeFacebook') || '') + '" placeholder="https://facebook.com/...">' +
+        '<input type="url" id="cafeFacebook" value="' + getAdminCafeSetting('cafeFacebook', '') + '" placeholder="https://facebook.com/...">' +
         '</div>' +
         '</div>' +
         '<button class="btn-primary" id="saveSettingsBtn" style="margin-top:8px;">' + S.saveSettings + '</button>' +
@@ -4874,10 +4906,11 @@ function loadSettings() {
             }
 
             function storeSetting(key, value) {
+                var storageKey = getAdminCafeStorageKey(key);
                 if (value == null || String(value).trim() === '') {
-                    localStorage.removeItem(key);
+                    localStorage.removeItem(storageKey);
                 } else {
-                    localStorage.setItem(key, String(value).trim());
+                    localStorage.setItem(storageKey, String(value).trim());
                 }
             }
 
@@ -4892,7 +4925,8 @@ function loadSettings() {
             storeSetting('cafeOpenTime', cafeOpenTime);
             storeSetting('cafeCloseTime', cafeCloseTime);
             try {
-                localStorage.setItem('cafeSettingsUpdatedAt', String(Date.now()));
+                var updateKey = 'cafeSettingsUpdatedAt' + (window.BRANCH_ID !== '1' ? window.BRANCH_SUFFIX : '');
+                localStorage.setItem(updateKey, String(Date.now()));
             } catch (e) { }
 
             document.getElementById('whatsappPhone').value = whatsappPhone;
@@ -4900,7 +4934,6 @@ function loadSettings() {
             document.getElementById('cafeTiktok').value = cafeTiktok;
             document.getElementById('cafeSnapchat').value = cafeSnapchat;
             document.getElementById('cafeFacebook').value = cafeFacebook;
-            var selectedLang = localStorage.getItem('selectedLang') || 'ku';
             var openHiddenSave = document.getElementById('cafeOpenTime');
             var closeHiddenSave = document.getElementById('cafeCloseTime');
             if (openHiddenSave) openHiddenSave.value = cafeOpenTime;
@@ -4924,7 +4957,7 @@ function loadSettings() {
                     if (err) {
                         var msg = (err && err.message ? String(err.message) : String(err)).toLowerCase();
                         if (msg.indexOf('permission') !== -1 || msg.indexOf('insufficient') !== -1 || msg.indexOf('denied') !== -1) {
-                            alert('⚠️ Settings saved locally only.\n\nFirestore WRITE was DENIED. Fix:\n1) In Firebase Console → project shawarma-demashq-menu → Firestore → Rules tab, paste the rules and click PUBLISH.\n2) Make sure you are logged in as admin.\n\n(' + (err && err.message ? err.message : err) + ')');
+                            alert('⚠️ Settings saved locally only.\n\nFirestore WRITE was DENIED. Fix:\n1) In Firebase Console → project shawarma-demeshq-menu → Firestore → Rules tab, paste the rules and click PUBLISH.\n2) Make sure you are logged in as admin.\n\n(' + (err && err.message ? err.message : err) + ')');
                         } else {
                             alert('⚠️ ' + S.settingsSaved + '\n\nCloud sync failed: ' + (err && err.message ? err.message : err) + '\n\nChanges saved locally only.');
                         }
@@ -4947,24 +4980,24 @@ function loadSettings() {
                 cafeLocationLabel: 'cafeLocationLabel',
                 cafeInstagram: 'cafeInstagram',
                 cafeTiktok: 'cafeTiktok',
-                cafeSnapchat: 'cafeSnapchat'
+                cafeSnapchat: 'cafeSnapchat',
+                cafeFacebook: 'cafeFacebook'
             };
-            Object.keys(fields).forEach(function (storageKey) {
-                var input = document.getElementById(fields[storageKey]);
+            Object.keys(fields).forEach(function (key) {
+                var input = document.getElementById(fields[key]);
                 if (!input) return;
-                var value = localStorage.getItem(storageKey) || input.value || '';
-                if (storageKey === 'whatsappPhone' && typeof normalizeWhatsAppPhone === 'function') {
+                var value = getAdminCafeSetting(key, input.value || '');
+                if (key === 'whatsappPhone' && typeof normalizeWhatsAppPhone === 'function') {
                     value = normalizeWhatsAppPhone(value);
                 }
                 input.value = value;
             });
             var openLoaded = document.getElementById('cafeOpenTime');
             var closeLoaded = document.getElementById('cafeCloseTime');
-            if (openLoaded) openLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeOpenTime') || '14:00', '14:00') : (localStorage.getItem('cafeOpenTime') || '14:00'));
-            if (closeLoaded) closeLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(localStorage.getItem('cafeCloseTime') || '02:00', '02:00') : (localStorage.getItem('cafeCloseTime') || '02:00'));
+            if (openLoaded) openLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(getAdminCafeSetting('cafeOpenTime', '14:00'), '14:00') : getAdminCafeSetting('cafeOpenTime', '14:00'));
+            if (closeLoaded) closeLoaded.value = (typeof normalizeCafeTimeValue === 'function' ? normalizeCafeTimeValue(getAdminCafeSetting('cafeCloseTime', '02:00'), '02:00') : getAdminCafeSetting('cafeCloseTime', '02:00'));
         });
     }
-
 }
 
 

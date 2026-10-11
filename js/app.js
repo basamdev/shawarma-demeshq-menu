@@ -7,10 +7,13 @@ window.BRANCH_SUFFIX = (window.BRANCH_ID !== '1') ? ('_branch' + window.BRANCH_I
 
 window.MENU_COLLECTION = 'menuItems' + window.BRANCH_SUFFIX;
 window.CAT_COLLECTION = 'categories' + window.BRANCH_SUFFIX;
+window.SETTINGS_COLLECTION = 'settings' + window.BRANCH_SUFFIX;
+window.SETTINGS_DOC = (window.BRANCH_ID !== '1') ? ('cafe' + window.BRANCH_SUFFIX) : 'cafe';
 window.CURRENT_BRANCH = window.BRANCH_ID;
 
 var MENU_COLLECTION = window.MENU_COLLECTION;
 var CAT_COLLECTION = window.CAT_COLLECTION;
+var SETTINGS_COLLECTION = window.SETTINGS_COLLECTION;
 
 var CACHE_KEY_MENU_ITEMS = (window.BRANCH_ID !== '1' ? ('cachedMenuItems' + window.BRANCH_SUFFIX) : 'cachedMenuItems');
 var CACHE_KEY_CATEGORIES = (window.BRANCH_ID !== '1' ? ('cachedCategories' + window.BRANCH_SUFFIX) : 'cachedCategories');
@@ -3422,15 +3425,23 @@ function normalizeSocialUrl(url, platform) {
     return 'https://' + cleaned;
 }
 
+function getCafeStorageKey(key) {
+    if (window.BRANCH_ID && window.BRANCH_ID !== '1') {
+        return key + window.BRANCH_SUFFIX;
+    }
+    return key;
+}
+
 function applyCafeSettingsToLocalStorage(data) {
     if (!data || typeof data !== 'object') return;
     CAFE_SETTING_KEYS.forEach(function (key) {
         if (!Object.prototype.hasOwnProperty.call(data, key)) return;
         var val = data[key];
+        var storageKey = getCafeStorageKey(key);
         if (val == null || String(val).trim() === '') {
-            localStorage.removeItem(key);
+            localStorage.removeItem(storageKey);
         } else {
-            localStorage.setItem(key, String(val).trim());
+            localStorage.setItem(storageKey, String(val).trim());
         }
     });
 }
@@ -3438,7 +3449,8 @@ function applyCafeSettingsToLocalStorage(data) {
 function getCafeSettingsFromLocalStorage() {
     var data = {};
     CAFE_SETTING_KEYS.forEach(function (key) {
-        var value = localStorage.getItem(key);
+        var storageKey = getCafeStorageKey(key);
+        var value = localStorage.getItem(storageKey);
         if (value != null && String(value).trim() !== '') {
             data[key] = String(value).trim();
         }
@@ -3450,16 +3462,30 @@ var cafeSettingsUnsubscribe = null;
 
 function handleCafeSettingsStorageChange(event) {
     if (!event || !event.key) return;
-    if (event.key === 'cafeSettingsUpdatedAt' || CAFE_SETTING_KEYS.indexOf(event.key) !== -1) {
+    var suffix = (window.BRANCH_ID && window.BRANCH_ID !== '1') ? window.BRANCH_SUFFIX : '';
+    if (event.key === ('cafeSettingsUpdatedAt' + suffix) || event.key === 'cafeSettingsUpdatedAt') {
         updateCafeInfoPanel();
+        return;
+    }
+    for (var i = 0; i < CAFE_SETTING_KEYS.length; i++) {
+        var baseKey = CAFE_SETTING_KEYS[i];
+        if (event.key === baseKey || event.key === (baseKey + suffix)) {
+            updateCafeInfoPanel();
+            break;
+        }
     }
 }
 
 window.addEventListener('storage', handleCafeSettingsStorageChange);
 
 function loadCafeSettingsFromFirestore(callback) {
+    var branchId = window.BRANCH_ID || '1';
+    var suffix = (branchId !== '1') ? ('_branch' + branchId) : '';
+    var docId = (branchId !== '1') ? ('cafe' + suffix) : 'cafe';
+    var colName = (branchId !== '1') ? ('settings' + suffix) : 'settings';
+
     if (USE_LOCAL_API) {
-        localApiRequest('settings.php?id=cafe').then(function(doc) {
+        localApiRequest('settings.php?id=' + encodeURIComponent(docId)).then(function(doc) {
             if (doc && doc.data) {
                 var data = typeof doc.data === 'string' ? JSON.parse(doc.data) : doc.data;
                 applyCafeSettingsToLocalStorage(data);
@@ -3477,20 +3503,52 @@ function loadCafeSettingsFromFirestore(callback) {
         return;
     }
 
-    window.db.collection('settings').doc('cafe').get().then(function (doc) {
-        if (doc.exists) {
-            applyCafeSettingsToLocalStorage(doc.data());
-        }
-        if (callback) callback();
-    }).catch(function (err) {
-        console.warn('Could not load cafe settings:', err.message);
-        if (callback) callback();
-    });
+    if (branchId !== '1') {
+        window.db.collection(colName).doc('cafe').get().then(function (doc) {
+            if (doc.exists && doc.data() && Object.keys(doc.data()).length > 0) {
+                applyCafeSettingsToLocalStorage(doc.data());
+                if (callback) callback();
+            } else {
+                window.db.collection('settings').doc(docId).get().then(function (doc2) {
+                    if (doc2.exists && doc2.data()) {
+                        applyCafeSettingsToLocalStorage(doc2.data());
+                    }
+                    if (callback) callback();
+                }).catch(function () {
+                    if (callback) callback();
+                });
+            }
+        }).catch(function (err) {
+            console.warn('Could not load branch cafe settings from primary collection:', err.message);
+            window.db.collection('settings').doc(docId).get().then(function (doc2) {
+                if (doc2.exists && doc2.data()) {
+                    applyCafeSettingsToLocalStorage(doc2.data());
+                }
+                if (callback) callback();
+            }).catch(function () {
+                if (callback) callback();
+            });
+        });
+    } else {
+        window.db.collection('settings').doc('cafe').get().then(function (doc) {
+            if (doc.exists) {
+                applyCafeSettingsToLocalStorage(doc.data());
+            }
+            if (callback) callback();
+        }).catch(function (err) {
+            console.warn('Could not load cafe settings:', err.message);
+            if (callback) callback();
+        });
+    }
 }
 
 function subscribeCafeSettingsUpdates() {
+    var branchId = window.BRANCH_ID || '1';
+    var suffix = (branchId !== '1') ? ('_branch' + branchId) : '';
+    var docId = (branchId !== '1') ? ('cafe' + suffix) : 'cafe';
+    var colName = (branchId !== '1') ? ('settings' + suffix) : 'settings';
+
     if (USE_LOCAL_API) {
-        // For local API, we'll poll for changes every 5 seconds
         if (window._settingsPollInterval) {
             clearInterval(window._settingsPollInterval);
         }
@@ -3499,7 +3557,7 @@ function subscribeCafeSettingsUpdates() {
                 clearInterval(window._settingsPollInterval);
                 return;
             }
-            localApiRequest('settings.php?id=cafe').then(function(doc) {
+            localApiRequest('settings.php?id=' + encodeURIComponent(docId)).then(function(doc) {
                 if (doc && doc.data) {
                     var data = typeof doc.data === 'string' ? JSON.parse(doc.data) : doc.data;
                     applyCafeSettingsToLocalStorage(data);
@@ -3516,21 +3574,49 @@ function subscribeCafeSettingsUpdates() {
         cafeSettingsUnsubscribe = null;
     }
 
-    cafeSettingsUnsubscribe = window.db.collection('settings').doc('cafe').onSnapshot(function (doc) {
-        if (doc.exists) {
-            applyCafeSettingsToLocalStorage(doc.data());
-            updateCafeInfoPanel();
-        }
-    }, function (err) {
-        console.warn('Cafe settings listener error:', err.message);
-    });
+    if (branchId !== '1') {
+        cafeSettingsUnsubscribe = window.db.collection(colName).doc('cafe').onSnapshot(function (doc) {
+            if (doc.exists) {
+                applyCafeSettingsToLocalStorage(doc.data());
+                updateCafeInfoPanel();
+            }
+        }, function (err) {
+            console.warn('Cafe settings listener error, trying fallback doc:', err.message);
+            if (cafeSettingsUnsubscribe) {
+                cafeSettingsUnsubscribe();
+                cafeSettingsUnsubscribe = null;
+            }
+            cafeSettingsUnsubscribe = window.db.collection('settings').doc(docId).onSnapshot(function (doc2) {
+                if (doc2.exists) {
+                    applyCafeSettingsToLocalStorage(doc2.data());
+                    updateCafeInfoPanel();
+                }
+            }, function (err2) {
+                console.warn('Fallback cafe settings listener error:', err2.message);
+            });
+        });
+    } else {
+        cafeSettingsUnsubscribe = window.db.collection('settings').doc('cafe').onSnapshot(function (doc) {
+            if (doc.exists) {
+                applyCafeSettingsToLocalStorage(doc.data());
+                updateCafeInfoPanel();
+            }
+        }, function (err) {
+            console.warn('Cafe settings listener error:', err.message);
+        });
+    }
 }
 
 function saveCafeSettingsToFirestore(data, callback) {
+    var branchId = window.BRANCH_ID || '1';
+    var suffix = (branchId !== '1') ? ('_branch' + branchId) : '';
+    var docId = (branchId !== '1') ? ('cafe' + suffix) : 'cafe';
+    var colName = (branchId !== '1') ? ('settings' + suffix) : 'settings';
+
     if (USE_LOCAL_API) {
         localApiRequest('settings.php', {
             method: 'POST',
-            body: { id: 'cafe', data: data }
+            body: { id: docId, data: data }
         }).then(function() {
             if (callback) callback(null);
         }).catch(function(err) {
@@ -3554,15 +3640,28 @@ function saveCafeSettingsToFirestore(data, callback) {
         if (callback) callback(new Error('Connection timeout'));
     }, 12000);
 
-    window.db.collection('settings').doc('cafe').set(payload, { merge: true }).then(function () {
-        clearTimeout(timer);
-        if (!timedOut && callback) callback(null);
-    }).catch(function (err) {
-        clearTimeout(timer);
-        if (!timedOut && callback) callback(err);
-    });
+    if (branchId !== '1') {
+        var p1 = window.db.collection(colName).doc('cafe').set(payload, { merge: true });
+        var p2 = window.db.collection('settings').doc(docId).set(payload, { merge: true }).catch(function(){});
+        Promise.all([p1, p2]).then(function () {
+            clearTimeout(timer);
+            if (!timedOut && callback) callback(null);
+        }).catch(function (err) {
+            clearTimeout(timer);
+            if (!timedOut && callback) callback(err);
+        });
+    } else {
+        window.db.collection('settings').doc('cafe').set(payload, { merge: true }).then(function () {
+            clearTimeout(timer);
+            if (!timedOut && callback) callback(null);
+        }).catch(function (err) {
+            clearTimeout(timer);
+            if (!timedOut && callback) callback(err);
+        });
+    }
 }
 
+window.getCafeStorageKey = getCafeStorageKey;
 window.loadCafeSettingsFromFirestore = loadCafeSettingsFromFirestore;
 window.saveCafeSettingsToFirestore = saveCafeSettingsToFirestore;
 window.subscribeCafeSettingsUpdates = subscribeCafeSettingsUpdates;
@@ -3576,34 +3675,52 @@ window.toLocaleDigits = toLocaleDigits;
 window.applyCafeSettingsToLocalStorage = applyCafeSettingsToLocalStorage;
 
 function getCafeInfo() {
-    var defaultUrl = 'https://maps.app.goo.gl/mmi5iv7mnGKxKZoq9?g_st=ic';
-    var defaultLabel = 'بەحرکە-مجەمع';
-    var storedUrl = localStorage.getItem('cafeLocationUrl');
-    var storedLabel = localStorage.getItem('cafeLocationLabel');
+    var isBranch2 = String(window.BRANCH_ID) === '2';
+    var defaultUrl = isBranch2 
+        ? 'https://maps.google.com' 
+        : 'https://maps.app.goo.gl/mmi5iv7mnGKxKZoq9?g_st=ic';
+    var defaultLabel = isBranch2 ? 'هەولێر - هەڤاڵان' : 'بەحرکە-مجەمع';
+    var defaultName = isBranch2 ? 'شاورما دیمەشق - هەڤاڵان' : 'Shawarma';
 
-    if (storedUrl === 'https://maps.google.com/?q=Baharka+Erbil') {
-        localStorage.setItem('cafeLocationUrl', defaultUrl);
-        storedUrl = defaultUrl;
-    }
-    if (storedLabel === 'baharka-erbil | شارع 150') {
-        localStorage.setItem('cafeLocationLabel', defaultLabel);
-        storedLabel = defaultLabel;
+    var keyUrl = getCafeStorageKey('cafeLocationUrl');
+    var keyLabel = getCafeStorageKey('cafeLocationLabel');
+    var keyName = getCafeStorageKey('cafeName');
+    var keyPhone = getCafeStorageKey('whatsappPhone');
+    var keyOpen = getCafeStorageKey('cafeOpenTime');
+    var keyClose = getCafeStorageKey('cafeCloseTime');
+    var keyInsta = getCafeStorageKey('cafeInstagram');
+    var keyTiktok = getCafeStorageKey('cafeTiktok');
+    var keySnap = getCafeStorageKey('cafeSnapchat');
+    var keyFb = getCafeStorageKey('cafeFacebook');
+
+    var storedUrl = localStorage.getItem(keyUrl);
+    var storedLabel = localStorage.getItem(keyLabel);
+
+    if (!isBranch2) {
+        if (storedUrl === 'https://maps.google.com/?q=Baharka+Erbil') {
+            localStorage.setItem('cafeLocationUrl', defaultUrl);
+            storedUrl = defaultUrl;
+        }
+        if (storedLabel === 'baharka-erbil | شارع 150') {
+            localStorage.setItem('cafeLocationLabel', defaultLabel);
+            storedLabel = defaultLabel;
+        }
     }
 
-    var openTime = normalizeCafeTimeValue(localStorage.getItem('cafeOpenTime'), '14:00');
-    var closeTime = normalizeCafeTimeValue(localStorage.getItem('cafeCloseTime'), '02:00');
+    var openTime = normalizeCafeTimeValue(localStorage.getItem(keyOpen), '14:00');
+    var closeTime = normalizeCafeTimeValue(localStorage.getItem(keyClose), '02:00');
     var openMinutes = parseCafeTimeToMinutes(openTime, 14);
     var closeMinutes = parseCafeTimeToMinutes(closeTime, 2);
 
     return {
-        name: localStorage.getItem('cafeName') || 'Shawarma',
-        phone: normalizeWhatsAppPhone(localStorage.getItem('whatsappPhone') || '9647506454656'),
+        name: localStorage.getItem(keyName) || defaultName,
+        phone: normalizeWhatsAppPhone(localStorage.getItem(keyPhone) || (isBranch2 ? localStorage.getItem('whatsappPhone') : null) || '9647506454656'),
         locationUrl: storedUrl || defaultUrl,
         locationLabel: storedLabel || defaultLabel,
-        instagram: localStorage.getItem('cafeInstagram') || '',
-        tiktok: localStorage.getItem('cafeTiktok') || '',
-        snapchat: localStorage.getItem('cafeSnapchat') || '',
-        facebook: localStorage.getItem('cafeFacebook') || '',
+        instagram: localStorage.getItem(keyInsta) || (isBranch2 ? localStorage.getItem('cafeInstagram') : '') || '',
+        tiktok: localStorage.getItem(keyTiktok) || (isBranch2 ? localStorage.getItem('cafeTiktok') : '') || '',
+        snapchat: localStorage.getItem(keySnap) || (isBranch2 ? localStorage.getItem('cafeSnapchat') : '') || '',
+        facebook: localStorage.getItem(keyFb) || (isBranch2 ? localStorage.getItem('cafeFacebook') : '') || '',
         openTime: openTime,
         closeTime: closeTime,
         openHour: Math.floor(openMinutes / 60),
