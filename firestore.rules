@@ -5,29 +5,61 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Menu Items (Branch 1, Branch 2, etc.)
     match /menuItems/{itemId} {
       allow read: if true;
       allow write: if isSignedIn();
     }
+    match /menuItems_branch2/{itemId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
 
+    // Categories (Branch 1, Branch 2, etc.)
     match /categories/{catId} {
       allow read: if true;
       allow write: if isSignedIn();
     }
-
-    match /settings/{docId} {
+    match /categories_branch2/{catId} {
       allow read: if true;
       allow write: if isSignedIn();
     }
 
+    // Settings (Branch 1, Branch 2, etc.)
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+    match /settings_branch2/{docId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Sales (Branch 1, Branch 2, etc.)
     match /sales/{saleId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn();
     }
+    match /sales_branch2/{saleId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
 
+    // Expenses (Branch 1, Branch 2, etc.)
     match /expenses/{expId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn();
     }
+    match /expenses_branch2/{expId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // General fallback for any future branches
+    match /{collection}/{docId} {
+      allow read: if collection.matches('^(menuItems|categories|settings).*$') || isSignedIn();
+      allow write: if isSignedIn();
+    }
   }
 }
+
