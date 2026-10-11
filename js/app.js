@@ -242,10 +242,15 @@ const i18n = {
     ku: {
         menuTitle: 'مێنووی ئێمە',
         favorites: 'دڵخوازەکان',
+        favoritesTitle: 'دڵخوازەکان',
+        clearAll: 'سڕینەوەی هەمووی',
+        addAllToCart: 'هەمووی بخەرە سەبەتە',
+        allAddedToCart: 'هەموو دڵخوازەکان خرانە سەبەتەوە 🛒',
+        clearFavoritesConfirm: 'دڵنیایت لە سڕینەوەی هەموو دڵخوازەکان؟',
         favAdded: 'زیادکرا بۆ دڵخوازەکان ❤️',
         favRemoved: 'لە دڵخوازەکان سڕایەوە',
         noFavorites: 'هیچ دڵخوازێک زیاد نەکراوە',
-        noFavoritesDesc: 'کرتە لەسەر ❤️ بکە لەسەر هەر ئایتمێک بۆ زیادکردنی بۆ دڵخوازەکانت!',
+        noFavoritesDesc: 'کرتە لەسەر ❤️ بکە لەسەر هەر خواردنێک بۆ ئەوەی لێرە پاشەکەوت بکرێت!',
         exploreMenu: 'گەڕان لە مێنوو',
         loadingMenu: 'داگرتنی مێنوو...',
         noItems: 'هیچ شتێک نییە لە مێنوودا.',
@@ -471,10 +476,15 @@ const i18n = {
     ar: {
         menuTitle: 'قائمتنا',
         favorites: 'المفضلة',
+        favoritesTitle: 'المفضلة',
+        clearAll: 'مسح الكل',
+        addAllToCart: 'إضافة الكل للسلة',
+        allAddedToCart: 'تمت إضافة جميع العناصر المفضلة إلى السلة 🛒',
+        clearFavoritesConfirm: 'هل أنت متأكد من مسح جميع العناصر المفضلة؟',
         favAdded: 'تمت الإضافة إلى المفضلة ❤️',
         favRemoved: 'تمت الإزالة من المفضلة',
         noFavorites: 'لا توجد أطباق مفضلة',
-        noFavoritesDesc: 'اضغط على ❤️ على أي وجبة لإضافتها إلى قائمتك المفضلة!',
+        noFavoritesDesc: 'اضغط على ❤️ في أي وجبة لإضافتها إلى قائمتك المفضلة!',
         exploreMenu: 'استعراض المنيو',
         loadingMenu: 'جارٍ تحميل القائمة...',
         noItems: 'لا توجد عناصر في القائمة.',
@@ -700,10 +710,15 @@ const i18n = {
     en: {
         menuTitle: 'Our Menu',
         favorites: 'Favorites',
+        favoritesTitle: 'My Favorites',
+        clearAll: 'Clear All',
+        addAllToCart: 'Add All to Cart',
+        allAddedToCart: 'All favorites added to cart 🛒',
+        clearFavoritesConfirm: 'Are you sure you want to clear all favorites?',
         favAdded: 'Added to favorites ❤️',
         favRemoved: 'Removed from favorites',
         noFavorites: 'No favorites yet',
-        noFavoritesDesc: 'Tap the ❤️ icon on any dish to add it to your personal favorites!',
+        noFavoritesDesc: 'Tap the ❤️ icon on any dish to save it in your favorites collection!',
         exploreMenu: 'Explore Menu',
         loadingMenu: 'Loading menu items...',
         noItems: 'No menu items found.',
@@ -2366,13 +2381,33 @@ document.addEventListener('DOMContentLoaded', function () {
         FavoriteManager.updateFavBadge();
     }
 
-    // Fav button
+    // Fav modal & buttons
     var favBtn = document.getElementById('favBtn');
     if (favBtn) {
         favBtn.addEventListener('click', function (e) {
             e.preventDefault();
-            toggleFavoritesView();
+            openFavPanel();
         });
+    }
+
+    var favClose = document.getElementById('favClose');
+    if (favClose) {
+        favClose.addEventListener('click', closeFavPanel);
+    }
+
+    var favBackdrop = document.getElementById('favBackdrop');
+    if (favBackdrop) {
+        favBackdrop.addEventListener('click', closeFavPanel);
+    }
+
+    var favClearBtn = document.getElementById('favClearBtn');
+    if (favClearBtn) {
+        favClearBtn.addEventListener('click', clearAllFavorites);
+    }
+
+    var favAddAllBtn = document.getElementById('favAddAllBtn');
+    if (favAddAllBtn) {
+        favAddAllBtn.addEventListener('click', addAllFavoritesToCart);
     }
 
     // Initialize language dropdown
@@ -2452,6 +2487,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 closeCafeInfoPanel();
                 closeProductDetail();
                 closeCartPanel();
+                closeFavPanel();
             }
         }
     });
@@ -4174,6 +4210,9 @@ var FavoriteManager = {
         } catch (e) {}
         this.updateFavBadge();
         this.syncCardButtons(id, isAdded);
+        if (document.getElementById('favOverlay') && document.getElementById('favOverlay').classList.contains('open')) {
+            renderFavPanelItems();
+        }
         return isAdded;
     },
     getFavCount: function () {
@@ -4193,6 +4232,12 @@ var FavoriteManager = {
         var favBtn = document.getElementById('favBtn');
         if (favBtn) {
             favBtn.classList.toggle('has-favs', count > 0);
+        }
+        var subtitle = document.getElementById('favCountSubtitle');
+        if (subtitle) {
+            var lang = localStorage.getItem('selectedLang') || 'ku';
+            var unit = (lang === 'ku') ? ' ئایتم' : (lang === 'ar' ? ' عناصر' : ' items');
+            subtitle.textContent = count + unit;
         }
     },
     syncCardButtons: function (id, isAdded) {
@@ -4217,39 +4262,30 @@ var FavoriteManager = {
 };
 window.FavoriteManager = FavoriteManager;
 
-function toggleFavoritesView() {
-    _showingFavorites = !_showingFavorites;
-    var favBtn = document.getElementById('favBtn');
-    if (favBtn) favBtn.classList.toggle('active', _showingFavorites);
-
-    var lang = localStorage.getItem('selectedLang') || 'ku';
-    var strings = i18n[lang] || i18n.en;
-    var titleEl = document.getElementById('activeCategoryTitle');
-
-    if (_showingFavorites) {
-        document.querySelectorAll('.category-btn').forEach(function (btn) {
-            btn.classList.remove('active');
-        });
-        if (titleEl) {
-            titleEl.innerHTML = '<span class="fav-title-icon">❤️</span> ' + (strings.favorites || 'Favorites');
-        }
-        renderFavoritesList();
-        var grid = document.getElementById('menuGrid');
-        if (grid) {
-            var gridTop = grid.getBoundingClientRect().top + window.scrollY - 100;
-            window.scrollTo({ top: gridTop, behavior: 'smooth' });
-        }
-    } else {
-        if (titleEl) {
-            titleEl.textContent = getCategoryDisplayName(_activeCategory || ALL_CATEGORY_ID, lang);
-        }
-        switchCategory(_activeCategory || ALL_CATEGORY_ID, { immediate: true });
+function openFavPanel() {
+    renderFavPanelItems();
+    var overlay = document.getElementById('favOverlay');
+    if (overlay) {
+        overlay.classList.add('open');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('fav-open');
     }
 }
-window.toggleFavoritesView = toggleFavoritesView;
+window.openFavPanel = openFavPanel;
 
-function renderFavoritesList() {
-    var container = document.getElementById('menuGrid');
+function closeFavPanel() {
+    var overlay = document.getElementById('favOverlay');
+    if (overlay) {
+        overlay.classList.remove('open');
+        overlay.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('fav-open');
+    }
+}
+window.closeFavPanel = closeFavPanel;
+
+function renderFavPanelItems() {
+    var container = document.getElementById('favItemsList');
+    var footer = document.getElementById('favFooter');
     if (!container) return;
 
     var lang = localStorage.getItem('selectedLang') || 'ku';
@@ -4261,36 +4297,171 @@ function renderFavoritesList() {
         return it && it.id && favIds.indexOf(String(it.id)) !== -1;
     });
 
-    container.innerHTML = '';
+    FavoriteManager.updateFavBadge();
 
     if (!favItems.length) {
         container.innerHTML =
-            '<div class="fav-empty-state">' +
+            '<div class="fav-drawer-empty">' +
                 '<div class="fav-empty-icon-wrap">' +
                     '<span class="fav-empty-icon">❤️</span>' +
                     '<span class="fav-empty-ring"></span>' +
                 '</div>' +
                 '<h3 class="fav-empty-title">' + (strings.noFavorites || 'No favorites yet') + '</h3>' +
-                '<p class="fav-empty-desc">' + (strings.noFavoritesDesc || 'Tap the ❤️ icon on any dish to add it to your personal favorites!') + '</p>' +
+                '<p class="fav-empty-desc">' + (strings.noFavoritesDesc || 'Tap the ❤️ icon on any dish to save it here!') + '</p>' +
                 '<button type="button" class="fav-empty-btn" id="favExploreBtn">' +
                     '<span>🍽️ ' + (strings.exploreMenu || 'Explore Menu') + '</span>' +
                 '</button>' +
             '</div>';
 
+        if (footer) footer.style.display = 'none';
+
         var exploreBtn = document.getElementById('favExploreBtn');
         if (exploreBtn) {
             exploreBtn.addEventListener('click', function () {
-                toggleFavoritesView();
+                closeFavPanel();
             });
         }
         return;
     }
 
+    if (footer) footer.style.display = 'block';
+
+    var fallbackImage = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27100%27 height=%27100%27%3E%3Crect fill=%231a1a1a width=%27100%27 height=%27100%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 font-size=%2724%27 text-anchor=%27middle%27 dy=%27.3em%27 fill=%23D4AF37%27%3E%E2%98%95%3C/text%3E%3C/svg%3E';
+
+    var html = '';
     favItems.forEach(function (item) {
-        container.appendChild(createMenuCard(item, lang, strings));
+        var name = item['name_' + lang] || item.name_en || item.name_ar || item.name_ku || 'Unnamed Item';
+        var price = item.price ? Number(item.price).toLocaleString() : '0';
+        var priceFormatted = (lang === 'en') ? (price + ' IQD') : (price + ' د.ع');
+        var imgUrl = normalizeImageUrl(item.image) || fallbackImage;
+
+        html +=
+            '<div class="fav-item-row" data-id="' + item.id + '">' +
+                '<div class="fav-item-img-wrap" data-item-id="' + item.id + '" role="button" title="' + (strings.viewDetails || 'View Details') + '">' +
+                    '<img src="' + imgUrl + '" alt="' + name + '" class="fav-item-img" loading="lazy" onerror="this.onerror=null;this.src=\'' + fallbackImage + '\'">' +
+                '</div>' +
+                '<div class="fav-item-info" data-item-id="' + item.id + '" role="button">' +
+                    '<h4 class="fav-item-name">' + name + '</h4>' +
+                    '<span class="fav-item-price">' + priceFormatted + '</span>' +
+                '</div>' +
+                '<div class="fav-item-actions">' +
+                    '<button type="button" class="fav-item-cart-btn" data-item-id="' + item.id + '" aria-label="Add to cart" title="' + (strings.cart || 'Add to Cart') + '">' +
+                        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                            '<circle cx="9" cy="21" r="1"></circle>' +
+                            '<circle cx="20" cy="21" r="1"></circle>' +
+                            '<path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>' +
+                        '</svg>' +
+                    '</button>' +
+                    '<button type="button" class="fav-item-remove-btn" data-item-id="' + item.id + '" aria-label="Remove favorite" title="' + (strings.favRemoved || 'Remove') + '">' +
+                        '<svg width="18" height="18" viewBox="0 0 24 24" fill="#f43f5e" stroke="#f43f5e" stroke-width="2">' +
+                            '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>' +
+                        '</svg>' +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+    });
+
+    container.innerHTML = html;
+
+    // Attach row handlers
+    container.querySelectorAll('.fav-item-remove-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var id = this.getAttribute('data-item-id');
+            var row = container.querySelector('.fav-item-row[data-id="' + id + '"]');
+            if (row) {
+                row.classList.add('removing');
+                setTimeout(function () {
+                    FavoriteManager.toggleFav(id);
+                    renderFavPanelItems();
+                }, 240);
+            } else {
+                FavoriteManager.toggleFav(id);
+                renderFavPanelItems();
+            }
+        });
+    });
+
+    container.querySelectorAll('.fav-item-cart-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var id = this.getAttribute('data-item-id');
+            var it = allItems.find(function (x) { return x && String(x.id) === String(id); });
+            if (it) {
+                addToCart(it);
+                btn.classList.add('added');
+                setTimeout(function () { btn.classList.remove('added'); }, 600);
+            }
+        });
+    });
+
+    container.querySelectorAll('.fav-item-img-wrap, .fav-item-info').forEach(function (el) {
+        el.addEventListener('click', function () {
+            var id = this.getAttribute('data-item-id');
+            var it = allItems.find(function (x) { return x && String(x.id) === String(id); });
+            if (it && typeof openProductDetail === 'function') {
+                closeFavPanel();
+                openProductDetail(it);
+            }
+        });
     });
 }
-window.renderFavoritesList = renderFavoritesList;
+window.renderFavPanelItems = renderFavPanelItems;
+
+function clearAllFavorites() {
+    var lang = localStorage.getItem('selectedLang') || 'ku';
+    var strings = i18n[lang] || i18n.en;
+    if (confirm(strings.clearFavoritesConfirm || 'Clear all favorites?')) {
+        try {
+            var key = FavoriteManager.getStorageKey();
+            localStorage.setItem(key, JSON.stringify([]));
+            if (!window.BRANCH_ID || window.BRANCH_ID === '1') {
+                localStorage.setItem('menu_favorites', JSON.stringify([]));
+            }
+        } catch (e) {}
+        FavoriteManager.updateFavBadge();
+        document.querySelectorAll('.menu-card-fav.active').forEach(function (b) {
+            b.classList.remove('active');
+        });
+        var detailFav = document.getElementById('detailFavBtn');
+        if (detailFav) detailFav.classList.remove('active');
+        renderFavPanelItems();
+    }
+}
+window.clearAllFavorites = clearAllFavorites;
+
+function addAllFavoritesToCart() {
+    var favIds = FavoriteManager.getFavorites();
+    var allItems = (typeof cachedMenuItems !== 'undefined' && Array.isArray(cachedMenuItems)) ? cachedMenuItems : [];
+    var favItems = allItems.filter(function (it) {
+        return it && it.id && favIds.indexOf(String(it.id)) !== -1;
+    });
+
+    if (!favItems.length) return;
+
+    favItems.forEach(function (it) {
+        addToCart(it);
+    });
+
+    var lang = localStorage.getItem('selectedLang') || 'ku';
+    var strings = i18n[lang] || i18n.en;
+
+    var addBtn = document.getElementById('favAddAllBtn');
+    if (addBtn) {
+        var origText = addBtn.innerHTML;
+        addBtn.innerHTML = '<i class="fa-solid fa-check"></i> ' + (strings.allAddedToCart || 'Added!');
+        addBtn.classList.add('success');
+        setTimeout(function () {
+            addBtn.innerHTML = origText;
+            addBtn.classList.remove('success');
+            closeFavPanel();
+            if (typeof openCartPanel === 'function') {
+                openCartPanel();
+            }
+        }, 600);
+    }
+}
+window.addAllFavoritesToCart = addAllFavoritesToCart;
 
 var MENU_FEATURES = {
     getFavorites: function () { return FavoriteManager.getFavorites(); },

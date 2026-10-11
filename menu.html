@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css?v=120">
+    <link rel="stylesheet" href="css/style.css?v=135">
 </head>
 <body class="menu-page emenu-layout" data-menu-theme="gold">
 <script>
@@ -404,6 +404,44 @@
         </div>
     </div>
 
+    <!-- Dedicated Luxury Favorites Modal / Drawer -->
+    <div class="fav-overlay" id="favOverlay" aria-hidden="true">
+        <div class="fav-backdrop" id="favBackdrop"></div>
+        <div class="fav-panel" role="dialog" aria-labelledby="favTitle">
+            <div class="fav-header">
+                <div class="fav-title-wrap">
+                    <div class="fav-title-icon-box">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                        </svg>
+                    </div>
+                    <div class="fav-title-text-group">
+                        <h2 class="fav-title" id="favTitle" data-i18n="favorites">دڵخوازەکان</h2>
+                        <span class="fav-count-subtitle" id="favCountSubtitle">0 ئایتم</span>
+                    </div>
+                </div>
+                <button class="fav-close" id="favClose" type="button" aria-label="Close">✕</button>
+            </div>
+
+            <div class="fav-items-list" id="favItemsList">
+                <!-- Dynamically rendered favorite cards or empty state -->
+            </div>
+
+            <div class="fav-footer" id="favFooter">
+                <div class="fav-footer-actions">
+                    <button type="button" class="fav-clear-btn" id="favClearBtn">
+                        <i class="fa-regular fa-trash-can"></i>
+                        <span data-i18n="clearAll">سڕینەوەی هەمووی</span>
+                    </button>
+                    <button type="button" class="fav-add-all-btn" id="favAddAllBtn">
+                        <i class="fa-solid fa-cart-plus"></i>
+                        <span data-i18n="addAllToCart">هەمووی بخەرە سەبەتە</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="cafe-info-overlay" id="cafeInfoOverlay" aria-hidden="true">
         <div class="cafe-info-backdrop"></div>
         <div class="cafe-info-panel" role="dialog" aria-labelledby="cafeInfoTitle">
@@ -487,7 +525,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="js/firebase.js?v=30"></script>
-    <script src="js/app.js?v=120"></script>
+    <script src="js/app.js?v=135"></script>
     <script src="js/local-api.js"></script>
     <script>
         (function () {
