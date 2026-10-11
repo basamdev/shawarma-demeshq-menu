@@ -6540,4 +6540,310 @@ body.light-mode .fav-close {
     }
 }
 
+/* ========================================
+   POWERED BY SMART SERVE — MODERN FOOTER SECTION
+   ======================================== */
+
+body.index-page .hero {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: clamp(1.2rem, 3.5vh, 2.5rem) var(--space-lg) max(1rem, env(safe-area-inset-bottom));
+    box-sizing: border-box;
+}
+
+body.index-page .hero-center {
+    margin: auto 0;
+}
+
+.smart-serve-footer {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 10;
+    user-select: none;
+    -webkit-user-select: none;
+    box-sizing: border-box;
+}
+
+.smart-serve-footer.index-footer {
+    margin-top: auto;
+    padding: 1.25rem 1rem max(1rem, env(safe-area-inset-bottom));
+    width: 100%;
+    max-width: 600px;
+}
+
+.smart-serve-footer.menu-footer {
+    margin-top: 2.8rem;
+    padding: 2.2rem 1rem max(3.5rem, calc(env(safe-area-inset-bottom) + 1.5rem));
+    width: 100%;
+}
+
+.smart-serve-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    width: 100%;
+    max-width: 520px;
+    position: relative;
+}
+
+/* Subtle glowing accent lines that fade outwards */
+.smart-serve-line {
+    flex: 1;
+    height: 1px;
+    min-width: 24px;
+    position: relative;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.45));
+}
+
+.smart-serve-line:first-child {
+    background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.45));
+}
+
+.smart-serve-line:last-child {
+    background: linear-gradient(90deg, rgba(168, 85, 247, 0.5), transparent);
+}
+
+[dir="rtl"] .smart-serve-line:first-child {
+    background: linear-gradient(270deg, transparent, rgba(0, 229, 255, 0.45));
+}
+
+[dir="rtl"] .smart-serve-line:last-child {
+    background: linear-gradient(270deg, rgba(168, 85, 247, 0.5), transparent);
+}
+
+.smart-serve-line::after {
+    content: '';
+    position: absolute;
+    inset: -1px 0;
+    background: inherit;
+    filter: blur(3px);
+    opacity: 0.65;
+    pointer-events: none;
+}
+
+/* Center Glassmorphic Floating Pill Badge */
+.smart-serve-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 18px 7px 9px;
+    border-radius: 9999px;
+    background: rgba(14, 12, 22, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(0, 229, 255, 0.28);
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.45),
+        0 0 16px rgba(0, 229, 255, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    text-decoration: none;
+    color: inherit;
+    cursor: default;
+    position: relative;
+}
+
+[dir="rtl"] .smart-serve-badge {
+    padding: 7px 9px 7px 18px;
+}
+
+.smart-serve-badge:hover {
+    transform: translateY(-2px) scale(1.02);
+    border-color: rgba(0, 229, 255, 0.6);
+    box-shadow:
+        0 8px 28px rgba(0, 0, 0, 0.55),
+        0 0 25px rgba(0, 229, 255, 0.35),
+        0 0 35px rgba(168, 85, 247, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+/* Smart Serve Circular Logo with Ambient Rotating Glow Ring */
+.smart-serve-logo-glow {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.smart-serve-logo-glow::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #00e5ff, #8b5cf6, #ec4899, #00e5ff);
+    animation: smartServeSpin 6s linear infinite;
+    opacity: 0.9;
+    filter: blur(1px);
+}
+
+.smart-serve-logo-img {
+    position: relative;
+    z-index: 1;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    background: #000;
+    box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Typography */
+.smart-serve-text-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+
+:lang(ar) .smart-serve-text-wrap,
+:lang(ku) .smart-serve-text-wrap,
+[dir="rtl"] .smart-serve-text-wrap {
+    font-family: var(--font-arabic, 'IBM Plex Sans Arabic', -apple-system, sans-serif);
+}
+
+.smart-serve-prefix {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.76);
+    letter-spacing: 0.01em;
+    transition: color 0.3s ease;
+}
+
+.smart-serve-brand {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 0.92rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    background: linear-gradient(135deg, #00f0ff 0%, #60a5fa 45%, #c084fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.35));
+    display: inline-block;
+}
+
+/* Twinkling Accent Sparkle */
+.smart-serve-sparkle {
+    font-size: 0.72rem;
+    color: #00e5ff;
+    filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.8));
+    animation: smartServePulse 2.8s ease-in-out infinite;
+    margin-inline-start: 2px;
+    display: inline-block;
+    user-select: none;
+}
+
+/* Keyframes */
+@keyframes smartServeSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes smartServePulse {
+    0%, 100% {
+        opacity: 0.45;
+        transform: scale(0.9) rotate(0deg);
+        filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.5));
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.2) rotate(15deg);
+        filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.9));
+    }
+}
+
+/* Light Mode Overrides */
+body.light-mode .smart-serve-badge {
+    background: rgba(255, 255, 255, 0.88);
+    border-color: rgba(0, 180, 216, 0.35);
+    box-shadow:
+        0 4px 18px rgba(0, 0, 0, 0.06),
+        0 0 14px rgba(0, 180, 216, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+body.light-mode .smart-serve-badge:hover {
+    background: rgba(255, 255, 255, 0.98);
+    border-color: rgba(0, 180, 216, 0.6);
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.1),
+        0 0 20px rgba(0, 180, 216, 0.28),
+        0 0 25px rgba(124, 58, 237, 0.2);
+}
+
+body.light-mode .smart-serve-prefix {
+    color: #334155;
+}
+
+body.light-mode .smart-serve-brand {
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 6px rgba(37, 99, 235, 0.25));
+}
+
+body.light-mode .smart-serve-line:first-child {
+    background: linear-gradient(90deg, transparent, rgba(2, 132, 199, 0.35));
+}
+body.light-mode .smart-serve-line:last-child {
+    background: linear-gradient(90deg, rgba(124, 58, 237, 0.35), transparent);
+}
+[dir="rtl"] body.light-mode .smart-serve-line:first-child {
+    background: linear-gradient(270deg, transparent, rgba(2, 132, 199, 0.35));
+}
+[dir="rtl"] body.light-mode .smart-serve-line:last-child {
+    background: linear-gradient(270deg, rgba(124, 58, 237, 0.35), transparent);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .smart-serve-divider {
+        gap: 10px;
+        max-width: 92%;
+    }
+    .smart-serve-line {
+        min-width: 14px;
+    }
+    .smart-serve-badge {
+        padding: 6px 14px 6px 8px;
+        gap: 8px;
+    }
+    [dir="rtl"] .smart-serve-badge {
+        padding: 6px 8px 6px 14px;
+    }
+    .smart-serve-logo-glow,
+    .smart-serve-logo-img {
+        width: 25px;
+        height: 25px;
+    }
+    .smart-serve-prefix {
+        font-size: 0.76rem;
+    }
+    .smart-serve-brand {
+        font-size: 0.86rem;
+    }
+    .smart-serve-sparkle {
+        font-size: 0.68rem;
+    }
+    .smart-serve-footer.menu-footer {
+        margin-top: 2rem;
+        padding-bottom: max(3rem, calc(env(safe-area-inset-bottom) + 1rem));
+    }
+}
+
+
 

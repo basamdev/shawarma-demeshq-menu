@@ -2054,6 +2054,8 @@ function loadManageItems() {
         '<input type="text" id="itemGroupAr" placeholder="' + (S.arabicName || 'Arabic') + '" style="margin-top:6px;">' +
         '<input type="text" id="itemGroupEn" placeholder="' + (S.englishName || 'English') + '" style="margin-top:6px;">' +
         '</div>' +
+        '<div class="form-group"><label>' + (S.itemOrder || 'Display Order (ڕیزبەندی نمایش)') + '</label>' +
+        '<input type="number" id="itemOrder" min="1" placeholder="1, 2, 3..."></div>' +
         '<div class="form-group"><label><input type="checkbox" id="itemAvailable" checked> ' + S.available + '</label></div>' +
         '<button type="button" class="btn-primary" id="saveItemBtn">' + S.saveItem + '</button>' +
         '<button type="button" class="btn-secondary" id="cancelItemBtn" style="margin-left:8px;">' + S.cancel + '</button>' +
@@ -2522,6 +2524,61 @@ function loadCategoryFilter() {
     });
 }
 
+function moveItem(itemId, dir) {
+    var activeCat = itemsActiveCategory || 'all';
+    var search = document.getElementById('itemSearch');
+    var searchTerm = search ? search.value.trim() : '';
+
+    var allDocs = _itemsSnapDocs.length > 0 ? _itemsSnapDocs.slice() : getItemDocsFromLocalCache();
+    var list = filterItemDocs(allDocs, searchTerm, activeCat);
+    list.sort(function (a, b) {
+        var da = typeof a.data === 'function' ? a.data() : a;
+        var db = typeof b.data === 'function' ? b.data() : b;
+        var ao = (da && da.order != null && da.order !== '' && !isNaN(da.order)) ? Number(da.order) : 999999;
+        var bo = (db && db.order != null && db.order !== '' && !isNaN(db.order)) ? Number(db.order) : 999999;
+        if (ao !== bo) return ao - bo;
+        return 0;
+    });
+
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) {
+        if (list[i].id === itemId) { idx = i; break; }
+    }
+    if (idx === -1) return;
+
+    var toIdx = idx + dir;
+    if (toIdx < 0 || toIdx >= list.length) return;
+
+    var docA = list[idx];
+    var docB = list[toIdx];
+    list[idx] = docB;
+    list[toIdx] = docA;
+
+    // Assign sequential orders 1, 2, 3...
+    list.forEach(function (doc, seq) {
+        var d = typeof doc.data === 'function' ? Object.assign({}, doc.data()) : Object.assign({}, doc);
+        d.order = seq + 1;
+        upsertCachedMenuItem(doc.id, d);
+    });
+
+    renderItemsList(list);
+
+    if (window.db) {
+        var batch = db.batch();
+        list.forEach(function (doc) {
+            var d = typeof doc.data === 'function' ? doc.data() : doc;
+            var ref = db.collection(window.MENU_COLLECTION).doc(doc.id);
+            batch.set(ref, {
+                order: d.order,
+                updated_at: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        });
+        batch.commit().catch(function (e) {
+            console.warn('[moveItem batch error]:', e);
+        });
+    }
+}
+
 function renderItemsList(items) {
     console.log(`[Rendered Items Total]: ${items ? items.length : 0}`);
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
@@ -2534,16 +2591,36 @@ function renderItemsList(items) {
 
     var lang = localStorage.getItem('selectedLang') || 'ku';
 
+    items.sort(function (a, b) {
+        var da = typeof a.data === 'function' ? a.data() : a;
+        var db = typeof b.data === 'function' ? b.data() : b;
+        var ao = (da && da.order != null && da.order !== '' && !isNaN(da.order)) ? Number(da.order) : 999999;
+        var bo = (db && db.order != null && db.order !== '' && !isNaN(db.order)) ? Number(db.order) : 999999;
+        if (ao !== bo) return ao - bo;
+        return 0;
+    });
+
     function paintRows(catMap) {
-        var html = '<div class="table-responsive"><table class="admin-table"><thead><tr><th>Image</th><th>Name</th><th>' + S.category + '</th><th>' + (S.group || 'Group') + '</th><th>' + S.price + '</th><th>' + S.available + '</th><th>Actions</th></tr></thead><tbody>';
-        items.forEach(function (doc) {
+        var html = '<div class="table-responsive"><table class="admin-table"><thead><tr>' +
+            '<th>' + (S.order || (lang === 'ku' ? 'ڕیزبەندی' : lang === 'ar' ? 'الترتيب' : 'Order')) + '</th>' +
+            '<th>Image</th><th>Name</th><th>' + S.category + '</th><th>' + (S.group || 'Group') + '</th><th>' + S.price + '</th><th>' + S.available + '</th><th>Actions</th></tr></thead><tbody>';
+        items.forEach(function (doc, idx) {
             var item = doc.data();
             var name = item['name_' + lang] || item.name_ku || item.name_ar || item.name_en || S.unnamed;
             var img = item.image || 'https://placehold.co/50x50?text=No+Image';
             var avail = item.available ? '<span style="color:#2E7D32;">' + S.yes + '</span>' : '<span style="color:#C62828;">' + S.no + '</span>';
             var catName = getCategoryLabel(item.category, lang, catMap);
             var groupName = item.group_ku || item.group_ar || item.group_en || '';
+            var displayOrder = (item.order != null && !isNaN(item.order)) ? item.order : (idx + 1);
+            var isFirst = idx === 0;
+            var isLast = idx === items.length - 1;
+            var sortControls = '<div class="sort-controls">' +
+                '<span class="order-badge">#' + displayOrder + '</span>' +
+                '<button type="button" class="btn-sort move-item-up" data-id="' + doc.id + '" title="' + (S.moveUp || 'Move Up') + '"' + (isFirst ? ' disabled' : '') + '>⬆️</button>' +
+                '<button type="button" class="btn-sort move-item-down" data-id="' + doc.id + '" title="' + (S.moveDown || 'Move Down') + '"' + (isLast ? ' disabled' : '') + '>⬇️</button>' +
+                '</div>';
             html += '<tr>' +
+                '<td>' + sortControls + '</td>' +
                 '<td><img src="' + img + '" alt="' + name + '" width="48" height="48"></td>' +
                 '<td>' + name + '</td>' +
                 '<td>' + catName + '</td>' +
@@ -2557,6 +2634,12 @@ function renderItemsList(items) {
         html += '</tbody></table></div>';
         list.innerHTML = html;
 
+        list.querySelectorAll('.move-item-up').forEach(function (btn) {
+            btn.addEventListener('click', function () { moveItem(this.getAttribute('data-id'), -1); });
+        });
+        list.querySelectorAll('.move-item-down').forEach(function (btn) {
+            btn.addEventListener('click', function () { moveItem(this.getAttribute('data-id'), 1); });
+        });
         list.querySelectorAll('.edit-item').forEach(function (btn) {
             btn.addEventListener('click', function () { editItem(this.getAttribute('data-id')); });
         });
@@ -2593,6 +2676,8 @@ function wireItemEvents() {
             document.getElementById('itemForm').reset();
             document.getElementById('itemId').value = '';
             document.getElementById('itemAvailable').checked = true;
+            var orderEl = document.getElementById('itemOrder');
+            if (orderEl) orderEl.value = '';
             var pr = document.getElementById('itemImagePreview');
             if (pr) pr.style.display = 'none';
             var saveBtn = document.getElementById('saveItemBtn');
@@ -2977,6 +3062,9 @@ function saveItem() {
         }
 
         var itemId = document.getElementById('itemId').value;
+        var orderEl = document.getElementById('itemOrder');
+        var orderVal = orderEl ? orderEl.value.trim() : '';
+        var itemOrderNum = (orderVal !== '' && !isNaN(parseInt(orderVal, 10))) ? parseInt(orderVal, 10) : null;
         var now = new Date().toISOString();
         var plainData = {
             name_ku: nameKu, name_ar: nameAr, name_en: nameEn,
@@ -2985,6 +3073,7 @@ function saveItem() {
             description_en: document.getElementById('itemDescEn').value.trim(),
             price: parseFloat(price) || 0,
             category: category,
+            order: itemOrderNum,
             group_ku: (document.getElementById('itemGroupKu') || {}).value || '',
             group_ar: (document.getElementById('itemGroupAr') || {}).value || '',
             group_en: (document.getElementById('itemGroupEn') || {}).value || '',
@@ -3074,6 +3163,8 @@ function editItem(itemId) {
         document.getElementById('itemDescEn').value = item.description_en || '';
         document.getElementById('itemPrice').value = item.price || '';
         document.getElementById('itemAvailable').checked = item.available !== false;
+        var orderEl = document.getElementById('itemOrder');
+        if (orderEl) orderEl.value = (item && item.order != null && !isNaN(item.order)) ? item.order : '';
         var groupEl = document.getElementById('itemGroupKu');
         if (groupEl) groupEl.value = item.group_ku || '';
         groupEl = document.getElementById('itemGroupAr');
@@ -3176,6 +3267,8 @@ function loadManageCategories() {
         '<div class="form-group"><label>' + S.categoryNameKu + '</label><input type="text" id="categoryNameKu" required></div>' +
         '<div class="form-group"><label>' + S.categoryNameAr + '</label><input type="text" id="categoryNameAr" required></div>' +
         '<div class="form-group"><label>' + S.categoryNameEn + '</label><input type="text" id="categoryNameEn" required></div>' +
+        '<div class="form-group"><label>' + (S.categoryOrder || 'Category Order (ڕیزبەندی بەش)') + '</label>' +
+        '<input type="number" id="categoryOrder" min="1" placeholder="1, 2, 3..."></div>' +
         '<div class="form-group"><label>' + S.categoryImage + '</label>' +
         '<input type="file" accept="image/*" id="categoryImageFile" style="margin-bottom:6px;">' +
         '<input type="text" id="categoryImageURL" placeholder="' + (S.imageUrlOrUpload || 'Paste image URL or upload above') + '">' +
@@ -3209,6 +3302,64 @@ function getMenuCategoryNames() {
     return names;
 }
 
+function moveCategory(fromIdx, dir) {
+    var cats = readCachedCategories();
+    var have = {};
+    cats.forEach(function (c) { have[c.id] = true; });
+    var allCats = mergeMenuCategories(cats, have);
+
+    allCats.sort(function (a, b) {
+        var ao = (a.data && a.data.order) != null ? a.data.order : null;
+        var bo = (b.data && b.data.order) != null ? b.data.order : null;
+        if (ao != null && bo != null) return ao - bo;
+        if (ao != null) return -1;
+        if (bo != null) return 1;
+        var ai = categoryPreferredIndex(a);
+        var bi = categoryPreferredIndex(b);
+        if (ai === -1 && bi === -1) return 0;
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+    });
+
+    var toIdx = fromIdx + dir;
+    if (toIdx < 0 || toIdx >= allCats.length) return;
+
+    var catA = allCats[fromIdx];
+    var catB = allCats[toIdx];
+    allCats[fromIdx] = catB;
+    allCats[toIdx] = catA;
+
+    allCats.forEach(function (c, seq) {
+        if (!c.data) c.data = {};
+        c.data.order = seq + 1;
+        upsertCachedCategory(c.id, c.data);
+    });
+
+    renderCategoriesTable(allCats);
+
+    if (window.db) {
+        var batch = db.batch();
+        allCats.forEach(function (c) {
+            if (c.id) {
+                var ref = db.collection(window.CAT_COLLECTION).doc(c.id);
+                var data = Object.assign({}, c.data || {}, {
+                    order: c.data.order,
+                    updated_at: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                batch.set(ref, data, { merge: true });
+            }
+        });
+        batch.commit().then(function () {
+            refreshCategoriesCache(function () {
+                renderCategoriesListNow();
+            });
+        }).catch(function (e) {
+            console.warn('[moveCategory batch error]:', e);
+        });
+    }
+}
+
 function renderCategoriesTable(categories) {
     var S = i18n[localStorage.getItem('selectedLang') || 'ku'] || i18n.en;
     var list = document.getElementById('categoriesList');
@@ -3233,17 +3384,31 @@ function renderCategoriesTable(categories) {
         return ai - bi;
     });
 
-    var html = '<div class="table-responsive"><table class="admin-table"><thead><tr><th>' + (S.image || 'Image') + '</th><th>' + (S.name || 'Name') + '</th><th>' + (S.actions || 'Actions') + '</th></tr></thead><tbody>';
-    categories.forEach(function (c) {
+    var html = '<div class="table-responsive"><table class="admin-table"><thead><tr>' +
+        '<th>' + (S.order || (lang === 'ku' ? 'ڕیزبەندی' : lang === 'ar' ? 'الترتيب' : 'Order')) + '</th>' +
+        '<th>' + (S.image || 'Image') + '</th>' +
+        '<th>' + (S.name || 'Name') + '</th>' +
+        '<th>' + (S.actions || 'Actions') + '</th>' +
+        '</tr></thead><tbody>';
+    categories.forEach(function (c, idx) {
         var cat = c.data || {};
         var name = cat['name_' + lang] || cat.name_ku || cat.name_ar || cat.name_en || c.id || S.unnamed;
         var img = cat.image || 'https://placehold.co/50x50?text=No+Image';
         var virtualBadge = c.virtual ? ' <span class="cat-virtual-badge">' + (S.fromMenu || 'from menu') + '</span>' : '';
+        var displayOrder = (cat.order != null && !isNaN(cat.order)) ? cat.order : (idx + 1);
+        var isFirst = idx === 0;
+        var isLast = idx === categories.length - 1;
+        var sortControls = '<div class="sort-controls">' +
+            '<span class="order-badge">#' + displayOrder + '</span>' +
+            '<button type="button" class="btn-sort move-category-up" data-index="' + idx + '" title="' + (S.moveUp || 'Move Up') + '"' + (isFirst ? ' disabled' : '') + '>⬆️</button>' +
+            '<button type="button" class="btn-sort move-category-down" data-index="' + idx + '" title="' + (S.moveDown || 'Move Down') + '"' + (isLast ? ' disabled' : '') + '>⬇️</button>' +
+            '</div>';
         var actions = '<button class="btn-primary btn-sm edit-category" data-id="' + c.id + '"' + (c.virtual ? ' data-virtual="1"' : '') + '>' + (c.virtual ? (S.addCategory || 'Add') : S.edit) + '</button>';
         if (!c.virtual) {
             actions += ' <button class="btn-danger btn-sm delete-category" data-id="' + c.id + '">' + S.delete + '</button>';
         }
         html += '<tr>' +
+            '<td>' + sortControls + '</td>' +
             '<td><img src="' + img + '" alt="" width="48" height="48" style="border-radius:8px;object-fit:cover;" onerror="this.src=\'https://placehold.co/50x50?text=Error\'"></td>' +
             '<td>' + name + virtualBadge + '</td>' +
             '<td>' + actions + '</td>' +
@@ -3252,6 +3417,16 @@ function renderCategoriesTable(categories) {
     html += '</tbody></table></div>';
     list.innerHTML = html;
 
+    list.querySelectorAll('.move-category-up').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            moveCategory(parseInt(this.getAttribute('data-index'), 10), -1);
+        });
+    });
+    list.querySelectorAll('.move-category-down').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            moveCategory(parseInt(this.getAttribute('data-index'), 10), 1);
+        });
+    });
     list.querySelectorAll('.edit-category').forEach(function (btn) {
         btn.addEventListener('click', function () { editCategory(this.getAttribute('data-id')); });
     });
@@ -3385,6 +3560,8 @@ function wireCategoryEvents() {
             document.getElementById('categoryModalTitle').textContent = S.addCategory;
             document.getElementById('categoryForm').reset();
             document.getElementById('categoryId').value = '';
+            var orderEl = document.getElementById('categoryOrder');
+            if (orderEl) orderEl.value = '';
             var pr = document.getElementById('categoryImagePreview');
             if (pr) pr.style.display = 'none';
             var modal = document.getElementById('categoryModal');
@@ -3496,12 +3673,19 @@ function saveCategory() {
     if (isCreate) {
         categoryId = nameEn || nameKu || nameAr;
     }
+    var orderEl = document.getElementById('categoryOrder');
+    var orderVal = orderEl ? orderEl.value.trim() : '';
+    var catOrder = (orderVal !== '' && !isNaN(parseInt(orderVal, 10))) ? parseInt(orderVal, 10) : null;
+    if (catOrder == null && isCreate) {
+        catOrder = readCachedCategories().length + 1;
+    }
     var now = new Date().toISOString();
     var plainData = {
         name_ku: nameKu,
         name_ar: nameAr,
         name_en: nameEn,
         image: finalImg,
+        order: catOrder,
         updated_at: now
     };
 
@@ -3555,6 +3739,10 @@ function openCategoryModalWith(categoryId, cat, isNew) {
     document.getElementById('categoryNameKu').value = cat.name_ku || '';
     document.getElementById('categoryNameAr').value = cat.name_ar || '';
     document.getElementById('categoryNameEn').value = cat.name_en || '';
+    var orderEl = document.getElementById('categoryOrder');
+    if (orderEl) {
+        orderEl.value = (cat && cat.order != null && !isNaN(cat.order)) ? cat.order : '';
+    }
     var pr = document.getElementById('categoryImagePreview');
     if (cat.image) {
         document.getElementById('categoryImageURL').value = cat.image;

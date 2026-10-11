@@ -472,6 +472,13 @@ const i18n = {
         installDontShow: 'دووبارە پیشان مەدە',
         installShowHelp: 'زیادکردن بۆ سکرینی سەرەکی',
         installNow: 'ئێستا دابمەزرێنە',
+        poweredBy: 'پەرەپێدراوە لەلایەن',
+        poweredByBrand: 'Smart Serve',
+        order: 'ڕیزبەندی',
+        itemOrder: 'ڕیزبەندی نمایش',
+        categoryOrder: 'ڕیزبەندی بەش',
+        moveUp: 'بەرەو سەرەوە',
+        moveDown: 'بەرەو خوارەوە',
     },
     ar: {
         menuTitle: 'قائمتنا',
@@ -706,6 +713,13 @@ const i18n = {
         installShowHelp: 'إضافة للشاشة الرئيسية',
         installNow: 'تثبيت الآن',
         androidStep4: 'اضغط «Install» — يُثبت تطبيق Shawarma',
+        poweredBy: 'تم التطوير بواسطة',
+        poweredByBrand: 'Smart Serve',
+        order: 'الترتيب',
+        itemOrder: 'ترتيب العرض',
+        categoryOrder: 'ترتيب القسم',
+        moveUp: 'للأعلى',
+        moveDown: 'للأسفل',
     },
     en: {
         menuTitle: 'Our Menu',
@@ -968,6 +982,13 @@ const i18n = {
         androidStep2: 'Choose «Add to Home screen»',
         androidStep3: 'Choose «Install»',
         androidStep4: 'Tap «Install» — Shawarma is added to your phone',
+        poweredBy: 'Powered by',
+        poweredByBrand: 'Smart Serve',
+        order: 'Order',
+        itemOrder: 'Display Order',
+        categoryOrder: 'Category Order',
+        moveUp: 'Move Up',
+        moveDown: 'Move Down',
     }
 };
 
@@ -2084,6 +2105,17 @@ function appendCategorySection(container, catId, catItems, lang, strings) {
     return section;
 }
 
+function sortMenuItemsByOrder(list) {
+    if (!list || !list.length) return list || [];
+    return list.slice().sort(function (a, b) {
+        var ao = (a && a.order != null && a.order !== '' && !isNaN(a.order)) ? Number(a.order) : 999999;
+        var bo = (b && b.order != null && b.order !== '' && !isNaN(b.order)) ? Number(b.order) : 999999;
+        if (ao !== bo) return ao - bo;
+        return 0;
+    });
+}
+window.sortMenuItemsByOrder = sortMenuItemsByOrder;
+
 function renderMenuItems(items) {
     const container = document.getElementById('menuGrid');
     if (!container) return;
@@ -2094,7 +2126,7 @@ function renderMenuItems(items) {
 
     container.innerHTML = '';
 
-    const renderedItems = items || [];
+    const renderedItems = sortMenuItemsByOrder(items || []);
     console.log(`[Rendered Items Total]: ${renderedItems.length}`);
 
     if (!renderedItems || renderedItems.length === 0) {
@@ -2174,10 +2206,10 @@ function renderMenuItems(items) {
                 groupHeading.className = 'group-heading';
                 groupHeading.textContent = g;
                 section.appendChild(groupHeading);
-                itemsByGroup[g].forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+                sortMenuItemsByOrder(itemsByGroup[g]).forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
             });
 
-            ungrouped.forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+            sortMenuItemsByOrder(ungrouped).forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
 
             container.appendChild(section);
         });
@@ -2217,10 +2249,10 @@ function renderMenuItems(items) {
             groupHeading.className = 'group-heading';
             groupHeading.textContent = g;
             section.appendChild(groupHeading);
-            itemsByGroup[g].forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+            sortMenuItemsByOrder(itemsByGroup[g]).forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
         });
 
-        ungrouped.forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
+        sortMenuItemsByOrder(ungrouped).forEach(item => section.appendChild(createMenuCard(item, lang, strings)));
 
         container.appendChild(section);
     }
