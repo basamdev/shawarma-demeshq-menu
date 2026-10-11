@@ -152,17 +152,19 @@ if (shouldEnablePersistence) {
 // Firebase Storage is not used in this app; images are stored as public URL strings.
 let storage = null;
 
-// Set up persistence
-try {
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-        .then(() => {
-            console.log('Auth persistence set to LOCAL');
-        })
-        .catch((error) => {
-            console.error('Error setting auth persistence:', error);
-        });
-} catch (error) {
-    console.error('Auth persistence setup error:', error);
+// Set up persistence (if auth is available)
+if (auth && firebase.auth && firebase.auth.Auth) {
+    try {
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+            .then(() => {
+                console.log('Auth persistence set to LOCAL');
+            })
+            .catch((error) => {
+                console.error('Error setting auth persistence:', error);
+            });
+    } catch (error) {
+        console.error('Auth persistence setup error:', error);
+    }
 }
 
 // Export for global use
@@ -175,10 +177,12 @@ console.log('Firebase Storage disabled; using direct image URLs only');
 console.log('Using Firebase environment:', window.firebaseEnvironment, 'project:', firebaseConfig.projectId);
 
 // Auth state observer (for debugging)
-auth.onAuthStateChanged((user) => {
-    if (user) {
-        console.log('User is signed in:', user.email);
-    } else {
-        console.log('User is signed out');
-    }
-});
+if (auth) {
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            console.log('User is signed in:', user.email);
+        } else {
+            console.log('User is signed out');
+        }
+    });
+}

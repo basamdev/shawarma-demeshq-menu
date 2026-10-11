@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    if (typeof USE_LOCAL_API === 'undefined' || !USE_LOCAL_API) {
+    if ((typeof USE_LOCAL_API === 'undefined' || !USE_LOCAL_API) && auth) {
         auth.onAuthStateChanged(function(user) {
             if (user) {
                 var branchParam = new URLSearchParams(window.location.search).get('branch');
