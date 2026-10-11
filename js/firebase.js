@@ -75,8 +75,10 @@ try {
 }
 
 // Initialize services
-const auth = firebase.auth();
+const auth = (typeof firebase.auth === 'function') ? firebase.auth() : null;
+window.auth = auth;
 const db = firebase.firestore();
+window.db = db;
 
 // Mobile browsers / PWA (iOS Safari, in-app WebViews) often fail with WebChannel;
 // long polling is more reliable on hosted HTTPS sites (Vercel, Netlify).
