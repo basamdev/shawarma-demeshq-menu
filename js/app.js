@@ -1824,6 +1824,12 @@ function scrollCategoryBarToActive() {
     if (!scroll) return;
     var activeBtn = scroll.querySelector('.category-btn.active');
     if (!activeBtn) return;
+    if (typeof activeBtn.scrollIntoView === 'function') {
+        try {
+            activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            return;
+        } catch (e) {}
+    }
     if (scroll.scrollWidth <= scroll.clientWidth) return;
     var scrollLeft = activeBtn.offsetLeft - (scroll.clientWidth / 2) + (activeBtn.clientWidth / 2);
     scroll.scrollTo({ left: scrollLeft, behavior: 'smooth' });
