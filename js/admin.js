@@ -19,6 +19,11 @@ var CACHE_KEY_CATEGORIES = (window.BRANCH_ID !== '1' ? `cachedCategories${window
 var CACHE_KEY_CASHIER_ITEMS = (window.BRANCH_ID !== '1' ? `cachedCashierItems${window.BRANCH_SUFFIX}` : 'cachedCashierItems');
 var CACHE_KEY_MENU_CAT_NAMES = (window.BRANCH_ID !== '1' ? `cachedMenuCategoryNames${window.BRANCH_SUFFIX}` : 'cachedMenuCategoryNames');
 
+function getAdminLoginUrl() {
+    return 'login.html' + (window.BRANCH_ID && window.BRANCH_ID !== '1' ? '?branch=' + encodeURIComponent(window.BRANCH_ID) : '');
+}
+window.getAdminLoginUrl = getAdminLoginUrl;
+
 function getBranchBadgeInfo() {
     var isBranch2 = String(window.BRANCH_ID) === '2';
     var lang = (typeof localStorage !== 'undefined' ? localStorage.getItem('selectedLang') : null) || 'ku';
@@ -53,8 +58,9 @@ window.getBranchBadgeInfo = getBranchBadgeInfo;
 
 function renderBranchBadge() {
     var info = getBranchBadgeInfo();
+    var isBranch2 = String(window.BRANCH_ID) === '2';
 
-    // 1. Top navigation header badge
+    // 1. Top navigation header badge / switcher
     var badge = document.getElementById('adminBranchBadge');
     if (!badge) {
         var headerLeft = document.querySelector('.admin-header-left');
@@ -65,9 +71,12 @@ function renderBranchBadge() {
         }
     }
     if (badge) {
-        badge.className = info.className;
-        badge.textContent = info.text;
-        badge.setAttribute('title', info.tooltip);
+        badge.className = 'admin-branch-switcher-wrap';
+        badge.innerHTML =
+            '<div class="admin-branch-switcher" role="group" aria-label="Branch Switcher">' +
+            '<a href="admin.html" class="admin-branch-pill' + (!isBranch2 ? ' active' : '') + '" title="لقی ١ بەحرکە (Branch 1 Bahirka)">📍 بەحرکە (B1)</a>' +
+            '<a href="admin.html?branch=2" class="admin-branch-pill' + (isBranch2 ? ' active' : '') + '" title="لقی ٢ هەڤاڵان (Branch 2 Havalan)">📍 هەڤاڵان (B2)</a>' +
+            '</div>';
     }
 
     // 2. Sidebar brand badge (next to restaurant logo & name)
@@ -82,7 +91,7 @@ function renderBranchBadge() {
     }
     if (sidebarBadge) {
         sidebarBadge.className = info.className;
-        sidebarBadge.textContent = info.text;
+        sidebarBadge.textContent = info.shortText;
         sidebarBadge.setAttribute('title', info.tooltip);
     }
 
@@ -322,7 +331,8 @@ function withOwnerFilter(query) {
 function backfillCreatedByForCurrentAdmin() {
     var email = getCurrentAdminEmail();
     if (!email || !window.db) return;
-    if (localStorage.getItem('createdByBackfilled_' + email)) return;
+    var backfillKey = 'createdByBackfilled_' + (window.BRANCH_SUFFIX ? window.BRANCH_SUFFIX.replace(/^_/, '') + '_' : '') + email;
+    if (localStorage.getItem(backfillKey)) return;
     db.collection(window.MENU_COLLECTION).get().then(function (snap) {
         var batch = db.batch();
         var updated = 0;
@@ -335,11 +345,11 @@ function backfillCreatedByForCurrentAdmin() {
         });
         if (updated > 0) {
             batch.commit().then(function () {
-                localStorage.setItem('createdByBackfilled_' + email, '1');
-                console.log('[backfill] Tagged ' + updated + ' items with createdBy');
+                localStorage.setItem(backfillKey, '1');
+                console.log('[backfill] Tagged ' + updated + ' items with createdBy in ' + window.MENU_COLLECTION);
             }).catch(function () { });
         } else {
-            localStorage.setItem('createdByBackfilled_' + email, '1');
+            localStorage.setItem(backfillKey, '1');
         }
     }).catch(function () { });
 }
@@ -1370,7 +1380,7 @@ window.adminAuthReady = new Promise(function (resolve) {
                 localStorage.removeItem('adminUser');
                 resolve(null);
                 if (navigator.onLine) {
-                    window.location.href = 'login.html';
+                    window.location.href = getAdminLoginUrl();
                 } else {
                     hydrateAdminFromLocalCache();
                     refreshAdminCurrentSection();
@@ -1379,7 +1389,7 @@ window.adminAuthReady = new Promise(function (resolve) {
         } else {
             resolve(null);
             if (navigator.onLine) {
-                window.location.href = 'login.html';
+                window.location.href = getAdminLoginUrl();
             } else {
                 hydrateAdminFromLocalCache();
                 refreshAdminCurrentSection();
@@ -1406,7 +1416,7 @@ window.adminAuthReady = new Promise(function (resolve) {
             hydrateAdminFromLocalCache();
             refreshAdminCurrentSection();
         } else if (navigator.onLine) {
-            window.location.href = 'login.html';
+            window.location.href = getAdminLoginUrl();
         }
     });
 });
@@ -1644,6 +1654,10 @@ function initAdminPanel() {
     });
 
     var defaultBtn = document.querySelector('.admin-nav-btn.active');
+    if (!defaultBtn) {
+        defaultBtn = document.querySelector('.admin-nav-btn[data-section="items"]') || document.querySelector('.admin-nav-btn');
+        if (defaultBtn) defaultBtn.classList.add('active');
+    }
     if (defaultBtn) {
         loadAdminSection(defaultBtn.getAttribute('data-section'));
         whenAdminReady(function () {
@@ -2145,7 +2159,7 @@ function startItemsListener() {
                 cashierCache.push({ id: d.id, v: data });
                 menuCache.push(Object.assign({ id: d.id }, data));
             });
-            safeSetItem('cachedCashierItems', JSON.stringify(cashierCache));
+            safeSetItem(CACHE_KEY_CASHIER_ITEMS, JSON.stringify(cashierCache));
             writeCachedMenuItemsFlat(menuCache);
 
             var catNames = {};
@@ -2153,7 +2167,7 @@ function startItemsListener() {
                 var c = d.data().category;
                 if (c && c.toLowerCase().trim() !== 'water') catNames[c] = true;
             });
-            localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(catNames)));
+            localStorage.setItem(CACHE_KEY_MENU_CAT_NAMES, JSON.stringify(Object.keys(catNames)));
         }).catch(function (err) {
             console.warn('[admin items] Local API failed:', err.message);
             if (!hydrateItemsUiFromCache()) {
@@ -2944,7 +2958,7 @@ function saveItem() {
                 saveBtn.textContent = saveBtn.dataset.prevText || S.saveItem;
             }
             alert(S.itemSyncFailed + '\nPlease log in again.');
-            window.location.href = 'login.html';
+            window.location.href = getAdminLoginUrl();
             return;
         }
 
@@ -3182,13 +3196,13 @@ function loadManageCategories() {
 function getMenuCategoryNames() {
     var names = {};
     try {
-        JSON.parse(localStorage.getItem('cachedCashierItems') || '[]').forEach(function (it) {
+        JSON.parse(localStorage.getItem(CACHE_KEY_CASHIER_ITEMS) || '[]').forEach(function (it) {
             var c = it && it.v && it.v.category;
             if (c) names[c] = true;
         });
     } catch (e) { }
     try {
-        JSON.parse(localStorage.getItem('cachedMenuCategoryNames') || '[]').forEach(function (n) {
+        JSON.parse(localStorage.getItem(CACHE_KEY_MENU_CAT_NAMES) || '[]').forEach(function (n) {
             if (n) names[n] = true;
         });
     } catch (e) { }
@@ -3273,7 +3287,7 @@ function loadCategoriesList() {
     if (USE_LOCAL_API) {
         localApiRequest('categories.php').then(function (cats) {
             var merged = mergeCategoryLists(cats.map(function (c) { return { id: c.id, data: c }; }), readCachedCategories());
-            safeSetItem('cachedCategories', JSON.stringify(merged));
+            safeSetItem(CACHE_KEY_CATEGORIES, JSON.stringify(merged));
             var have = {};
             merged.forEach(function (c) { have[c.id] = true; });
             renderCategoriesTable(mergeMenuCategories(merged, have));
@@ -3282,7 +3296,7 @@ function loadCategoriesList() {
             localApiRequest('menu_items.php').then(function (items) {
                 var names = {};
                 items.forEach(function (it) { if (it.category) names[it.category] = true; });
-                localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(Object.keys(names)));
+                localStorage.setItem(CACHE_KEY_MENU_CAT_NAMES, JSON.stringify(Object.keys(names)));
                 renderCategoriesListNow();
             }).catch(function () { });
         }).catch(function (err) {
@@ -3606,12 +3620,12 @@ function deleteCategory(categoryId) {
 
 function removeCategoryFromCacheAndUi(categoryId) {
     var cats = readCachedCategories().filter(function (c) { return c.id !== categoryId; });
-    safeSetItem('cachedCategories', JSON.stringify(cats));
+    safeSetItem(CACHE_KEY_CATEGORIES, JSON.stringify(cats));
 
     try {
-        var names = JSON.parse(localStorage.getItem('cachedMenuCategoryNames') || '[]');
+        var names = JSON.parse(localStorage.getItem(CACHE_KEY_MENU_CAT_NAMES) || '[]');
         var filtered = names.filter(function (n) { return n !== categoryId; });
-        localStorage.setItem('cachedMenuCategoryNames', JSON.stringify(filtered));
+        localStorage.setItem(CACHE_KEY_MENU_CAT_NAMES, JSON.stringify(filtered));
     } catch (e) { }
 
     renderCategoriesListNow();
@@ -5545,21 +5559,22 @@ function deleteExpense(expenseId) {
 
 function handleLogout() {
     stopDashboardListeners();
+    var logoutUrl = getAdminLoginUrl();
     if (USE_LOCAL_API) {
         localStorage.removeItem('adminAuthToken');
         localStorage.removeItem('adminUser');
         window.currentAuthToken = null;
         window.currentUser = null;
-        window.location.href = 'login.html';
+        window.location.href = logoutUrl;
         return;
     }
     if (window.auth) {
         auth.signOut().then(function () {
-            window.location.href = 'login.html';
+            window.location.href = logoutUrl;
         }).catch(function () {
-            window.location.href = 'login.html';
+            window.location.href = logoutUrl;
         });
     } else {
-        window.location.href = 'login.html';
+        window.location.href = logoutUrl;
     }
 }

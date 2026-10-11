@@ -3725,3 +3725,83 @@ body.light-mode .admin-branch-badge--branch1 {
     font-size: 0.85rem;
 }
 
+/* Branch Switcher & Badges */
+.admin-branch-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.admin-branch-badge--branch1 {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
+}
+
+.admin-branch-badge--branch2 {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    color: #fbbf24;
+}
+
+.admin-branch-switcher-wrap {
+    display: inline-flex;
+    align-items: center;
+    margin-inline-start: 12px;
+}
+
+.admin-branch-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 3px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.admin-branch-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.admin-branch-pill:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.admin-branch-pill.active {
+    background: var(--primary);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 600px) {
+    .admin-branch-switcher-wrap {
+        margin-inline-start: 6px;
+    }
+    .admin-branch-pill {
+        padding: 3px 8px;
+        font-size: 0.7rem;
+    }
+}
+
+

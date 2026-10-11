@@ -25,6 +25,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            function getAdminDestination() {
+                try {
+                    var branchParam = new URLSearchParams(window.location.search).get('branch');
+                    if (branchParam && branchParam !== '1') {
+                        return 'admin.html?branch=' + encodeURIComponent(branchParam);
+                    }
+                } catch (e) {}
+                return 'admin.html';
+            }
+
             if (typeof USE_LOCAL_API !== 'undefined' && USE_LOCAL_API) {
                 // Use authApi.login() which resolves the API URL absolutely
                 // (via getApiUrl) and sends credentials. Building the URL
@@ -39,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         localStorage.setItem('adminUser', JSON.stringify(response.user));
                     }
                     showMessage(loginError, '', false);
-                    window.location.href = 'admin.html';
+                    window.location.href = getAdminDestination();
                 }).catch(function(error) {
                     showMessage(loginError, error.message || 'Authentication failed', true);
                 });
@@ -49,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
             auth.signInWithEmailAndPassword(email, password)
                 .then(function() {
                     showMessage(loginError, '', false);
-                    window.location.href = 'admin.html';
+                    window.location.href = getAdminDestination();
                 })
                 .catch(function(error) {
                     const errorCode = error.code;
@@ -75,7 +85,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof USE_LOCAL_API === 'undefined' || !USE_LOCAL_API) {
         auth.onAuthStateChanged(function(user) {
             if (user) {
-                window.location.href = 'admin.html';
+                var branchParam = new URLSearchParams(window.location.search).get('branch');
+                var adminTarget = (branchParam && branchParam !== '1') ? ('admin.html?branch=' + encodeURIComponent(branchParam)) : 'admin.html';
+                window.location.href = adminTarget;
             }
         });
     }
