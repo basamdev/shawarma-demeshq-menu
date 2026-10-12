@@ -88,25 +88,6 @@
 
     <section class="hero">
         <div class="hero-center">
-            <div class="branch-pill-group" id="branchPillGroup" style="display:inline-flex; align-items:center; gap:6px; margin-bottom:14px; background:rgba(0,0,0,0.55); backdrop-filter:blur(10px); padding:4px 8px; border-radius:30px; border:1px solid rgba(247,216,125,0.3); z-index:10;">
-                <a href="index.html?branch=1" class="branch-pill-item" id="branchPill1" style="color:rgba(255,255,255,0.85); text-decoration:none; padding:5px 14px; border-radius:20px; font-size:0.85rem; font-weight:600; transition:all 0.2s;">📍 لقی ١ بەحرکە</a>
-                <a href="index.html?branch=2" class="branch-pill-item" id="branchPill2" style="color:rgba(255,255,255,0.85); text-decoration:none; padding:5px 14px; border-radius:20px; font-size:0.85rem; font-weight:600; transition:all 0.2s;">📍 لقی ٢ هەڤاڵان</a>
-            </div>
-            <script>
-                (function() {
-                    try {
-                        var p = new URLSearchParams(window.location.search || '');
-                        var b = p.get('branch') || localStorage.getItem('current_branch') || localStorage.getItem('selectedBranch') || '1';
-                        var p1 = document.getElementById('branchPill1');
-                        var p2 = document.getElementById('branchPill2');
-                        if (b === '2') {
-                            if (p2) { p2.style.background = '#F7D87D'; p2.style.color = '#1a1a1a'; p2.style.boxShadow = '0 2px 8px rgba(247,216,125,0.4)'; }
-                        } else {
-                            if (p1) { p1.style.background = '#F7D87D'; p1.style.color = '#1a1a1a'; p1.style.boxShadow = '0 2px 8px rgba(247,216,125,0.4)'; }
-                        }
-                    } catch (e) {}
-                })();
-            </script>
             <div class="logo-float-wrap">
                  <img src="assets/shawarma demeshq-logo.jpg?v=1" alt="Shawarma" class="logo" id="indexLogo"
                      onerror="this.onerror=null; this.src='assets/logo.svg';">
