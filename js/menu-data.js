@@ -6,7 +6,18 @@
     'use strict';
 
     var urlParams = new URLSearchParams(window.location.search || '');
-    var currentBranch = urlParams.get('branch') || window.CURRENT_BRANCH || '1';
+    var urlBranch = urlParams.get('branch');
+    if (urlBranch) {
+        try {
+            localStorage.setItem('current_branch', urlBranch);
+            localStorage.setItem('selectedBranch', urlBranch);
+        } catch (e) {}
+    }
+    var storedBranch = null;
+    try {
+        storedBranch = localStorage.getItem('current_branch') || localStorage.getItem('selectedBranch');
+    } catch (e) {}
+    var currentBranch = urlBranch || window.CURRENT_BRANCH || storedBranch || '1';
     window.CURRENT_BRANCH = currentBranch;
     var menuCollection = (currentBranch === '2' ? 'menuItems_branch2' : 'menuItems');
     window.MENU_COLLECTION = menuCollection;

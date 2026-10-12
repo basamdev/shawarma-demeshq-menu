@@ -47,11 +47,22 @@
     </style>
 </head>
 <body class="index-page has-video-bg">
+    <div class="logo-splash" id="logoSplash">
+        <img src="assets/shawarma demeshq-logo.jpg?v=1" alt="Shawarma" onerror="this.onerror=null; this.src='assets/logo.svg';">
+        <span class="logo-splash-text" id="logoSplashText">شاورمة الدمشقیة</span>
+        <div class="logo-splash-dots"><span></span><span></span><span></span></div>
+    </div>
     <script>
         (function () {
             try {
                 var p = new URLSearchParams(window.location.search || '');
-                var b = p.get('branch');
+                var b = p.get('branch') || localStorage.getItem('current_branch') || localStorage.getItem('selectedBranch');
+                if (p.get('branch')) {
+                    try {
+                        localStorage.setItem('current_branch', p.get('branch'));
+                        localStorage.setItem('selectedBranch', p.get('branch'));
+                    } catch (e) {}
+                }
                 if (b === '2') {
                     window.BRANCH_ID = '2';
                     window.CURRENT_BRANCH = '2';
@@ -63,25 +74,12 @@
                     };
                     var name = titles[l] || titles.ar;
                     document.title = name;
-                    document.addEventListener('DOMContentLoaded', function () {
-                        var st = document.querySelector('.logo-splash-text');
-                        if (st) st.textContent = name;
-                        var ht = document.getElementById('heroTitleTyped');
-                        if (ht && !ht.textContent) {
-                            ht.textContent = name;
-                            ht.setAttribute('dir', l === 'en' ? 'ltr' : 'rtl');
-                        }
-                    });
+                    var st = document.getElementById('logoSplashText');
+                    if (st) st.textContent = name;
                 }
             } catch (e) {}
         })();
     </script>
-
-    <div class="logo-splash" id="logoSplash">
-        <img src="assets/shawarma demeshq-logo.jpg?v=1" alt="Shawarma" onerror="this.onerror=null; this.src='assets/logo.svg';">
-        <span class="logo-splash-text">شاورمة الدمشقیة</span>
-        <div class="logo-splash-dots"><span></span><span></span><span></span></div>
-    </div>
 
     <video class="bg-video" autoplay muted loop playsinline>
         <source src="images/menu-bg.mp4" type="video/mp4">

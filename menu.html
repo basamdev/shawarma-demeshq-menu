@@ -203,7 +203,13 @@
 
     try {
         var p = new URLSearchParams(window.location.search || '');
-        var b = p.get('branch');
+        var b = p.get('branch') || localStorage.getItem('current_branch') || localStorage.getItem('selectedBranch');
+        if (p.get('branch')) {
+            try {
+                localStorage.setItem('current_branch', p.get('branch'));
+                localStorage.setItem('selectedBranch', p.get('branch'));
+            } catch (e) {}
+        }
         if (b === '2') {
             window.BRANCH_ID = '2';
             window.CURRENT_BRANCH = '2';
@@ -248,6 +254,27 @@
                     <span class="menu-hero-typed" id="heroTitleTyped" dir="rtl">Shawarma</span><span class="menu-hero-cursor" id="heroTitleCursor" aria-hidden="true"></span>
                 </span>
             </h1>
+            <script>
+                (function () {
+                    try {
+                        var p = new URLSearchParams(window.location.search || '');
+                        var b = p.get('branch') || localStorage.getItem('current_branch') || localStorage.getItem('selectedBranch');
+                        if (b === '2') {
+                            var l = p.get('lang') || localStorage.getItem('selectedLang') || 'ku';
+                            var b2Names = {
+                                ku: 'ئه لكه ره م ئه لديمه شقي',
+                                ar: 'الكرم الدمشقي - منارة',
+                                en: 'Alkarm aldimashqi - mnara'
+                            };
+                            var typed = document.getElementById('heroTitleTyped');
+                            if (typed) {
+                                typed.textContent = b2Names[l] || b2Names.ku;
+                                typed.setAttribute('dir', l === 'en' ? 'ltr' : 'rtl');
+                            }
+                        }
+                    } catch (e) {}
+                })();
+            </script>
         </div>
         <div class="menu-hero-curve" aria-hidden="true">
             <svg viewBox="0 0 400 32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">

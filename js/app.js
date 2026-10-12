@@ -2,7 +2,19 @@
 // Handles: i18n, theme, category filtering, product detail modal, video player
 
 window.urlParams = window.urlParams || new URLSearchParams(window.location.search || '');
-window.BRANCH_ID = window.urlParams.get('branch') || window.CURRENT_BRANCH || '1';
+var urlBranch = window.urlParams.get('branch');
+if (urlBranch) {
+    try {
+        localStorage.setItem('current_branch', urlBranch);
+        localStorage.setItem('selectedBranch', urlBranch);
+    } catch (e) {}
+}
+var storedBranch = null;
+try {
+    storedBranch = localStorage.getItem('current_branch') || localStorage.getItem('selectedBranch');
+} catch (e) {}
+
+window.BRANCH_ID = urlBranch || window.CURRENT_BRANCH || storedBranch || '1';
 window.BRANCH_SUFFIX = (window.BRANCH_ID !== '1') ? ('_branch' + window.BRANCH_ID) : '';
 
 window.MENU_COLLECTION = 'menuItems' + window.BRANCH_SUFFIX;
