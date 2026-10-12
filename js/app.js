@@ -439,15 +439,18 @@ const i18n = {
         locationLabelField: 'ناونیشان (دەردەکەوێت لە مێنوو)',
         cafeOpenTimeLabel: 'کاتی کردنەوە',
         cafeCloseTimeLabel: 'کاتی داخراو',
-        cafeOpenTimePlaceholder: '٢:٠٠ دوای نیوەڕۆ',
-        cafeCloseTimePlaceholder: '٢:٠٠ بەیانی',
-        timeAm: 'بەیانی',
-        timePm: 'ئێوارە',
+        cafeOpenTimePlaceholder: '٢:٠٠ ڕۆژ',
+        cafeCloseTimePlaceholder: '٢:٠٠ شەو',
+        timeAm: 'ڕۆژ',
+        timePm: 'شەو',
+        timeDay: 'ڕۆژ',
+        timeNight: 'شەو',
         applyTime: 'جێبەجێکردن',
         saveHours: 'پاشەکەوتکردنی کاتەکان',
         hoursSaved: 'کاتەکان پاشەکەوت کران!',
         cafeHoursDaily: 'ڕۆژانە',
-        callWhatsAppNumber: 'ژمارەی پەیوەندی / واتساپ',
+        callWhatsAppNumber: 'ژمارەی پەیوەندی / واتساپ (١)',
+        callPhoneNumber2: 'ژمارەی تەلەفۆن ٢ (دڵخوازانە)',
         currency: 'دراو',
         saveSettings: 'پاشەکەوتکردن',
         settingsSaved: 'ڕێکخستنەکان پاشەکەوت کران!',
@@ -695,15 +698,18 @@ const i18n = {
         locationLabelField: 'العنوان (يظهر في القائمة)',
         cafeOpenTimeLabel: 'وقت الفتح',
         cafeCloseTimeLabel: 'وقت الإغلاق',
-        cafeOpenTimePlaceholder: '٢:٠٠ مساءً',
-        cafeCloseTimePlaceholder: '٢:٠٠ صباحاً',
-        timeAm: 'صباحاً',
-        timePm: 'مساءً',
+        cafeOpenTimePlaceholder: '٢:٠٠ نهاراً',
+        cafeCloseTimePlaceholder: '٢:٠٠ ليلاً',
+        timeAm: 'نهاراً',
+        timePm: 'ليلاً',
+        timeDay: 'نهاراً',
+        timeNight: 'ليلاً',
         applyTime: 'تطبيق',
         saveHours: 'حفظ الأوقات',
         hoursSaved: 'تم حفظ الأوقات!',
         cafeHoursDaily: 'يومياً',
-        callWhatsAppNumber: 'رقم الاتصال / واتساب',
+        callWhatsAppNumber: 'رقم الاتصال / واتساب (١)',
+        callPhoneNumber2: 'رقم الهاتف ٢ (اختياري)',
         currency: 'العملة',
         saveSettings: 'حفظ الإعدادات',
         settingsSaved: 'تم حفظ الإعدادات!',
@@ -953,13 +959,16 @@ const i18n = {
         cafeCloseTimeLabel: 'Closing time',
         cafeOpenTimePlaceholder: '2:00 PM',
         cafeCloseTimePlaceholder: '2:00 AM',
-        timeAm: 'Morning',
-        timePm: 'Evening',
+        timeAm: 'AM',
+        timePm: 'PM',
+        timeDay: 'AM',
+        timeNight: 'PM',
         applyTime: 'Apply',
         saveHours: 'Save hours',
         hoursSaved: 'Hours saved!',
         cafeHoursDaily: 'Daily',
-        callWhatsAppNumber: 'Call / WhatsApp number',
+        callWhatsAppNumber: 'Phone 1 / WhatsApp',
+        callPhoneNumber2: 'Phone Number 2 (Optional)',
         currency: 'Currency',
         saveSettings: 'Save Settings',
         settingsSaved: 'Settings saved!',
@@ -3614,13 +3623,15 @@ function sendWhatsAppOrder() {
 var CAFE_SETTING_KEYS = [
     'cafeName',
     'whatsappPhone',
+    'whatsappPhone2',
     'cafeLocationUrl',
     'cafeLocationLabel',
     'cafeOpenTime',
     'cafeCloseTime',
     'cafeInstagram',
     'cafeTiktok',
-    'cafeSnapchat'
+    'cafeSnapchat',
+    'cafeFacebook'
 ];
 
 function toLocaleDigits(value, lang) {
@@ -3634,8 +3645,8 @@ function toLocaleDigits(value, lang) {
 function parseCafePeriodToPm(periodText) {
     var p = (periodText || '').trim().toLowerCase();
     if (!p) return null;
-    if (/^p(?:m)?$/i.test(p) || p === 'م' || /مساء/.test(p) || /دوای\s*نیوەڕۆ|دواینیوەڕۆ/.test(p)) return true;
-    if (/^a(?:m)?$/i.test(p) || p === 'ص' || /صباح/.test(p) || /بەیانی/.test(p)) return false;
+    if (/^p(?:m)?$/i.test(p) || p === 'م' || /مساء/.test(p) || /دوای\s*نیوەڕۆ|دواینیوەڕۆ/.test(p) || /شەو/.test(p) || /ليل/.test(p) || /night/.test(p)) return true;
+    if (/^a(?:m)?$/i.test(p) || p === 'ص' || /صباح/.test(p) || /بەیانی/.test(p) || /ڕۆژ|رۆژ/.test(p) || /نهار/.test(p) || /day/.test(p)) return false;
     return null;
 }
 
@@ -3704,16 +3715,31 @@ function formatCafeTimeForDisplay(timeStr, lang) {
     var hour24 = parseInt(parts[0], 10);
     var minute = parseInt(parts[1], 10);
     var strings = i18n[lang] || i18n.en;
-    var hour12 = hour24 % 12 || 12;
     var minuteStr = String(minute).padStart(2, '0');
-    var isPm = hour24 >= 12;
 
-    if (lang === 'ku' || lang === 'ar') {
-        var clock = toLocaleDigits(hour12, lang) + ':' + toLocaleDigits(minuteStr, lang);
-        var period = isPm ? (strings.timePm || 'PM') : (strings.timeAm || 'AM');
+    if (lang === 'ku') {
+        var isDay = hour24 >= 6 && hour24 < 18;
+        var h12 = isDay
+            ? (hour24 > 12 ? hour24 - 12 : (hour24 === 0 ? 12 : hour24))
+            : (hour24 >= 12 ? hour24 - 12 : (hour24 === 0 ? 12 : hour24));
+        var clock = toLocaleDigits(h12, lang) + ':' + toLocaleDigits(minuteStr, lang);
+        var period = isDay ? (strings.timeDay || 'ڕۆژ') : (strings.timeNight || 'شەو');
         return clock + ' ' + period;
     }
 
+    if (lang === 'ar') {
+        var isDay = hour24 >= 6 && hour24 < 18;
+        var h12 = isDay
+            ? (hour24 > 12 ? hour24 - 12 : (hour24 === 0 ? 12 : hour24))
+            : (hour24 >= 12 ? hour24 - 12 : (hour24 === 0 ? 12 : hour24));
+        var clock = toLocaleDigits(h12, lang) + ':' + toLocaleDigits(minuteStr, lang);
+        var period = isDay ? (strings.timeDay || 'نهاراً') : (strings.timeNight || 'ليلاً');
+        return clock + ' ' + period;
+    }
+
+    // English keeps AM/PM as requested
+    var hour12 = hour24 % 12 || 12;
+    var isPm = hour24 >= 12;
     return hour12 + ':' + minuteStr + ' ' + (isPm ? 'PM' : 'AM');
 }
 
@@ -3724,32 +3750,51 @@ function formatCafeHoursDisplay(info, lang) {
     return (strings.cafeHoursDaily || 'Daily') + ': ' + open + ' — ' + close;
 }
 
-function parseCafeTimeParts(timeStr, fallback) {
+function parseCafeTimeParts(timeStr, fallback, lang) {
     fallback = fallback || '14:00';
     var normalized = normalizeCafeTimeValue(timeStr, fallback);
     var pieces = normalized.split(':');
     var hour24 = parseInt(pieces[0], 10);
     var minute = parseInt(pieces[1], 10);
+    var isDay = hour24 >= 6 && hour24 < 18;
+    var hour12 = isDay
+        ? (hour24 > 12 ? hour24 - 12 : (hour24 === 0 ? 12 : hour24))
+        : (hour24 >= 12 ? hour24 - 12 : (hour24 === 0 ? 12 : hour24));
     return {
         normalized: normalized,
-        hour12: hour24 % 12 || 12,
+        hour12: hour12,
         minute: minute,
-        isPm: hour24 >= 12
+        isPm: hour24 >= 12,
+        isDay: isDay,
+        period: (lang === 'en') ? (hour24 >= 12 ? 'pm' : 'am') : (isDay ? 'day' : 'night')
     };
 }
 
-function buildCafeTimeFromParts(hour12, minute, isPm) {
+function buildCafeTimeFromParts(hour12, minute, period, lang) {
     var h = parseInt(hour12, 10);
     var m = parseInt(minute, 10);
     if (isNaN(h) || isNaN(m)) return '14:00';
-    h = h % 12;
-    if (isPm) h += 12;
+    m = Math.max(0, Math.min(59, m));
+
+    if (period === 'day') {
+        if (h === 12) h = 12;
+        else if (h >= 1 && h <= 5) h += 12;
+    } else if (period === 'night') {
+        if (h === 12) h = 0;
+        else if (h >= 1 && h <= 5) h = h;
+        else if (h >= 6 && h <= 11) h += 12;
+    } else if (period === 'pm' || period === true) {
+        if (h !== 12) h += 12;
+    } else if (period === 'am' || period === false) {
+        if (h === 12) h = 0;
+    }
+
     return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
 }
 
-function normalizeWhatsAppPhone(phone) {
+function normalizeWhatsAppPhone(phone, allowEmpty) {
     var digits = (phone || '').replace(/\D/g, '');
-    if (!digits) return '9647506454656';
+    if (!digits) return allowEmpty ? '' : '9647506454656';
     if (digits.indexOf('00') === 0) digits = digits.slice(2);
     if (digits.indexOf('964') === 0) return digits;
     if (digits.indexOf('0') === 0) return '964' + digits.slice(1);
@@ -4051,6 +4096,7 @@ function getCafeInfo() {
     var keyLabel = getCafeStorageKey('cafeLocationLabel');
     var keyName = getCafeStorageKey('cafeName');
     var keyPhone = getCafeStorageKey('whatsappPhone');
+    var keyPhone2 = getCafeStorageKey('whatsappPhone2');
     var keyOpen = getCafeStorageKey('cafeOpenTime');
     var keyClose = getCafeStorageKey('cafeCloseTime');
     var keyInsta = getCafeStorageKey('cafeInstagram');
@@ -4085,6 +4131,7 @@ function getCafeInfo() {
     return {
         name: isBranch2 ? (b2Names[curLang] || storedName || defaultName) : (storedName || defaultName),
         phone: normalizeWhatsAppPhone(localStorage.getItem(keyPhone) || (isBranch2 ? localStorage.getItem('whatsappPhone') : null) || '9647506454656'),
+        phone2: normalizeWhatsAppPhone(localStorage.getItem(keyPhone2) || (isBranch2 ? localStorage.getItem('whatsappPhone2') : null) || '', true),
         locationUrl: storedUrl || defaultUrl,
         locationLabel: storedLabel || defaultLabel,
         instagram: localStorage.getItem(keyInsta) || (isBranch2 ? localStorage.getItem('cafeInstagram') : '') || '',
@@ -4172,8 +4219,24 @@ function updateCafeInfoPanel() {
 
     var phoneEl = document.getElementById('cafePhoneDisplay');
     if (phoneEl) {
-        phoneEl.textContent = formatCafePhone(info.phone);
-        phoneEl.setAttribute('dir', 'ltr');
+        if (info.phone) {
+            phoneEl.innerHTML = '<a href="tel:+' + info.phone + '" style="color:inherit; text-decoration:none;"><i class="fa-solid fa-phone" style="font-size:0.75rem; margin-inline-end:5px; opacity:0.75;"></i>' + formatCafePhone(info.phone) + '</a>';
+            phoneEl.setAttribute('dir', 'ltr');
+            phoneEl.style.display = '';
+        } else {
+            phoneEl.style.display = 'none';
+        }
+    }
+
+    var phone2El = document.getElementById('cafePhone2Display');
+    if (phone2El) {
+        if (info.phone2) {
+            phone2El.innerHTML = '<a href="tel:+' + info.phone2 + '" style="color:inherit; text-decoration:none;"><i class="fa-solid fa-phone" style="font-size:0.75rem; margin-inline-end:5px; opacity:0.75;"></i>' + formatCafePhone(info.phone2) + '</a>';
+            phone2El.setAttribute('dir', 'ltr');
+            phone2El.style.display = '';
+        } else {
+            phone2El.style.display = 'none';
+        }
     }
 
     var instaBtn = document.getElementById('cafeInstagramBtn');
@@ -4276,8 +4339,24 @@ function setupCafeInfoPanel() {
     var callBtn = document.getElementById('cafeCallBtn');
     if (callBtn) {
         callBtn.addEventListener('click', function () {
-            var phone = normalizeWhatsAppPhone(getCafeInfo().phone);
-            window.location.href = 'tel:+' + phone;
+            var info = getCafeInfo();
+            var phone1 = normalizeWhatsAppPhone(info.phone);
+            var phone2 = normalizeWhatsAppPhone(info.phone2, true);
+            if (phone1 && phone2) {
+                var lang = localStorage.getItem('selectedLang') || 'ku';
+                var promptMsg = (lang === 'ar')
+                    ? 'اختر رقم الاتصال:\n١) ' + formatCafePhone(phone1) + '\n٢) ' + formatCafePhone(phone2) + '\n\nاضغط "موافق" للرقم الأول أو "إلغاء" للرقم الثاني'
+                    : (lang === 'en')
+                    ? 'Choose number to call:\n1) ' + formatCafePhone(phone1) + '\n2) ' + formatCafePhone(phone2) + '\n\nPress OK for #1, Cancel for #2'
+                    : 'ژمارەی پەیوەندی هەڵبژێرە:\n١) ' + formatCafePhone(phone1) + '\n٢) ' + formatCafePhone(phone2) + '\n\nبۆ ژمارەی یەکەم OK دابگرە، بۆ ژمارەی دووەم Cancel';
+                if (confirm(promptMsg)) {
+                    window.location.href = 'tel:+' + phone1;
+                } else {
+                    window.location.href = 'tel:+' + phone2;
+                }
+            } else {
+                window.location.href = 'tel:+' + (phone1 || phone2);
+            }
         });
     }
 
