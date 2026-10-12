@@ -1303,7 +1303,15 @@ function restFieldValue(field) {
     if ('integerValue' in field) return parseInt(field.integerValue, 10);
     if ('doubleValue' in field) return parseFloat(field.doubleValue);
     if ('booleanValue' in field) return !!field.booleanValue;
+    if ('timestampValue' in field) return field.timestampValue;
     if ('nullValue' in field) return null;
+    if ('arrayValue' in field) return (field.arrayValue.values || []).map(restFieldValue);
+    if ('mapValue' in field) {
+        var o = {};
+        var fields = field.mapValue.fields || {};
+        Object.keys(fields).forEach(function (k) { o[k] = restFieldValue(fields[k]); });
+        return o;
+    }
     return null;
 }
 
@@ -1400,15 +1408,75 @@ function computeCategoryBarSig(categories, items, lang) {
     return prefix + 'fb|' + Array.from(found).sort().join('|') + '|' + lang;
 }
 
+function parseCategoriesFromRest(json) {
+    var cats = [];
+    (json.documents || []).forEach(function (doc) {
+        var f = doc.fields || {};
+        var id = doc.name.split('/').pop();
+        var data = {};
+        Object.keys(f).forEach(function (k) {
+            data[k] = restFieldValue(f[k]);
+        });
+        cats.push({ id: id, data: data });
+    });
+    return cats;
+}
+
+function fetchCategoriesViaRest(timeoutMs) {
+    if (window._firestoreApiDisabled) return Promise.reject(new Error('Firestore API disabled'));
+    timeoutMs = timeoutMs || 8000;
+    var cfg = window.firebaseConfig;
+    if (!cfg || !cfg.projectId || !cfg.apiKey) {
+        return Promise.reject(new Error('Firebase config missing'));
+    }
+    var baseUrl = getFirestoreRestBaseUrl();
+    var url = baseUrl + encodeURIComponent(cfg.projectId) +
+        '/databases/(default)/documents/' + encodeURIComponent(window.CAT_COLLECTION) + '?key=' + encodeURIComponent(cfg.apiKey) + '&pageSize=100';
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = null;
+    var opts = { cache: 'no-store' };
+    if (controller) {
+        timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+        opts.signal = controller.signal;
+    }
+    return fetch(url, opts).then(function (r) {
+        if (timer) clearTimeout(timer);
+        if (!r.ok) {
+            return r.text().then(function (body) {
+                var msg = 'REST HTTP ' + r.status;
+                if (body && body.indexOf('Cloud Firestore API has not been used') !== -1) {
+                    window._firestoreApiDisabled = true;
+                    msg = body;
+                }
+                throw new Error(msg);
+            });
+        }
+        return r.json();
+    }).then(parseCategoriesFromRest).catch(function (err) {
+        if (timer) clearTimeout(timer);
+        if (isFirestoreApiDisabledError(err)) showFirestoreApiDisabledAlert();
+        throw err;
+    });
+}
+
 async function loadCategoriesFromFirebase() {
-    if (!window.db) return false;
     if (window._firestoreApiDisabled) return false;
     try {
-        const catSnap = await firestoreGetWithTimeout(window.db.collection(window.CAT_COLLECTION), 8000);
-        const categories = [];
-        catSnap.forEach(doc => {
-            categories.push({ id: doc.id, data: doc.data() });
-        });
+        var categories = [];
+        if (window.db) {
+            try {
+                const catSnap = await firestoreGetWithTimeout(window.db.collection(window.CAT_COLLECTION), 8000);
+                catSnap.forEach(doc => {
+                    categories.push({ id: doc.id, data: doc.data() });
+                });
+            } catch (sdkErr) {
+                console.warn('[categories] SDK get timed out or unavailable, using REST fallback:', sdkErr.message);
+                categories = await fetchCategoriesViaRest(8000);
+            }
+        } else {
+            categories = await fetchCategoriesViaRest(8000);
+        }
+
         categories.sort(function (a, b) {
             var ao = (a.data && a.data.order != null) ? a.data.order : 999999;
             var bo = (b.data && b.data.order != null) ? b.data.order : 999999;
@@ -1423,7 +1491,7 @@ async function loadCategoriesFromFirebase() {
         }
         return prev !== sig;
     } catch (e) {
-        console.error('Error loading categories:', e);
+        console.warn('Note: offline categories used if available (' + (e.message || e) + ')');
         if (isFirestoreApiDisabledError(e)) {
             showFirestoreApiDisabledAlert();
         }

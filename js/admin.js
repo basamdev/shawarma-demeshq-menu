@@ -1,7 +1,13 @@
 // Admin.js — Shawarma Admin Panel
 
 window.urlParams = window.urlParams || new URLSearchParams(window.location.search);
-window.BRANCH_ID = window.urlParams.get('branch') || '1';
+window.BRANCH_ID = window.urlParams.get('branch') || localStorage.getItem('current_branch') || localStorage.getItem('selectedBranch') || '1';
+if (window.urlParams.get('branch')) {
+    try {
+        localStorage.setItem('current_branch', window.urlParams.get('branch'));
+        localStorage.setItem('selectedBranch', window.urlParams.get('branch'));
+    } catch (e) {}
+}
 window.BRANCH_SUFFIX = (window.BRANCH_ID !== '1') ? `_branch${window.BRANCH_ID}` : '';
 
 window.MENU_COLLECTION = `menuItems${window.BRANCH_SUFFIX}`;

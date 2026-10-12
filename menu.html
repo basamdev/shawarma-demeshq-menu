@@ -19,6 +19,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css?v=139">
+    <style>
+        body.is-branch-2 #heroVideoB1, html.is-branch-2 #heroVideoB1 { display: none !important; }
+        body.is-branch-2 #heroVideoB2, html.is-branch-2 #heroVideoB2 { display: block !important; }
+        body:not(.is-branch-2) #heroVideoB2 { display: none !important; }
+        body:not(.is-branch-2) #heroVideoB1 { display: block !important; }
+    </style>
 </head>
 <body class="menu-page emenu-layout" data-menu-theme="gold">
 <script>
@@ -210,7 +216,9 @@
                 localStorage.setItem('selectedBranch', p.get('branch'));
             } catch (e) {}
         }
-        if (b === '2') {
+        if (String(b) === '2') {
+            document.documentElement.classList.add('is-branch-2');
+            if (document.body) document.body.classList.add('is-branch-2');
             window.BRANCH_ID = '2';
             window.CURRENT_BRANCH = '2';
             var l = p.get('lang') || localStorage.getItem('selectedLang') || 'ku';
@@ -226,6 +234,7 @@
             };
             document.title = titles[l] || titles.ku;
             document.addEventListener('DOMContentLoaded', function () {
+                document.body.classList.add('is-branch-2');
                 var typed = document.getElementById('heroTitleTyped');
                 if (typed) {
                     typed.textContent = b2Names[l] || b2Names.ku;
@@ -233,6 +242,16 @@
                 }
                 var infoTitle = document.getElementById('cafeInfoTitle');
                 if (infoTitle) infoTitle.textContent = b2Names[l] || b2Names.ku;
+                var v1 = document.getElementById('heroVideoB1');
+                var v2 = document.getElementById('heroVideoB2');
+                if (v1) { v1.style.display = 'none'; try { v1.pause(); } catch (e) {} }
+                if (v2) {
+                    v2.style.display = 'block';
+                    v2.muted = true;
+                    v2.defaultMuted = true;
+                    var p = v2.play();
+                    if (p && typeof p.catch === 'function') p.catch(function () {});
+                }
             });
         }
     } catch (e) {}
@@ -240,9 +259,48 @@
 </script>
 
     <header class="menu-hero">
-        <video class="menu-hero-video" autoplay muted loop playsinline webkit-playsinline preload="auto">
+        <!-- Branch 1 Default Video -->
+        <video class="menu-hero-video" id="heroVideoB1" autoplay muted loop playsinline webkit-playsinline preload="auto">
             <source src="images/new-shawarma-video.mp4" type="video/mp4">
         </video>
+        <!-- Branch 2 Specific Video -->
+        <video class="menu-hero-video" id="heroVideoB2" autoplay muted loop playsinline webkit-playsinline preload="auto" style="display:none;">
+            <source src="images/havalan.video-shawarma.MP4" type="video/mp4">
+        </video>
+        <script>
+            (function () {
+                try {
+                    var p = new URLSearchParams(window.location.search || '');
+                    var b = p.get('branch') || localStorage.getItem('current_branch') || localStorage.getItem('selectedBranch') || window.BRANCH_ID || window.CURRENT_BRANCH;
+                    var isB2 = (String(b) === '2');
+                    var v1 = document.getElementById('heroVideoB1');
+                    var v2 = document.getElementById('heroVideoB2');
+                    if (isB2) {
+                        document.documentElement.classList.add('is-branch-2');
+                        if (document.body) document.body.classList.add('is-branch-2');
+                        if (v1) { v1.style.display = 'none'; try { v1.pause(); } catch (e) {} }
+                        if (v2) {
+                            v2.style.display = 'block';
+                            v2.muted = true;
+                            v2.defaultMuted = true;
+                            var playProm = v2.play();
+                            if (playProm && typeof playProm.catch === 'function') playProm.catch(function () {});
+                        }
+                    } else {
+                        document.documentElement.classList.remove('is-branch-2');
+                        if (document.body) document.body.classList.remove('is-branch-2');
+                        if (v2) { v2.style.display = 'none'; try { v2.pause(); } catch (e) {} }
+                        if (v1) {
+                            v1.style.display = 'block';
+                            v1.muted = true;
+                            v1.defaultMuted = true;
+                            var playProm = v1.play();
+                            if (playProm && typeof playProm.catch === 'function') playProm.catch(function () {});
+                        }
+                    }
+                } catch (e) {}
+            })();
+        </script>
         <div class="menu-hero-shade"></div>
         <div class="menu-hero-brand" id="menuHeroBrand">
             <div class="menu-hero-logo-wrap">
@@ -599,7 +657,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="js/firebase.js?v=32"></script>
-    <script src="js/app.js?v=143"></script>
+    <script src="js/app.js?v=144"></script>
     <script src="js/local-api.js"></script>
     <script>
         (function () {

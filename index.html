@@ -44,6 +44,10 @@
         .lang-sep {
             font-family: inherit;
         }
+        body.is-branch-2 #indexVideoB1, html.is-branch-2 #indexVideoB1 { display: none !important; }
+        body.is-branch-2 #indexVideoB2, html.is-branch-2 #indexVideoB2 { display: block !important; }
+        body:not(.is-branch-2) #indexVideoB2 { display: none !important; }
+        body:not(.is-branch-2) #indexVideoB1 { display: block !important; }
     </style>
 </head>
 <body class="index-page has-video-bg">
@@ -64,6 +68,8 @@
                     } catch (e) {}
                 }
                 if (b === '2') {
+                    document.documentElement.classList.add('is-branch-2');
+                    if (document.body) document.body.classList.add('is-branch-2');
                     window.BRANCH_ID = '2';
                     window.CURRENT_BRANCH = '2';
                     var l = p.get('lang') || localStorage.getItem('selectedLang') || 'ar';
@@ -81,9 +87,44 @@
         })();
     </script>
 
-    <video class="bg-video" autoplay muted loop playsinline>
+    <!-- Branch 1 Default Video -->
+    <video class="bg-video" id="indexVideoB1" autoplay muted loop playsinline>
         <source src="images/menu-bg.mp4" type="video/mp4">
     </video>
+    <!-- Branch 2 Specific Video -->
+    <video class="bg-video" id="indexVideoB2" autoplay muted loop playsinline style="display:none;">
+        <source src="images/havalan.video-shawarma.MP4" type="video/mp4">
+    </video>
+    <script>
+        (function () {
+            try {
+                var p = new URLSearchParams(window.location.search || '');
+                var b = p.get('branch') || localStorage.getItem('current_branch') || localStorage.getItem('selectedBranch');
+                var isB2 = (String(b) === '2');
+                var iv1 = document.getElementById('indexVideoB1');
+                var iv2 = document.getElementById('indexVideoB2');
+                if (isB2) {
+                    if (iv1) { iv1.style.display = 'none'; try { iv1.pause(); } catch (e) {} }
+                    if (iv2) {
+                        iv2.style.display = 'block';
+                        iv2.muted = true;
+                        iv2.defaultMuted = true;
+                        var p2 = iv2.play();
+                        if (p2 && typeof p2.catch === 'function') p2.catch(function () {});
+                    }
+                } else {
+                    if (iv2) { iv2.style.display = 'none'; try { iv2.pause(); } catch (e) {} }
+                    if (iv1) {
+                        iv1.style.display = 'block';
+                        iv1.muted = true;
+                        iv1.defaultMuted = true;
+                        var p1 = iv1.play();
+                        if (p1 && typeof p1.catch === 'function') p1.catch(function () {});
+                    }
+                }
+            } catch (e) {}
+        })();
+    </script>
     <div class="bg-overlay"></div>
 
     <section class="hero">
@@ -140,7 +181,7 @@
         </div>
     </section>
 
-    <script src="js/app.js?v=142"></script>
+    <script src="js/app.js?v=144"></script>
     <script>
         (function () {
             var splash = document.getElementById('logoSplash');
