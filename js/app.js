@@ -2731,14 +2731,14 @@ function applyLanguageUI(lang) {
     var isBranch2 = String(window.BRANCH_ID || window.CURRENT_BRANCH) === '2';
     if (isBranch2) {
         var b2Titles = {
-            ku: 'ئه لكه ره م ئه لديمه شقي | مێنوو',
+            ku: 'ئه لكه ره م ئه لديمه شقي - مەنارە | مێنوو',
             ar: 'الكرم الدمشقي - منارة | القائمة',
             en: 'Alkarm aldimashqi - mnara | Menu'
         };
         var isIndexPage = document.body && document.body.classList.contains('index-page');
         if (isIndexPage) {
             var b2IndexTitles = {
-                ku: 'ئه لكه ره م ئه لديمه شقي',
+                ku: 'ئه لكه ره م ئه لديمه شقي - مەنارە',
                 ar: 'الكرم الدمشقي - منارة',
                 en: 'Alkarm aldimashqi - mnara'
             };
@@ -3249,7 +3249,7 @@ var HERO_TYPE_PHRASES_BRANCH1 = [
 
 var HERO_TYPE_PHRASES_BRANCH2 = [
     { text: 'الكرم الدمشقي - منارة', dir: 'rtl' },
-    { text: 'ئه لكه ره م ئه لديمه شقي', dir: 'rtl' },
+    { text: 'ئه لكه ره م ئه لديمه شقي - مەنارە', dir: 'rtl' },
     { text: 'Alkarm aldimashqi - mnara', dir: 'ltr' }
 ];
 
@@ -4042,7 +4042,7 @@ function getCafeInfo() {
     var curLang = (typeof localStorage !== 'undefined' && localStorage.getItem('selectedLang')) || 'ku';
     var b2Names = {
         ar: 'الكرم الدمشقي - منارة',
-        ku: 'ئه لكه ره م ئه لديمه شقي',
+        ku: 'ئه لكه ره م ئه لديمه شقي - مەنارە',
         en: 'Alkarm aldimashqi - mnara'
     };
     var defaultName = isBranch2 ? (b2Names[curLang] || b2Names.ar) : 'Shawarma';
@@ -4153,7 +4153,7 @@ function updateCafeInfoPanel() {
         if (isBranch2) {
             var b2Names = {
                 ar: 'الكرم الدمشقي - منارة',
-                ku: 'ئه لكه ره م ئه لديمه شقي',
+                ku: 'ئه لكه ره م ئه لديمه شقي - مەنارە',
                 en: 'Alkarm aldimashqi - mnara'
             };
             titleEl.textContent = b2Names[lang] || info.name || b2Names.ku;
