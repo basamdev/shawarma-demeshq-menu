@@ -435,15 +435,21 @@ const i18n = {
         paymentSuccess: 'پارەدان سەرکەوتوو بوو! کۆی گشتی: ',
         noItemsAdded: 'هیچ ئایتمێک زیاد نەکراوە.\nکلیک لەسەر ئایتم بکە بۆ زیادکردن.',
         cafeName: 'ناوی کافێ',
+        cafeNameKu: 'ناوی چێشتخانە (کوردی)',
+        cafeNameAr: 'ناوی چێشتخانە (عەرەبی)',
+        cafeNameEn: 'ناوی چێشتخانە (ئینگلیزی)',
         locationMapsUrl: 'لینکی نەخشە (Google Maps)',
         locationLabelField: 'ناونیشان (دەردەکەوێت لە مێنوو)',
+        locationLabelKu: 'ناونیشان (کوردی)',
+        locationLabelAr: 'ناونیشان (عەرەبی)',
+        locationLabelEn: 'ناونیشان (ئینگلیزی)',
         cafeOpenTimeLabel: 'کاتی کردنەوە',
         cafeCloseTimeLabel: 'کاتی داخراو',
-        cafeOpenTimePlaceholder: '٢:٠٠ ڕۆژ',
+        cafeOpenTimePlaceholder: '٢:٠٠ بەیانی',
         cafeCloseTimePlaceholder: '٢:٠٠ شەو',
-        timeAm: 'ڕۆژ',
+        timeAm: 'بەیانی',
         timePm: 'شەو',
-        timeDay: 'ڕۆژ',
+        timeDay: 'بەیانی',
         timeNight: 'شەو',
         applyTime: 'جێبەجێکردن',
         saveHours: 'پاشەکەوتکردنی کاتەکان',
@@ -694,8 +700,14 @@ const i18n = {
         paymentSuccess: 'تم الدفع بنجاح! الإجمالي: ',
         noItemsAdded: 'لم تتم إضافة أي عناصر.\nاضغط على العناصر لإضافتها.',
         cafeName: 'اسم المقهى',
+        cafeNameKu: 'اسم المطعم (كردي)',
+        cafeNameAr: 'اسم المطعم (عربي)',
+        cafeNameEn: 'اسم المطعم (إنكليزي)',
         locationMapsUrl: 'رابط الخريطة (Google Maps)',
         locationLabelField: 'العنوان (يظهر في القائمة)',
+        locationLabelKu: 'العنوان (كردي)',
+        locationLabelAr: 'العنوان (عربي)',
+        locationLabelEn: 'العنوان (إنكليزي)',
         cafeOpenTimeLabel: 'وقت الفتح',
         cafeCloseTimeLabel: 'وقت الإغلاق',
         cafeOpenTimePlaceholder: '٢:٠٠ نهاراً',
@@ -953,8 +965,14 @@ const i18n = {
         paymentSuccess: 'Payment successful! Total: ',
         noItemsAdded: 'No items added yet.\nTap items to add them.',
         cafeName: 'Cafe Name',
+        cafeNameKu: 'Restaurant Name (Kurdish)',
+        cafeNameAr: 'Restaurant Name (Arabic)',
+        cafeNameEn: 'Restaurant Name (English)',
         locationMapsUrl: 'Map link (Google Maps)',
         locationLabelField: 'Address label (shown on menu)',
+        locationLabelKu: 'Location (Kurdish)',
+        locationLabelAr: 'Location (Arabic)',
+        locationLabelEn: 'Location (English)',
         cafeOpenTimeLabel: 'Opening time',
         cafeCloseTimeLabel: 'Closing time',
         cafeOpenTimePlaceholder: '2:00 PM',
@@ -3622,10 +3640,16 @@ function sendWhatsAppOrder() {
 
 var CAFE_SETTING_KEYS = [
     'cafeName',
+    'cafeNameKu',
+    'cafeNameAr',
+    'cafeNameEn',
     'whatsappPhone',
     'whatsappPhone2',
     'cafeLocationUrl',
     'cafeLocationLabel',
+    'cafeLocationLabelKu',
+    'cafeLocationLabelAr',
+    'cafeLocationLabelEn',
     'cafeOpenTime',
     'cafeCloseTime',
     'cafeInstagram',
@@ -3723,7 +3747,7 @@ function formatCafeTimeForDisplay(timeStr, lang) {
             ? (hour24 > 12 ? hour24 - 12 : (hour24 === 0 ? 12 : hour24))
             : (hour24 >= 12 ? hour24 - 12 : (hour24 === 0 ? 12 : hour24));
         var clock = toLocaleDigits(h12, lang) + ':' + toLocaleDigits(minuteStr, lang);
-        var period = isDay ? (strings.timeDay || 'ڕۆژ') : (strings.timeNight || 'شەو');
+        var period = isDay ? (strings.timeDay || 'بەیانی') : (strings.timeNight || 'شەو');
         return clock + ' ' + period;
     }
 
@@ -4083,18 +4107,37 @@ function getCafeInfo() {
     var defaultUrl = isBranch2 
         ? 'https://maps.google.com' 
         : 'https://maps.app.goo.gl/mmi5iv7mnGKxKZoq9?g_st=ic';
-    var defaultLabel = isBranch2 ? 'هەولێر - هەڤاڵان' : 'بەحرکە-مجەمع';
     var curLang = (typeof localStorage !== 'undefined' && localStorage.getItem('selectedLang')) || 'ku';
+    var b1Names = {
+        ku: 'شاوەرمە دیمەشق',
+        ar: 'شاورما دمشق',
+        en: 'Shawarma Demeshq'
+    };
     var b2Names = {
         ar: 'الكرم الدمشقي - منارة',
         ku: 'ئه لكه ره م ئه لديمه شقي - مەنارە',
         en: 'Alkarm aldimashqi - mnara'
     };
-    var defaultName = isBranch2 ? (b2Names[curLang] || b2Names.ar) : 'Shawarma';
+    var defaultName = isBranch2 ? (b2Names[curLang] || b2Names.ar) : (b1Names[curLang] || 'Shawarma');
 
+    var b1Locs = {
+        ku: 'بەحرکە-مجەمع',
+        ar: 'بحركة - مجمع',
+        en: 'Baharka - Mujamma'
+    };
+    var b2Locs = {
+        ku: 'هەولێر - هەڤاڵان',
+        ar: 'أربيل - هفالان',
+        en: 'Erbil - Havalan'
+    };
+    var defaultLabel = isBranch2 ? (b2Locs[curLang] || b2Locs.ku) : (b1Locs[curLang] || b1Locs.ku);
+
+    var langSuffix = curLang === 'ar' ? 'Ar' : (curLang === 'en' ? 'En' : 'Ku');
     var keyUrl = getCafeStorageKey('cafeLocationUrl');
     var keyLabel = getCafeStorageKey('cafeLocationLabel');
+    var keyLabelLang = getCafeStorageKey('cafeLocationLabel' + langSuffix);
     var keyName = getCafeStorageKey('cafeName');
+    var keyNameLang = getCafeStorageKey('cafeName' + langSuffix);
     var keyPhone = getCafeStorageKey('whatsappPhone');
     var keyPhone2 = getCafeStorageKey('whatsappPhone2');
     var keyOpen = getCafeStorageKey('cafeOpenTime');
@@ -4105,8 +4148,8 @@ function getCafeInfo() {
     var keyFb = getCafeStorageKey('cafeFacebook');
 
     var storedUrl = localStorage.getItem(keyUrl);
-    var storedLabel = localStorage.getItem(keyLabel);
-    var storedName = localStorage.getItem(keyName);
+    var storedLabel = localStorage.getItem(keyLabelLang) || localStorage.getItem(keyLabel);
+    var storedName = localStorage.getItem(keyNameLang) || localStorage.getItem(keyName);
 
     if (isBranch2) {
         if (!storedName || storedName === 'شاورما دیمەشق - هەڤاڵان' || storedName === 'Shawarma') {
@@ -4129,7 +4172,7 @@ function getCafeInfo() {
     var closeMinutes = parseCafeTimeToMinutes(closeTime, 2);
 
     return {
-        name: isBranch2 ? (b2Names[curLang] || storedName || defaultName) : (storedName || defaultName),
+        name: storedName || defaultName,
         phone: normalizeWhatsAppPhone(localStorage.getItem(keyPhone) || (isBranch2 ? localStorage.getItem('whatsappPhone') : null) || '9647506454656'),
         phone2: normalizeWhatsAppPhone(localStorage.getItem(keyPhone2) || (isBranch2 ? localStorage.getItem('whatsappPhone2') : null) || '', true),
         locationUrl: storedUrl || defaultUrl,

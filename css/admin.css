@@ -352,6 +352,55 @@
     margin-bottom: 0;
 }
 
+.settings-multilang-field {
+    align-items: flex-start;
+}
+
+.settings-multilang-field .settings-social-icon {
+    margin-top: 24px;
+}
+
+.settings-lang-inputs-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.settings-lang-input-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}
+
+.settings-lang-input-item label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+.settings-lang-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--primary);
+}
+
+body.light-mode .settings-lang-badge {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
 .settings-social-icon {
     width: 44px;
     height: 44px;
