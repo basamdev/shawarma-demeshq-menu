@@ -47,6 +47,35 @@
     </style>
 </head>
 <body class="index-page has-video-bg">
+    <script>
+        (function () {
+            try {
+                var p = new URLSearchParams(window.location.search || '');
+                var b = p.get('branch');
+                if (b === '2') {
+                    window.BRANCH_ID = '2';
+                    window.CURRENT_BRANCH = '2';
+                    var l = p.get('lang') || localStorage.getItem('selectedLang') || 'ar';
+                    var titles = {
+                        ar: 'الكرم الدمشقي - منارة',
+                        ku: 'ئه لكه ره م ئه لديمه شقي',
+                        en: 'Alkarm aldimashqi - mnara'
+                    };
+                    var name = titles[l] || titles.ar;
+                    document.title = name;
+                    document.addEventListener('DOMContentLoaded', function () {
+                        var st = document.querySelector('.logo-splash-text');
+                        if (st) st.textContent = name;
+                        var ht = document.getElementById('heroTitleTyped');
+                        if (ht && !ht.textContent) {
+                            ht.textContent = name;
+                            ht.setAttribute('dir', l === 'en' ? 'ltr' : 'rtl');
+                        }
+                    });
+                }
+            } catch (e) {}
+        })();
+    </script>
 
     <div class="logo-splash" id="logoSplash">
         <img src="assets/shawarma demeshq-logo.jpg?v=1" alt="Shawarma" onerror="this.onerror=null; this.src='assets/logo.svg';">
@@ -96,7 +125,7 @@
         </div>
     </section>
 
-    <script src="js/app.js?v=95"></script>
+    <script src="js/app.js?v=96"></script>
     <script>
         (function () {
             var splash = document.getElementById('logoSplash');

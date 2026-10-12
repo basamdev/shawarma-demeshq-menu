@@ -200,6 +200,36 @@
     applyEmenuThemeCssVars(document.body, themes[id]);
     window.MENU_THEMES = themes;
     window.applyEmenuThemeCssVars = applyEmenuThemeCssVars;
+
+    try {
+        var p = new URLSearchParams(window.location.search || '');
+        var b = p.get('branch');
+        if (b === '2') {
+            window.BRANCH_ID = '2';
+            window.CURRENT_BRANCH = '2';
+            var l = p.get('lang') || localStorage.getItem('selectedLang') || 'ku';
+            var titles = {
+                ku: 'ئه لكه ره م ئه لديمه شقي | مێنوو',
+                ar: 'الكرم الدمشقي - منارة | القائمة',
+                en: 'Alkarm aldimashqi - mnara | Menu'
+            };
+            var b2Names = {
+                ku: 'ئه لكه ره م ئه لديمه شقي',
+                ar: 'الكرم الدمشقي - منارة',
+                en: 'Alkarm aldimashqi - mnara'
+            };
+            document.title = titles[l] || titles.ku;
+            document.addEventListener('DOMContentLoaded', function () {
+                var typed = document.getElementById('heroTitleTyped');
+                if (typed) {
+                    typed.textContent = b2Names[l] || b2Names.ku;
+                    typed.setAttribute('dir', l === 'en' ? 'ltr' : 'rtl');
+                }
+                var infoTitle = document.getElementById('cafeInfoTitle');
+                if (infoTitle) infoTitle.textContent = b2Names[l] || b2Names.ku;
+            });
+        }
+    } catch (e) {}
 })();
 </script>
 
@@ -541,7 +571,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="js/firebase.js?v=32"></script>
-    <script src="js/app.js?v=140"></script>
+    <script src="js/app.js?v=141"></script>
     <script src="js/local-api.js"></script>
     <script>
         (function () {

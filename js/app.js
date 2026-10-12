@@ -2716,7 +2716,29 @@ function setActiveLanguage(lang) {
 
 function applyLanguageUI(lang) {
     var strings = i18n[lang] || i18n.en;
-    document.title = strings.pageTitle;
+    var isBranch2 = String(window.BRANCH_ID || window.CURRENT_BRANCH) === '2';
+    if (isBranch2) {
+        var b2Titles = {
+            ku: 'ئه لكه ره م ئه لديمه شقي | مێنوو',
+            ar: 'الكرم الدمشقي - منارة | القائمة',
+            en: 'Alkarm aldimashqi - mnara | Menu'
+        };
+        var isIndexPage = document.body && document.body.classList.contains('index-page');
+        if (isIndexPage) {
+            var b2IndexTitles = {
+                ku: 'ئه لكه ره م ئه لديمه شقي',
+                ar: 'الكرم الدمشقي - منارة',
+                en: 'Alkarm aldimashqi - mnara'
+            };
+            document.title = b2IndexTitles[lang] || b2IndexTitles.ar;
+            var splashText = document.querySelector('.logo-splash-text');
+            if (splashText) splashText.textContent = b2IndexTitles[lang] || b2IndexTitles.ar;
+        } else {
+            document.title = b2Titles[lang] || b2Titles.ku;
+        }
+    } else {
+        document.title = strings.pageTitle;
+    }
 
     document.querySelectorAll('[data-i18n]').forEach(function (element) {
         if (element.closest('#menuHeroBrand')) return;
@@ -3208,10 +3230,23 @@ function setupMenuThemePicker() {
     });
 }
 
-var HERO_TYPE_PHRASES = [
+var HERO_TYPE_PHRASES_BRANCH1 = [
     { text: 'شاورمة الدمشقیة', dir: 'rtl' },
     { text: 'Shawarma', dir: 'ltr' }
 ];
+
+var HERO_TYPE_PHRASES_BRANCH2 = [
+    { text: 'الكرم الدمشقي - منارة', dir: 'rtl' },
+    { text: 'ئه لكه ره م ئه لديمه شقي', dir: 'rtl' },
+    { text: 'Alkarm aldimashqi - mnara', dir: 'ltr' }
+];
+
+function getHeroTypePhrases() {
+    var isBranch2 = String(window.BRANCH_ID || window.CURRENT_BRANCH) === '2';
+    return isBranch2 ? HERO_TYPE_PHRASES_BRANCH2 : HERO_TYPE_PHRASES_BRANCH1;
+}
+
+var HERO_TYPE_PHRASES = getHeroTypePhrases();
 
 function heroTypeChars(str) {
     return Array.from(str);
@@ -3224,11 +3259,12 @@ function initHeroTitleSequence() {
 
     stopHeroTitleLoop();
 
+    var phrases = getHeroTypePhrases();
     var phraseIndex = 0;
     var charIndex = 0;
     var isDeleting = false;
     var isIndexPage = document.body.classList.contains('index-page');
-    var chars = heroTypeChars(HERO_TYPE_PHRASES[0].text);
+    var chars = heroTypeChars(phrases[0].text);
 
     function typeDelay() {
         if (isDeleting) {
@@ -3244,13 +3280,13 @@ function initHeroTitleSequence() {
     }
 
     function applyPhraseMeta() {
-        var phrase = HERO_TYPE_PHRASES[phraseIndex];
+        var phrase = phrases[phraseIndex];
         typewriter.setAttribute('dir', phrase.dir);
         typedEl.setAttribute('dir', phrase.dir);
     }
 
     function tick() {
-        var phrase = HERO_TYPE_PHRASES[phraseIndex];
+        var phrase = phrases[phraseIndex];
         chars = heroTypeChars(phrase.text);
         applyPhraseMeta();
 
@@ -3271,7 +3307,7 @@ function initHeroTitleSequence() {
 
             if (charIndex <= 0) {
                 isDeleting = false;
-                phraseIndex = (phraseIndex + 1) % HERO_TYPE_PHRASES.length;
+                phraseIndex = (phraseIndex + 1) % phrases.length;
                 initHeroTitleSequence._timeout = setTimeout(tick, pauseDelay());
                 return;
             }
@@ -3986,12 +4022,18 @@ window.toLocaleDigits = toLocaleDigits;
 window.applyCafeSettingsToLocalStorage = applyCafeSettingsToLocalStorage;
 
 function getCafeInfo() {
-    var isBranch2 = String(window.BRANCH_ID) === '2';
+    var isBranch2 = String(window.BRANCH_ID || window.CURRENT_BRANCH) === '2';
     var defaultUrl = isBranch2 
         ? 'https://maps.google.com' 
         : 'https://maps.app.goo.gl/mmi5iv7mnGKxKZoq9?g_st=ic';
     var defaultLabel = isBranch2 ? 'هەولێر - هەڤاڵان' : 'بەحرکە-مجەمع';
-    var defaultName = isBranch2 ? 'شاورما دیمەشق - هەڤاڵان' : 'Shawarma';
+    var curLang = (typeof localStorage !== 'undefined' && localStorage.getItem('selectedLang')) || 'ku';
+    var b2Names = {
+        ar: 'الكرم الدمشقي - منارة',
+        ku: 'ئه لكه ره م ئه لديمه شقي',
+        en: 'Alkarm aldimashqi - mnara'
+    };
+    var defaultName = isBranch2 ? (b2Names[curLang] || b2Names.ar) : 'Shawarma';
 
     var keyUrl = getCafeStorageKey('cafeLocationUrl');
     var keyLabel = getCafeStorageKey('cafeLocationLabel');
@@ -4006,8 +4048,13 @@ function getCafeInfo() {
 
     var storedUrl = localStorage.getItem(keyUrl);
     var storedLabel = localStorage.getItem(keyLabel);
+    var storedName = localStorage.getItem(keyName);
 
-    if (!isBranch2) {
+    if (isBranch2) {
+        if (!storedName || storedName === 'شاورما دیمەشق - هەڤاڵان' || storedName === 'Shawarma') {
+            storedName = defaultName;
+        }
+    } else {
         if (storedUrl === 'https://maps.google.com/?q=Baharka+Erbil') {
             localStorage.setItem('cafeLocationUrl', defaultUrl);
             storedUrl = defaultUrl;
@@ -4024,7 +4071,7 @@ function getCafeInfo() {
     var closeMinutes = parseCafeTimeToMinutes(closeTime, 2);
 
     return {
-        name: localStorage.getItem(keyName) || defaultName,
+        name: isBranch2 ? (b2Names[curLang] || storedName || defaultName) : (storedName || defaultName),
         phone: normalizeWhatsAppPhone(localStorage.getItem(keyPhone) || (isBranch2 ? localStorage.getItem('whatsappPhone') : null) || '9647506454656'),
         locationUrl: storedUrl || defaultUrl,
         locationLabel: storedLabel || defaultLabel,
@@ -4078,6 +4125,7 @@ function updateCafeInfoPanel() {
     var lang = localStorage.getItem('selectedLang') || 'ku';
     var strings = i18n[lang] || i18n.en;
     var info = getCafeInfo();
+    var isBranch2 = String(window.BRANCH_ID || window.CURRENT_BRANCH) === '2';
     var open = isCafeOpen(info);
 
     var statusEl = document.getElementById('cafeStatusBadge');
@@ -4089,7 +4137,18 @@ function updateCafeInfoPanel() {
     }
 
     var titleEl = document.getElementById('cafeInfoTitle');
-    if (titleEl) titleEl.textContent = info.name || strings.cafeInfoTitle;
+    if (titleEl) {
+        if (isBranch2) {
+            var b2Names = {
+                ar: 'الكرم الدمشقي - منارة',
+                ku: 'ئه لكه ره م ئه لديمه شقي',
+                en: 'Alkarm aldimashqi - mnara'
+            };
+            titleEl.textContent = b2Names[lang] || info.name || b2Names.ku;
+        } else {
+            titleEl.textContent = info.name || strings.cafeInfoTitle;
+        }
+    }
 
     var hoursEl = document.getElementById('cafeHoursText');
     if (hoursEl) hoursEl.textContent = formatCafeHoursDisplay(info, lang);

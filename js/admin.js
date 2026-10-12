@@ -5331,7 +5331,7 @@ function buildReceiptPrintHtml(options) {
         '<body class="' + langClass + '">' +
         '<div class="receipt">' +
         '<img class="brand-logo" src="' + escapeReceiptHtml(options.logoUrl || 'assets/shawarma demeshq-logo.jpg') + '" alt="" onerror="this.style.display=\'none\'">' +
-        '<div class="brand-title"><span class="en">Shawarma</span><span class="sep">|</span><span class="ku">Shawarma</span></div>' +
+        '<div class="brand-title"><span class="en">' + escapeReceiptHtml(options.brandEn || 'Shawarma') + '</span><span class="sep">|</span><span class="ku">' + escapeReceiptHtml(options.brandKu || 'Shawarma') + '</span></div>' +
         '<div class="brand-tagline">Premium Coffee House</div>' +
         (options.location ? '<div class="brand-location">' + escapeReceiptHtml(options.location) + '</div>' : '') +
         '<hr class="rule">' +
@@ -5460,6 +5460,8 @@ function printReceipt(itemsOverride) {
 
     var receiptHTML = buildReceiptPrintHtml({
         lang: lang,
+        brandEn: isBranch2 ? 'Alkarm aldimashqi - mnara' : 'Shawarma',
+        brandKu: isBranch2 ? 'ئه لكه ره م ئه لديمه شقي' : 'Shawarma',
         items: items.slice(),
         total: total,
         receiptNo: receiptNo,
@@ -5976,7 +5978,7 @@ function loadSettings() {
 
     var isBranch2 = String(window.BRANCH_ID) === '2';
     var branchBadgeTitle = isBranch2 ? '📍 لقی ٢ - هەڤاڵان (Havalan)' : '📍 لقی ١ - بەحرکە (Bahirka)';
-    var defaultCafeName = isBranch2 ? 'شاورما دیمەشق - هەڤاڵان' : S.siteName;
+    var defaultCafeName = isBranch2 ? 'الكرم الدمشقي - منارة' : S.siteName;
     var defaultCafeLocUrl = isBranch2 ? 'https://maps.google.com' : 'https://maps.app.goo.gl/mmi5iv7mnGKxKZoq9?g_st=ic';
     var defaultCafeLocLabel = isBranch2 ? 'هەولێر - هەڤاڵان' : 'بەحرکە-مجەمع';
 
