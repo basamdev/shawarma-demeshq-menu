@@ -2013,13 +2013,15 @@ function clearCategorySelection() {
         btn.classList.remove('active');
     });
 
-    // Restore the background video to how it looked before any category was picked.
+    // Restore the background media to how it looked before any category was picked.
     var bgVideo = document.querySelector('.bg-video');
     if (bgVideo) {
         bgVideo.style.visibility = '';
-        var playPromise = bgVideo.play();
-        if (playPromise && typeof playPromise.catch === 'function') {
-            playPromise.catch(function () {});
+        if (typeof bgVideo.play === 'function') {
+            var playPromise = bgVideo.play();
+            if (playPromise && typeof playPromise.catch === 'function') {
+                playPromise.catch(function () {});
+            }
         }
     }
 

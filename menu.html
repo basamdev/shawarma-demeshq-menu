@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css?v=139">
+    <link rel="stylesheet" href="css/style.css?v=140">
     <style>
         body.is-branch-2 #heroVideoB1, html.is-branch-2 #heroVideoB1 { display: none !important; }
         body.is-branch-2 #heroVideoB2, html.is-branch-2 #heroVideoB2 { display: block !important; }
@@ -244,14 +244,8 @@
                 if (infoTitle) infoTitle.textContent = b2Names[l] || b2Names.ku;
                 var v1 = document.getElementById('heroVideoB1');
                 var v2 = document.getElementById('heroVideoB2');
-                if (v1) { v1.style.display = 'none'; try { v1.pause(); } catch (e) {} }
-                if (v2) {
-                    v2.style.display = 'block';
-                    v2.muted = true;
-                    v2.defaultMuted = true;
-                    var p = v2.play();
-                    if (p && typeof p.catch === 'function') p.catch(function () {});
-                }
+                if (v1) v1.style.display = 'none';
+                if (v2) v2.style.display = 'block';
             });
         }
     } catch (e) {}
@@ -259,14 +253,9 @@
 </script>
 
     <header class="menu-hero">
-        <!-- Branch 1 Default Video -->
-        <video class="menu-hero-video" id="heroVideoB1" autoplay muted loop playsinline webkit-playsinline preload="auto">
-            <source src="images/new-shawarma-video.mp4" type="video/mp4">
-        </video>
-        <!-- Branch 2 Specific Video -->
-        <video class="menu-hero-video" id="heroVideoB2" autoplay muted loop playsinline webkit-playsinline preload="auto" style="display:none;">
-            <source src="images/havalan.video-shawarma.MP4" type="video/mp4">
-        </video>
+        <!-- Branch 1 / 2 hero stills (video temporarily disabled for Vercel test) -->
+        <img class="menu-hero-video" id="heroVideoB1" src="images/hero-still-b1.jpg?v=2" alt="" decoding="async" fetchpriority="low">
+        <img class="menu-hero-video" id="heroVideoB2" src="images/hero-still-b2.jpg?v=2" alt="" decoding="async" fetchpriority="low" style="display:none;">
         <script>
             (function () {
                 try {
@@ -278,25 +267,13 @@
                     if (isB2) {
                         document.documentElement.classList.add('is-branch-2');
                         if (document.body) document.body.classList.add('is-branch-2');
-                        if (v1) { v1.style.display = 'none'; try { v1.pause(); } catch (e) {} }
-                        if (v2) {
-                            v2.style.display = 'block';
-                            v2.muted = true;
-                            v2.defaultMuted = true;
-                            var playProm = v2.play();
-                            if (playProm && typeof playProm.catch === 'function') playProm.catch(function () {});
-                        }
+                        if (v1) v1.style.display = 'none';
+                        if (v2) v2.style.display = 'block';
                     } else {
                         document.documentElement.classList.remove('is-branch-2');
                         if (document.body) document.body.classList.remove('is-branch-2');
-                        if (v2) { v2.style.display = 'none'; try { v2.pause(); } catch (e) {} }
-                        if (v1) {
-                            v1.style.display = 'block';
-                            v1.muted = true;
-                            v1.defaultMuted = true;
-                            var playProm = v1.play();
-                            if (playProm && typeof playProm.catch === 'function') playProm.catch(function () {});
-                        }
+                        if (v2) v2.style.display = 'none';
+                        if (v1) v1.style.display = 'block';
                     }
                 } catch (e) {}
             })();
@@ -304,7 +281,7 @@
         <div class="menu-hero-shade"></div>
         <div class="menu-hero-brand" id="menuHeroBrand">
             <div class="menu-hero-logo-wrap">
-                <img src="assets/shawarma demeshq-logo.jpg?v=1" alt="Shawarma" class="menu-hero-logo" id="menuHeroLogo" onerror="this.onerror=null; this.src='assets/logo.svg';">
+                <img src="assets/shawarma demeshq-logo.jpg?v=2" alt="Shawarma" class="menu-hero-logo" id="menuHeroLogo" onerror="this.onerror=null; this.src='assets/logo.svg';">
                 <span class="menu-hero-logo-ring" aria-hidden="true"></span>
             </div>
             <h1 class="menu-hero-title">
@@ -581,7 +558,7 @@
 
             <div class="cafe-info-head">
                 <div class="cafe-info-logo-wrap">
-                    <img src="assets/shawarma demeshq-logo.jpg?v=1" alt="Shawarma" class="cafe-info-logo" onerror="this.style.display='none'">
+                    <img src="assets/shawarma demeshq-logo.jpg?v=2" alt="Shawarma" class="cafe-info-logo" onerror="this.style.display='none'">
                 </div>
                 <h2 class="cafe-info-title" id="cafeInfoTitle">Shawarma</h2>
                 <div class="cafe-status-badge is-open" id="cafeStatusBadge">
@@ -657,7 +634,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="js/firebase.js?v=32"></script>
-    <script src="js/app.js?v=144"></script>
+    <script src="js/app.js?v=145"></script>
     <script src="js/local-api.js"></script>
     <script>
         (function () {

@@ -1,0 +1,5 @@
+# Heavy media temporarily excluded from Vercel deploy (static image test)
+images/menu-bg.mp4
+images/new-shawarma-video.mp4
+images/havalan.video-shawarma.MP4
+CLOUDFLARE-MIGRATION.md

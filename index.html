@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=64">
+    <link rel="stylesheet" href="css/style.css?v=65">
     <style>
         :lang(en) {
             font-family: var(--font-body);
@@ -52,7 +52,7 @@
 </head>
 <body class="index-page has-video-bg">
     <div class="logo-splash" id="logoSplash">
-        <img src="assets/shawarma demeshq-logo.jpg?v=1" alt="Shawarma" onerror="this.onerror=null; this.src='assets/logo.svg';">
+        <img src="assets/shawarma demeshq-logo.jpg?v=2" alt="Shawarma" onerror="this.onerror=null; this.src='assets/logo.svg';">
         <span class="logo-splash-text" id="logoSplashText">شاورمة الدمشقیة</span>
         <div class="logo-splash-dots"><span></span><span></span><span></span></div>
     </div>
@@ -87,14 +87,9 @@
         })();
     </script>
 
-    <!-- Branch 1 Default Video -->
-    <video class="bg-video" id="indexVideoB1" autoplay muted loop playsinline>
-        <source src="images/menu-bg.mp4" type="video/mp4">
-    </video>
-    <!-- Branch 2 Specific Video -->
-    <video class="bg-video" id="indexVideoB2" autoplay muted loop playsinline style="display:none;">
-        <source src="images/menu-bg.mp4" type="video/mp4">
-    </video>
+    <!-- Branch 1 / 2 static backgrounds (video temporarily disabled for Vercel test) -->
+    <img class="bg-video" id="indexVideoB1" src="images/bg-still-b1.jpg?v=2" alt="" decoding="async" fetchpriority="low">
+    <img class="bg-video" id="indexVideoB2" src="images/bg-still-b2.jpg?v=2" alt="" decoding="async" fetchpriority="low" style="display:none;">
     <script>
         (function () {
             try {
@@ -104,23 +99,11 @@
                 var iv1 = document.getElementById('indexVideoB1');
                 var iv2 = document.getElementById('indexVideoB2');
                 if (isB2) {
-                    if (iv1) { iv1.style.display = 'none'; try { iv1.pause(); } catch (e) {} }
-                    if (iv2) {
-                        iv2.style.display = 'block';
-                        iv2.muted = true;
-                        iv2.defaultMuted = true;
-                        var p2 = iv2.play();
-                        if (p2 && typeof p2.catch === 'function') p2.catch(function () {});
-                    }
+                    if (iv1) iv1.style.display = 'none';
+                    if (iv2) iv2.style.display = 'block';
                 } else {
-                    if (iv2) { iv2.style.display = 'none'; try { iv2.pause(); } catch (e) {} }
-                    if (iv1) {
-                        iv1.style.display = 'block';
-                        iv1.muted = true;
-                        iv1.defaultMuted = true;
-                        var p1 = iv1.play();
-                        if (p1 && typeof p1.catch === 'function') p1.catch(function () {});
-                    }
+                    if (iv2) iv2.style.display = 'none';
+                    if (iv1) iv1.style.display = 'block';
                 }
             } catch (e) {}
         })();
@@ -130,7 +113,7 @@
     <section class="hero">
         <div class="hero-center">
             <div class="logo-float-wrap">
-                 <img src="assets/shawarma demeshq-logo.jpg?v=1" alt="Shawarma" class="logo" id="indexLogo"
+                 <img src="assets/shawarma demeshq-logo.jpg?v=2" alt="Shawarma" class="logo" id="indexLogo"
                      onerror="this.onerror=null; this.src='assets/logo.svg';">
               </div>
               <h1 class="cafe-name">
@@ -181,7 +164,7 @@
         </div>
     </section>
 
-    <script src="js/app.js?v=144"></script>
+    <script src="js/app.js?v=145"></script>
     <script>
         (function () {
             var splash = document.getElementById('logoSplash');

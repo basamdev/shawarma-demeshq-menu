@@ -195,6 +195,8 @@ body {
                 filter var(--duration-slow) var(--ease-out-expo);
 }
 
+/* Static stills use the same .bg-video / .menu-hero-video rules as video did */
+
 body.light-mode .bg-video {
     opacity: 0.4;
     filter: brightness(1.2) contrast(1.05);
