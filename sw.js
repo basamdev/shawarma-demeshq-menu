@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ali-cafe-v117';
+const CACHE_NAME = 'ali-cafe-v118';
 const APP_SHELL_PATHS = /\.(html|css|js)$/i;
 const FIREBASE_SDK_URLS = [
     'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js',
@@ -13,10 +13,10 @@ const STATIC_ASSETS = [
     './assets/smart-serve-logo.jpg',
     './assets/logo.svg',
     './images/flag-kurdistan.svg',
-    './images/install/ios-step-1.png',
-    './images/install/ios-step-2.png',
-    './images/install/ios-step-3.png',
-    './images/install/ios-step-4.png',
+    './images/install/ios-step-1.jpg',
+    './images/install/ios-step-2.jpg',
+    './images/install/ios-step-3.jpg',
+    './images/install/ios-step-4.jpg',
     './images/install/android-step-1.png',
     './images/install/android-step-2.png',
     './images/install/android-step-3.png',

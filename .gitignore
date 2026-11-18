@@ -3,6 +3,7 @@ firebase-debug.log
 .vscode
 .cursor
 .venv
+.kilo
 database/
 sample-data.js
 seed-menu.html
@@ -14,3 +15,10 @@ js/favicon.ico
 css/style.css.bak
 netlify.toml
 vercel.json
+CLOUDFLARE-MIGRATION.md
+
+# Heavy videos kept locally only — not deployed to Vercel
+images/**/*.mp4
+images/**/*.MP4
+images/**/*.webm
+images/install/*.png

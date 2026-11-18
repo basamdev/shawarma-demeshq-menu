@@ -1,5 +1,12 @@
-# Heavy media temporarily excluded from Vercel deploy (static image test)
-images/menu-bg.mp4
-images/new-shawarma-video.mp4
-images/havalan.video-shawarma.MP4
+# Keep Vercel bandwidth low — static menu does not need these
+images/**/*.mp4
+images/**/*.MP4
+images/**/*.webm
+images/install/*.png
+.kilo
 CLOUDFLARE-MIGRATION.md
+diagnostic.html
+add-data.html
+api
+*.php
+firebase-debug.log

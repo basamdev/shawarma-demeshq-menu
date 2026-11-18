@@ -5006,10 +5006,10 @@ window.checkForAppUpdate = checkForAppUpdate;
 
 var INSTALL_TUTORIAL_IMAGES = {
     ios: [
-        'images/install/ios-step-1.png',
-        'images/install/ios-step-2.png',
-        'images/install/ios-step-3.png',
-        'images/install/ios-step-4.png'
+        'images/install/ios-step-1.jpg',
+        'images/install/ios-step-2.jpg',
+        'images/install/ios-step-3.jpg',
+        'images/install/ios-step-4.jpg'
     ],
     android: [
         'images/install/android-step-1.png',
